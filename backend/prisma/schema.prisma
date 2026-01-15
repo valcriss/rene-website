@@ -1,0 +1,63 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum EventStatus {
+  DRAFT
+  PENDING
+  PUBLISHED
+  REJECTED
+}
+
+enum UserRole {
+  EDITOR
+  MODERATOR
+  ADMIN
+}
+
+model Event {
+  id               String      @id @default(uuid()) @db.Uuid
+  title            String
+  content          String
+  image            String
+  categoryId       String
+  eventStartAt     DateTime
+  eventEndAt       DateTime
+  allDay           Boolean
+  venueName        String
+  address          String?
+  postalCode       String
+  city             String
+  latitude         Float
+  longitude        Float
+  organizerName    String
+  organizerUrl     String?
+  contactEmail     String?
+  contactPhone     String?
+  ticketUrl        String?
+  websiteUrl       String?
+  status           EventStatus @default(DRAFT)
+  publishedAt      DateTime?
+  publicationEndAt DateTime
+  rejectionReason  String?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  @@index([eventStartAt])
+  @@index([status])
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String
+  email        String   @unique
+  role         UserRole
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
