@@ -1,6 +1,7 @@
 import express from "express";
 import { createAdminRouter } from "./admin/routes";
-import { createInMemoryAdminRepository } from "./admin/inMemoryRepository";
+import { createAdminRepository } from "./admin/repositoryFactory";
+import { createCategoriesRouter } from "./categories/routes";
 import { createEventRouter } from "./events/routes";
 import { createEventRepository } from "./events/repositoryFactory";
 import { registerStatic } from "./static";
@@ -23,8 +24,9 @@ export const createApp = () => {
   const eventRepository = createEventRepository();
   app.use("/api", createEventRouter(eventRepository));
 
-  const adminRepository = createInMemoryAdminRepository();
+  const adminRepository = createAdminRepository();
   app.use("/api/admin", createAdminRouter(adminRepository));
+  app.use("/api/categories", createCategoriesRouter(adminRepository));
 
   app.get("/api/health", (_req, res) => {
     res.json({ status: "ok" });

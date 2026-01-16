@@ -1,4 +1,5 @@
 import { mount } from "@vue/test-utils";
+import { createPinia } from "pinia";
 import { nextTick } from "vue";
 import { vi } from "vitest";
 import App from "../src/App.vue";
@@ -24,7 +25,7 @@ describe("moderation handlers", () => {
   const mountWithRouter = async (path = "/login") => {
     const router = createTestRouter(path);
     await router.isReady();
-    const wrapper = mount(App, { global: { plugins: [router] } });
+    const wrapper = mount(App, { global: { plugins: [createPinia(), router] } });
     return { wrapper, router };
   };
   type Exposed = {

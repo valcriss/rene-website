@@ -1,4 +1,5 @@
-import { useAuth } from "../src/auth/useAuth";
+import { createPinia, setActivePinia } from "pinia";
+import { useAuthStore } from "../src/stores/auth";
 
 const setupStorage = () => {
   window.localStorage.clear();
@@ -6,42 +7,43 @@ const setupStorage = () => {
 
 describe("useAuth", () => {
   beforeEach(() => {
+    setActivePinia(createPinia());
     setupStorage();
   });
 
   it("defaults to visitor", () => {
-    const auth = useAuth();
-    expect(auth.role.value).toBe("VISITOR");
-    expect(auth.isAuthenticated.value).toBe(false);
+    const auth = useAuthStore();
+    expect(auth.role).toBe("VISITOR");
+    expect(auth.isAuthenticated).toBe(false);
   });
 
   it("loads stored role", () => {
     window.localStorage.setItem("rene-auth-role", "ADMIN");
-    const auth = useAuth();
-    expect(auth.role.value).toBe("ADMIN");
-    expect(auth.isAuthenticated.value).toBe(true);
+    const auth = useAuthStore();
+    expect(auth.role).toBe("ADMIN");
+    expect(auth.isAuthenticated).toBe(true);
   });
 
   it("login updates storage", () => {
-    const auth = useAuth();
+    const auth = useAuthStore();
     auth.login("MODERATOR");
     expect(window.localStorage.getItem("rene-auth-role")).toBe("MODERATOR");
   });
 
   it("logout clears storage", () => {
-    const auth = useAuth();
+    const auth = useAuthStore();
     auth.login("EDITOR");
     auth.logout();
-    expect(auth.role.value).toBe("VISITOR");
+    expect(auth.role).toBe("VISITOR");
     expect(window.localStorage.getItem("rene-auth-role")).toBeNull();
   });
 
   it("resetCredentials clears fields", () => {
-    const auth = useAuth();
-    auth.email.value = "test@example.com";
-    auth.password.value = "secret";
+    const auth = useAuthStore();
+    auth.email = "test@example.com";
+    auth.password = "secret";
     auth.resetCredentials();
-    expect(auth.email.value).toBe("");
-    expect(auth.password.value).toBe("");
+    expect(auth.email).toBe("");
+    expect(auth.password).toBe("");
   });
 });

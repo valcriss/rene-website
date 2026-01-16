@@ -1,7 +1,9 @@
 import "@testing-library/jest-dom";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/vue";
+import { createPinia } from "pinia";
 import { vi } from "vitest";
 import App from "../src/App.vue";
+import { useCategoriesStore } from "../src/stores/categories";
 import { createTestRouter } from "./testRouter";
 
 vi.mock("../src/components/EventMap.vue", () => ({
@@ -16,7 +18,17 @@ describe("App", () => {
   const renderWithRouter = async (path = "/") => {
     const router = createTestRouter(path);
     await router.isReady();
-    render(App, { global: { plugins: [router] } });
+    const pinia = createPinia();
+    const categoriesStore = useCategoriesStore(pinia);
+    categoriesStore.categories = [
+      { id: "music", name: "Musique", createdAt: "2026-01-01", updatedAt: "2026-01-01" },
+      { id: "art", name: "Art", createdAt: "2026-01-01", updatedAt: "2026-01-01" },
+      { id: "cinema", name: "Cinéma", createdAt: "2026-01-01", updatedAt: "2026-01-01" }
+    ];
+    categoriesStore.hasLoaded = true;
+    categoriesStore.loading = false;
+    categoriesStore.error = null;
+    render(App, { global: { plugins: [pinia, router] } });
     return router;
   };
 

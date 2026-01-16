@@ -116,8 +116,13 @@ export const createAdminCategory = async (
 ): Promise<ServiceResult<AdminCategory>> => {
   const validation = validateCategoryInput(input);
   if (!validation.ok) return validation;
-  const created = await repo.createCategory(validation.value);
-  return { ok: true, value: created };
+  try {
+    const created = await repo.createCategory(validation.value);
+    return { ok: true, value: created };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Erreur inconnue";
+    return { ok: false, errors: [message] };
+  }
 };
 
 export const updateAdminCategory = async (
@@ -127,18 +132,28 @@ export const updateAdminCategory = async (
 ): Promise<ServiceResult<AdminCategory>> => {
   const validation = validateCategoryInput(input);
   if (!validation.ok) return validation;
-  const updated = await repo.updateCategory(id, validation.value);
-  if (!updated) return { ok: false, errors: ["Category not found"] };
-  return { ok: true, value: updated };
+  try {
+    const updated = await repo.updateCategory(id, validation.value);
+    if (!updated) return { ok: false, errors: ["Category not found"] };
+    return { ok: true, value: updated };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Erreur inconnue";
+    return { ok: false, errors: [message] };
+  }
 };
 
 export const deleteAdminCategory = async (
   repo: AdminRepository,
   id: string
 ): Promise<ServiceResult<null>> => {
-  const deleted = await repo.deleteCategory(id);
-  if (!deleted) return { ok: false, errors: ["Category not found"] };
-  return { ok: true, value: null };
+  try {
+    const deleted = await repo.deleteCategory(id);
+    if (!deleted) return { ok: false, errors: ["Category not found"] };
+    return { ok: true, value: null };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Erreur inconnue";
+    return { ok: false, errors: [message] };
+  }
 };
 
 export const getAdminSettings = (repo: AdminRepository): Promise<AdminSettings> => repo.getSettings();

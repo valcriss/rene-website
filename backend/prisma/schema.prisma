@@ -48,8 +48,20 @@ model Event {
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
 
+  category         Category    @relation(fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
   @@index([eventStartAt])
   @@index([status])
+  @@index([categoryId])
+}
+
+model Category {
+  id        String   @id
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  events    Event[]
 }
 
 model User {

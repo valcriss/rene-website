@@ -3,6 +3,7 @@ jest.mock("@prisma/client", () => {
   const findUnique = jest.fn();
   const create = jest.fn();
   const update = jest.fn();
+  const findCategory = jest.fn();
 
   return {
     PrismaClient: jest.fn(() => ({
@@ -11,13 +12,17 @@ jest.mock("@prisma/client", () => {
         findUnique,
         create,
         update
+      },
+      category: {
+        findUnique: findCategory
       }
     })),
     __mocks: {
       findMany,
       findUnique,
       create,
-      update
+      update,
+      findCategory
     }
   };
 });
@@ -29,6 +34,7 @@ const prismaMocks = jest.requireMock("@prisma/client").__mocks as {
   findUnique: jest.Mock;
   create: jest.Mock;
   update: jest.Mock;
+  findCategory: jest.Mock;
 };
 
 describe("createPrismaEventRepository", () => {
@@ -37,6 +43,7 @@ describe("createPrismaEventRepository", () => {
     prismaMocks.findUnique.mockReset();
     prismaMocks.create.mockReset();
     prismaMocks.update.mockReset();
+    prismaMocks.findCategory.mockReset();
   });
 
   it("maps list events", async () => {
@@ -147,6 +154,7 @@ describe("createPrismaEventRepository", () => {
       updatedAt: new Date("2026-01-02T00:00:00.000Z")
     };
     prismaMocks.create.mockResolvedValue(item);
+    prismaMocks.findCategory.mockResolvedValue({ id: "book", name: "Lecture", createdAt: new Date(), updatedAt: new Date() });
 
     const result = await repo.create({
       title: "Lecture",
@@ -199,6 +207,7 @@ describe("createPrismaEventRepository", () => {
       updatedAt: new Date("2026-01-02T00:00:00.000Z")
     };
     prismaMocks.update.mockResolvedValue(item);
+    prismaMocks.findCategory.mockResolvedValue({ id: "art", name: "Art", createdAt: new Date(), updatedAt: new Date() });
 
     const result = await repo.update("4", {
       title: "Expo",
@@ -222,6 +231,7 @@ describe("createPrismaEventRepository", () => {
   it("returns null when update fails", async () => {
     const repo = createPrismaEventRepository();
     prismaMocks.update.mockRejectedValue(new Error("not found"));
+    prismaMocks.findCategory.mockResolvedValue({ id: "art", name: "Art", createdAt: new Date(), updatedAt: new Date() });
 
     const result = await repo.update("missing", {
       title: "Expo",

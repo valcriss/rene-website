@@ -19,8 +19,13 @@ export const createEvent = async (
     return { ok: false, errors: validation.errors };
   }
 
-  const created = await repo.create(validation.value);
-  return { ok: true, value: created };
+  try {
+    const created = await repo.create(validation.value);
+    return { ok: true, value: created };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Erreur inconnue";
+    return { ok: false, errors: [message] };
+  }
 };
 
 export const updateEvent = async (
@@ -33,11 +38,16 @@ export const updateEvent = async (
     return { ok: false, errors: validation.errors };
   }
 
-  const updated = await repo.update(id, validation.value);
-  if (!updated) {
-    return { ok: false, errors: ["Event not found"] };
+  try {
+    const updated = await repo.update(id, validation.value);
+    if (!updated) {
+      return { ok: false, errors: ["Event not found"] };
+    }
+    return { ok: true, value: updated };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Erreur inconnue";
+    return { ok: false, errors: [message] };
   }
-  return { ok: true, value: updated };
 };
 
 export const submitEvent = async (

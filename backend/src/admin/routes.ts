@@ -79,7 +79,8 @@ export const createAdminRouter = (repo: AdminRepository) => {
   router.delete("/categories/:id", async (req, res) => {
     const result = await deleteAdminCategory(repo, req.params.id);
     if (!result.ok) {
-      res.status(404).json({ errors: result.errors });
+      const status = result.errors.includes("Category in use") ? 409 : 404;
+      res.status(status).json({ errors: result.errors });
       return;
     }
     res.status(204).send();

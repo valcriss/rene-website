@@ -1,4 +1,5 @@
 import { mount } from "@vue/test-utils";
+import { createPinia } from "pinia";
 import { nextTick } from "vue";
 import { vi } from "vitest";
 import App from "../src/App.vue";
@@ -40,8 +41,20 @@ describe("admin handlers", () => {
   const mountWithRouter = async (path = "/login") => {
     const router = createTestRouter(path);
     await router.isReady();
-    const wrapper = mount(App, { global: { plugins: [router] } });
+    const wrapper = mount(App, { global: { plugins: [createPinia(), router] } });
     return { wrapper, router };
+  };
+  const goToAdminUsers = async (router: ReturnType<typeof createTestRouter>) => {
+    await router.replace("/backoffice/admin/users");
+    await nextTick();
+  };
+  const goToAdminCategories = async (router: ReturnType<typeof createTestRouter>) => {
+    await router.replace("/backoffice/admin/categories");
+    await nextTick();
+  };
+  const goToAdminSettings = async (router: ReturnType<typeof createTestRouter>) => {
+    await router.replace("/backoffice/admin/settings");
+    await nextTick();
   };
   const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0));
   const waitForAdminLoad = async (wrapper: ReturnType<typeof mount>) => {
@@ -88,12 +101,13 @@ describe("admin handlers", () => {
   });
 
   it("resets admin user form from edit mode", async () => {
-    const { wrapper } = await mountWithRouter();
+    const { wrapper, router } = await mountWithRouter();
     await nextTick();
 
     const vm = wrapper.vm as unknown as Exposed;
     vm.setRole("ADMIN");
     await nextTick();
+    await goToAdminUsers(router);
     await waitForAdminLoad(wrapper);
 
     vm.startAdminUserEdit({ id: "u1", name: "Admin", email: "admin@test", role: "ADMIN" });
@@ -120,25 +134,20 @@ describe("admin handlers", () => {
 
     const vm = wrapper.vm as unknown as Exposed;
     vm.setRole("ADMIN");
-    for (let i = 0; i < 4; i += 1) {
-      if (router.currentRoute.value.path === "/backoffice") {
-        break;
-      }
-      await flushPromises();
-      await nextTick();
-    }
+    await goToAdminUsers(router);
 
     expect(wrapper.text()).toContain("Chargement de l'administration");
   });
 
   it("updates admin user and handles errors", async () => {
     updateAdminUserMock.mockResolvedValue({ id: "u1", name: "Admin", email: "admin@test", role: "ADMIN" });
-    const { wrapper } = await mountWithRouter();
+    const { wrapper, router } = await mountWithRouter();
     await nextTick();
 
     const vm = wrapper.vm as unknown as Exposed;
     vm.setRole("ADMIN");
     await nextTick();
+    await goToAdminUsers(router);
     await waitForAdminLoad(wrapper);
 
     expect(wrapper.text()).toContain("Admin");
@@ -160,12 +169,13 @@ describe("admin handlers", () => {
 
   it("uses error message when admin user update fails with Error", async () => {
     updateAdminUserMock.mockRejectedValue(new Error("Oups"));
-    const { wrapper } = await mountWithRouter();
+    const { wrapper, router } = await mountWithRouter();
     await nextTick();
 
     const vm = wrapper.vm as unknown as Exposed;
     vm.setRole("ADMIN");
     await nextTick();
+    await goToAdminUsers(router);
     await waitForAdminLoad(wrapper);
 
     vm.startAdminUserEdit({ id: "u1", name: "Admin", email: "admin@test", role: "ADMIN" });
@@ -178,12 +188,13 @@ describe("admin handlers", () => {
 
   it("deletes admin user and resets edit state", async () => {
     deleteAdminUserMock.mockResolvedValue(undefined);
-    const { wrapper } = await mountWithRouter();
+    const { wrapper, router } = await mountWithRouter();
     await nextTick();
 
     const vm = wrapper.vm as unknown as Exposed;
     vm.setRole("ADMIN");
     await nextTick();
+    await goToAdminUsers(router);
     await waitForAdminLoad(wrapper);
 
     vm.startAdminUserEdit({ id: "u1", name: "Admin", email: "admin@test", role: "ADMIN" });
@@ -196,12 +207,13 @@ describe("admin handlers", () => {
 
   it("handles delete admin user error", async () => {
     deleteAdminUserMock.mockRejectedValue(new Error("Boom"));
-    const { wrapper } = await mountWithRouter();
+    const { wrapper, router } = await mountWithRouter();
     await nextTick();
 
     const vm = wrapper.vm as unknown as Exposed;
     vm.setRole("ADMIN");
     await nextTick();
+    await goToAdminUsers(router);
     await waitForAdminLoad(wrapper);
 
     await vm.handleDeleteAdminUser("u1");
@@ -210,12 +222,13 @@ describe("admin handlers", () => {
 
   it("handles delete admin user error with string", async () => {
     deleteAdminUserMock.mockRejectedValue("nope");
-    const { wrapper } = await mountWithRouter();
+    const { wrapper, router } = await mountWithRouter();
     await nextTick();
 
     const vm = wrapper.vm as unknown as Exposed;
     vm.setRole("ADMIN");
     await nextTick();
+    await goToAdminUsers(router);
     await waitForAdminLoad(wrapper);
 
     await vm.handleDeleteAdminUser("u1");
@@ -226,12 +239,13 @@ describe("admin handlers", () => {
     deleteAdminCategoryMock.mockResolvedValue(undefined);
     createAdminCategoryMock.mockRejectedValue("nope");
 
-    const { wrapper } = await mountWithRouter();
+    const { wrapper, router } = await mountWithRouter();
     await nextTick();
 
     const vm = wrapper.vm as unknown as Exposed;
     vm.setRole("ADMIN");
     await nextTick();
+    await goToAdminCategories(router);
     await waitForAdminLoad(wrapper);
 
     vm.startAdminCategoryEdit({ id: "c1", name: "Musique" });
@@ -244,12 +258,13 @@ describe("admin handlers", () => {
   });
 
   it("resets admin category form from edit mode", async () => {
-    const { wrapper } = await mountWithRouter();
+    const { wrapper, router } = await mountWithRouter();
     await nextTick();
 
     const vm = wrapper.vm as unknown as Exposed;
     vm.setRole("ADMIN");
     await nextTick();
+    await goToAdminCategories(router);
     await waitForAdminLoad(wrapper);
 
     vm.startAdminCategoryEdit({ id: "c1", name: "Musique" });
@@ -268,12 +283,13 @@ describe("admin handlers", () => {
 
   it("uses error message when admin category save fails with Error", async () => {
     createAdminCategoryMock.mockRejectedValue(new Error("Oups"));
-    const { wrapper } = await mountWithRouter();
+    const { wrapper, router } = await mountWithRouter();
     await nextTick();
 
     const vm = wrapper.vm as unknown as Exposed;
     vm.setRole("ADMIN");
     await nextTick();
+    await goToAdminCategories(router);
     await waitForAdminLoad(wrapper);
 
     await vm.handleSaveAdminCategory();
@@ -281,12 +297,13 @@ describe("admin handlers", () => {
   });
 
   it("starts admin user edit from list button", async () => {
-    const { wrapper } = await mountWithRouter();
+    const { wrapper, router } = await mountWithRouter();
     await nextTick();
 
     const vm = wrapper.vm as unknown as Exposed;
     vm.setRole("ADMIN");
     await nextTick();
+    await goToAdminUsers(router);
     await waitForAdminLoad(wrapper);
 
     const userList = wrapper.get("[data-testid='admin-user-list']");
@@ -308,12 +325,13 @@ describe("admin handlers", () => {
 
   it("deletes admin category from list button", async () => {
     deleteAdminCategoryMock.mockResolvedValue(undefined);
-    const { wrapper } = await mountWithRouter();
+    const { wrapper, router } = await mountWithRouter();
     await nextTick();
 
     const vm = wrapper.vm as unknown as Exposed;
     vm.setRole("ADMIN");
     await nextTick();
+    await goToAdminCategories(router);
     await waitForAdminLoad(wrapper);
 
     const categoryList = wrapper.get("[data-testid='admin-category-list']");
@@ -333,12 +351,13 @@ describe("admin handlers", () => {
 
   it("handles delete admin category error", async () => {
     deleteAdminCategoryMock.mockRejectedValue(new Error("Erreur"));
-    const { wrapper } = await mountWithRouter();
+    const { wrapper, router } = await mountWithRouter();
     await nextTick();
 
     const vm = wrapper.vm as unknown as Exposed;
     vm.setRole("ADMIN");
     await nextTick();
+    await goToAdminCategories(router);
     await waitForAdminLoad(wrapper);
 
     await vm.handleDeleteAdminCategory("c1");
@@ -347,12 +366,13 @@ describe("admin handlers", () => {
 
   it("handles delete admin category error with string", async () => {
     deleteAdminCategoryMock.mockRejectedValue("nope");
-    const { wrapper } = await mountWithRouter();
+    const { wrapper, router } = await mountWithRouter();
     await nextTick();
 
     const vm = wrapper.vm as unknown as Exposed;
     vm.setRole("ADMIN");
     await nextTick();
+    await goToAdminCategories(router);
     await waitForAdminLoad(wrapper);
 
     await vm.handleDeleteAdminCategory("c1");
@@ -361,12 +381,13 @@ describe("admin handlers", () => {
 
   it("handles settings error", async () => {
     updateAdminSettingsMock.mockRejectedValue(new Error("Oups"));
-    const { wrapper } = await mountWithRouter();
+    const { wrapper, router } = await mountWithRouter();
     await nextTick();
 
     const vm = wrapper.vm as unknown as Exposed;
     vm.setRole("ADMIN");
     await nextTick();
+    await goToAdminSettings(router);
     await waitForAdminLoad(wrapper);
 
     await vm.handleSaveAdminSettings();
@@ -375,12 +396,13 @@ describe("admin handlers", () => {
 
   it("handles settings error with string", async () => {
     updateAdminSettingsMock.mockRejectedValue("nope");
-    const { wrapper } = await mountWithRouter();
+    const { wrapper, router } = await mountWithRouter();
     await nextTick();
 
     const vm = wrapper.vm as unknown as Exposed;
     vm.setRole("ADMIN");
     await nextTick();
+    await goToAdminSettings(router);
     await flushPromises();
     await nextTick();
 

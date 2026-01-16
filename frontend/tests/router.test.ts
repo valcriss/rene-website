@@ -7,6 +7,21 @@ describe("router", () => {
     const router = createAppRouter(createMemoryHistory());
     const paths = router.getRoutes().map((route) => route.path);
 
-    expect(paths).toEqual(expect.arrayContaining(["/", "/login", "/backoffice", "/event/:id"]));
+    expect(paths).toEqual(
+      expect.arrayContaining([
+        "/",
+        "/login",
+        "/backoffice",
+        "/backoffice/events",
+        "/backoffice/events/new",
+        "/backoffice/moderation",
+        "/backoffice/moderation/view/:id",
+        "/backoffice/admin",
+        "/backoffice/admin/users",
+        "/backoffice/admin/categories",
+        "/backoffice/admin/settings",
+        "/event/:id"
+      ])
+    );
   });
 });

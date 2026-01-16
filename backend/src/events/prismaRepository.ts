@@ -60,6 +60,13 @@ const toEvent = (data: PrismaEvent): Event => ({
   updatedAt: data.updatedAt.toISOString()
 });
 
+const ensureCategoryExists = async (categoryId: string) => {
+  const category = await prisma.category.findUnique({ where: { id: categoryId } });
+  if (!category) {
+    throw new Error("Category not found");
+  }
+};
+
 export const createPrismaEventRepository = (): EventRepository => ({
   list: async () =>
     prisma.event
@@ -69,8 +76,9 @@ export const createPrismaEventRepository = (): EventRepository => ({
     prisma.event
       .findUnique({ where: { id } })
       .then((item: PrismaEvent | null) => (item ? toEvent(item) : null)),
-  create: async (input: CreateEventInput) =>
-    prisma.event
+  create: async (input: CreateEventInput) => {
+    await ensureCategoryExists(input.categoryId);
+    return prisma.event
       .create({
         data: {
           title: input.title,
@@ -98,9 +106,10 @@ export const createPrismaEventRepository = (): EventRepository => ({
           rejectionReason: null
         }
       })
-      .then(toEvent)
-  ,
+      .then(toEvent);
+  },
   update: async (id: string, input: CreateEventInput) => {
+    await ensureCategoryExists(input.categoryId);
     try {
       const updated = await prisma.event.update({
         where: { id },

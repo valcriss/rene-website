@@ -31,6 +31,14 @@ describe("admin routes", () => {
     expect(categoriesResponse.body.length).toBeGreaterThan(0);
   });
 
+  it("lists public categories", async () => {
+    const app = createApp();
+    const response = await request(app).get("/api/categories");
+
+    expect(response.status).toBe(200);
+    expect(response.body.length).toBeGreaterThan(0);
+  });
+
   it("creates updates and deletes a user", async () => {
     const app = createApp();
     const createResponse = await request(app)

@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { AdminRepository } from "./repository";
+import { slugifyCategoryId } from "./slug";
 import {
   AdminCategory,
   AdminSettings,
@@ -25,7 +26,7 @@ export const createInMemoryAdminRepository = (): AdminRepository => {
     users.set(id, { id, ...input, createdAt: timestamp, updatedAt: timestamp });
   };
   const seedCategory = (input: CreateAdminCategoryInput) => {
-    const id = randomUUID();
+    const id = slugifyCategoryId(input.name) || randomUUID();
     const timestamp = now();
     categories.set(id, { id, ...input, createdAt: timestamp, updatedAt: timestamp });
   };
@@ -56,7 +57,7 @@ export const createInMemoryAdminRepository = (): AdminRepository => {
     listCategories: async () => Array.from(categories.values()),
     getCategoryById: async (id) => categories.get(id) ?? null,
     createCategory: async (input) => {
-      const id = randomUUID();
+      const id = slugifyCategoryId(input.name) || randomUUID();
       const timestamp = now();
       const category: AdminCategory = { id, ...input, createdAt: timestamp, updatedAt: timestamp };
       categories.set(id, category);

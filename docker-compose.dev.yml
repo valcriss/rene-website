@@ -10,5 +10,62 @@ services:
       - "5432:5432"
     volumes:
       - db-data:/var/lib/postgresql/data
+  photon-init:
+    image: debian:bookworm-slim
+    container_name: photon-init
+    volumes:
+      - ./photon:/photon
+    environment:
+      # Version Photon (OpenSearch recommandé)
+      - PHOTON_VERSION=0.7.4
+
+
+    command:
+      - bash
+      - -lc
+      - |
+        set -euo pipefail
+        apt-get update
+        apt-get install -y --no-install-recommends ca-certificates curl bzip2 tar
+        rm -rf /var/lib/apt/lists/*
+
+        mkdir -p /photon/bin /photon/data
+
+        # 2) Télécharger et extraire la base (si photon_data absent)
+        if [ ! -d "/photon/data/photon_data" ]; then
+          echo "Downloading Photon DB dump..."
+          curl -fL --insecure https://download1.graphhopper.com/public/experimental/extracts/by-country-code/fr/photon-db-fr-latest.tar.bz2 \
+            | bzip2 -cd \
+            | tar -x -C /photon/data
+        else
+          echo "photon_data already exists, skipping DB download."
+        fi
+
+        echo "Init done."
+
+    restart: "no"
+
+  photon:
+    image: eclipse-temurin:21-jre
+    container_name: photon
+    depends_on:
+      photon-init:
+        condition: service_completed_successfully
+    ports:
+      - "2322:2322"
+    volumes:
+      - ./photon:/photon
+      - ./docker/photon-0.7.4.jar:/photon/bin/photon-0.7.4.jar
+    command:
+      - bash
+      - -lc
+      - |
+        set -euo pipefail
+        exec java -jar "/photon/bin/photon-0.7.4.jar" \
+          -data-dir "/photon/data" \
+          -listen-ip "0.0.0.0" \
+          -listen-port "2322"
+    restart: unless-stopped
+
 volumes:
   db-data:

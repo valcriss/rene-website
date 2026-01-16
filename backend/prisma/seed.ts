@@ -29,10 +29,13 @@ const seed = async () => {
   console.log(`Seed démarré (${getDatabaseInfo()}).`);
 
   const deletedEvents = await prisma.event.deleteMany();
+  const deletedCategories = await prisma.category.deleteMany();
   const deletedUsers = await prisma.user.deleteMany();
 
   // eslint-disable-next-line no-console
-  console.log(`Suppression avant seed: ${deletedUsers.count} utilisateurs, ${deletedEvents.count} événements.`);
+  console.log(
+    `Suppression avant seed: ${deletedUsers.count} utilisateurs, ${deletedCategories.count} catégories, ${deletedEvents.count} événements.`
+  );
 
   const usersResult = await prisma.user.createMany({
     data: [
@@ -54,6 +57,21 @@ const seed = async () => {
         role: "ADMIN",
         passwordHash: hashPassword("admin-rene-2026")
       }
+    ]
+  });
+
+  const categoriesResult = await prisma.category.createMany({
+    data: [
+      { id: "music", name: "Musique" },
+      { id: "lecture", name: "Lecture" },
+      { id: "theatre", name: "Théâtre" },
+      { id: "expo", name: "Exposition" },
+      { id: "cinema", name: "Cinéma" },
+      { id: "festival", name: "Festival" },
+      { id: "market", name: "Marché" },
+      { id: "heritage", name: "Patrimoine" },
+      { id: "atelier", name: "Atelier" },
+      { id: "science", name: "Science" }
     ]
   });
 
@@ -563,7 +581,9 @@ const seed = async () => {
   });
 
   // eslint-disable-next-line no-console
-  console.log(`Seed terminé: ${usersResult.count} utilisateurs, ${eventsResult.count} événements.`);
+  console.log(
+    `Seed terminé: ${usersResult.count} utilisateurs, ${categoriesResult.count} catégories, ${eventsResult.count} événements.`
+  );
 };
 
 seed()
