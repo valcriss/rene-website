@@ -1,7 +1,6 @@
-import { Prisma } from "@prisma/client";
 import { prisma } from "../prisma/client";
 import { EventRepository } from "./repository";
-import { CreateEventInput, Event } from "./types";
+import { CreateEventInput, Event, EventStatus } from "./types";
 
 type PrismaEvent = {
   id: string;
@@ -102,11 +101,11 @@ export const createPrismaEventRepository = (): EventRepository => ({
       contactPhone: input.contactPhone ?? null,
       ticketUrl: input.ticketUrl ?? null,
       websiteUrl: input.websiteUrl ?? null,
-      status: "DRAFT",
+      status: "DRAFT" as EventStatus,
       publishedAt: null,
       publicationEndAt: new Date(input.eventEndAt),
       rejectionReason: null
-    } as unknown as Prisma.EventCreateInput;
+    };
 
     return prisma.event.create({ data }).then(toEvent);
   },

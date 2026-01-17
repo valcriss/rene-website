@@ -10,12 +10,14 @@ import {
 } from "./types";
 import { slugifyCategoryId } from "./slug";
 
-const toAdminCategory = (data: {
+type PrismaCategory = {
   id: string;
   name: string;
   createdAt: Date;
   updatedAt: Date;
-}): AdminCategory => ({
+};
+
+const toAdminCategory = (data: PrismaCategory): AdminCategory => ({
   id: data.id,
   name: data.name,
   createdAt: data.createdAt.toISOString(),
@@ -62,11 +64,11 @@ export const createPrismaAdminRepository = (): AdminRepository => {
     listCategories: async () =>
       prisma.category
         .findMany({ orderBy: { name: "asc" } })
-        .then((items) => items.map(toAdminCategory)),
+        .then((items: PrismaCategory[]) => items.map(toAdminCategory)),
     getCategoryById: async (id) =>
       prisma.category
         .findUnique({ where: { id } })
-        .then((item) => (item ? toAdminCategory(item) : null)),
+        .then((item: PrismaCategory | null) => (item ? toAdminCategory(item) : null)),
     createCategory: async (input: CreateAdminCategoryInput) => {
       const id = slugifyCategoryId(input.name);
       if (!id) {
