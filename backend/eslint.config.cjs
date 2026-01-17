@@ -6,7 +6,7 @@ const globals = require("globals");
 
 module.exports = [
   {
-    ignores: ["dist/**", "coverage/**"]
+    ignores: ["dist/**", "coverage/**", "tests/**/*.js"]
   },
   js.configs.recommended,
   prettier,

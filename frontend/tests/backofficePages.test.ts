@@ -12,6 +12,7 @@ import BackofficeLayout from "../src/pages/backoffice/BackofficeLayout.vue";
 import BackofficeEventsPage from "../src/pages/backoffice/BackofficeEventsPage.vue";
 import BackofficeEventCreatePage from "../src/pages/backoffice/BackofficeEventCreatePage.vue";
 import BackofficeModerationPage from "../src/pages/backoffice/BackofficeModerationPage.vue";
+import BackofficeModerationViewPage from "../src/pages/backoffice/BackofficeModerationViewPage.vue";
 import BackofficeAdminUsersPage from "../src/pages/backoffice/BackofficeAdminUsersPage.vue";
 import BackofficeAdminCategoriesPage from "../src/pages/backoffice/BackofficeAdminCategoriesPage.vue";
 import BackofficeAdminSettingsPage from "../src/pages/backoffice/BackofficeAdminSettingsPage.vue";
@@ -245,6 +246,35 @@ describe("BackofficeModerationPage", () => {
 
     await fireEvent.click(screen.getByText("Voir la publication"));
     expect(pushSpy).toHaveBeenCalledWith("/backoffice/moderation/view/1");
+  });
+});
+
+describe("BackofficeModerationViewPage", () => {
+  it("returns to moderation and follows selected event", async () => {
+    const { router, pinia } = await setup("/backoffice/moderation/view/1", "MODERATOR");
+    const pushSpy = vi.spyOn(router, "push");
+
+    render(BackofficeModerationViewPage, {
+      global: {
+        plugins: [pinia, router],
+        stubs: {
+          EventDetailView: {
+            props: ["eventId"],
+            emits: ["select"],
+            template:
+              "<div><button type='button' @click=\"$emit('select','42')\">Select</button><slot name='header'></slot></div>"
+          }
+        }
+      }
+    });
+
+    expect(screen.getByText("Prévisualisation de la publication")).toBeInTheDocument();
+
+    await fireEvent.click(screen.getByText("Retour à la modération"));
+    expect(pushSpy).toHaveBeenCalledWith("/backoffice/moderation");
+
+    await fireEvent.click(screen.getByText("Select"));
+    expect(pushSpy).toHaveBeenCalledWith("/backoffice/moderation/view/42");
   });
 });
 

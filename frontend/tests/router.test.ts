@@ -24,4 +24,20 @@ describe("router", () => {
       ])
     );
   });
+
+  it("loads async route components", async () => {
+    const router = createAppRouter(createMemoryHistory());
+    const components = router
+      .getRoutes()
+      .map((route) => route.components?.default ?? route.component)
+      .filter(Boolean);
+
+    await Promise.all(
+      components.map((component) =>
+        typeof component === "function" ? component() : Promise.resolve()
+      )
+    );
+
+    expect(components.length).toBeGreaterThan(0);
+  });
 });
