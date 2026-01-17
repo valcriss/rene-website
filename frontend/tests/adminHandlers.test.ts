@@ -134,6 +134,7 @@ describe("admin handlers", () => {
 
     const vm = wrapper.vm as unknown as Exposed;
     vm.setRole("ADMIN");
+    await nextTick();
     await goToAdminUsers(router);
 
     expect(wrapper.text()).toContain("Chargement de l'administration");

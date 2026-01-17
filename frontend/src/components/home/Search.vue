@@ -25,6 +25,8 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: "HomeSearch" });
+
 type Props = {
   modelValue: string;
 };

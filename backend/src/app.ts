@@ -4,6 +4,9 @@ import { createAdminRepository } from "./admin/repositoryFactory";
 import { createCategoriesRouter } from "./categories/routes";
 import { createEventRouter } from "./events/routes";
 import { createEventRepository } from "./events/repositoryFactory";
+import { createGeocodingRouter } from "./geocoding/routes";
+import { createUploadRouter } from "./uploads/routes";
+import { getUploadDir } from "./uploads/storage";
 import { registerStatic } from "./static";
 
 export const createApp = () => {
@@ -23,6 +26,9 @@ export const createApp = () => {
 
   const eventRepository = createEventRepository();
   app.use("/api", createEventRouter(eventRepository));
+  app.use("/api", createGeocodingRouter());
+  app.use("/api", createUploadRouter());
+  app.use("/uploads", express.static(getUploadDir()));
 
   const adminRepository = createAdminRepository();
   app.use("/api/admin", createAdminRouter(adminRepository));

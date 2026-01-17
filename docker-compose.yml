@@ -5,10 +5,15 @@ services:
     environment:
       PORT: 3000
       DATABASE_URL: postgres://rene:rene@db:5432/rene
+      PHOTON_URL: http://photon:2322
+      UPLOAD_DIR: /app/uploads
     ports:
       - "3000:3000"
     depends_on:
       - db
+      - photon
+    volumes:
+      - uploads-data:/app/uploads
   db:
     image: postgres:16
     environment:
@@ -17,5 +22,65 @@ services:
       POSTGRES_DB: rene
     volumes:
       - db-data:/var/lib/postgresql/data
+  photon-init:
+    image: debian:bookworm-slim
+    container_name: photon-init
+    env_file:
+      - .env
+    volumes:
+      - photon-data:/photon
+    command:
+      - bash
+      - -lc
+      - |
+        set -euo pipefail
+        apt-get update
+        apt-get install -y --no-install-recommends ca-certificates curl bzip2 tar
+        rm -rf /var/lib/apt/lists/*
+
+        mkdir -p /photon/bin /photon/data
+
+        JAR="/photon/bin/photon-opensearch-${PHOTON_VERSION}.jar"
+        if [ ! -f "$${JAR}" ]; then
+          echo "Downloading Photon jar ${PHOTON_VERSION}..."
+          curl -fL -o "$${JAR}" \
+            "https://github.com/komoot/photon/releases/download/${PHOTON_VERSION}/photon-opensearch-${PHOTON_VERSION}.jar"
+        else
+          echo "Jar already present: $${JAR}"
+        fi
+
+        # Photon attend /photon/data/photon_data/...
+        if [ ! -d "/photon/data/photon_data" ]; then
+          echo "Downloading & extracting Photon DB dump..."
+          curl -fL "${PHOTON_DB_URL}" | bzip2 -cd | tar -x -C /photon/data
+        else
+          echo "photon_data already exists, skipping DB download."
+        fi
+
+        echo "Init done."
+    restart: "no"
+
+  photon:
+    image: eclipse-temurin:21-jre
+    container_name: photon
+    depends_on:
+      photon-init:
+        condition: service_completed_successfully
+    env_file:
+      - .env
+    volumes:
+      - photon-data:/photon
+    command:
+      - bash
+      - -lc
+      - |
+        set -euo pipefail
+        exec java -jar "/photon/bin/photon-opensearch-${PHOTON_VERSION}.jar" \
+          -data-dir "/photon/data" \
+          -listen-ip "0.0.0.0" \
+          -listen-port "2322"
+    restart: unless-stopped
 volumes:
   db-data:
+  photon-data:
+  uploads-data:

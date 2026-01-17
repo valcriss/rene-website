@@ -1,4 +1,3 @@
-version: "3.9"
 services:
   db:
     image: postgres:16
@@ -15,11 +14,8 @@ services:
     container_name: photon-init
     volumes:
       - ./photon:/photon
-    environment:
-      # Version Photon (OpenSearch recommandé)
-      - PHOTON_VERSION=0.7.4
-
-
+    env_file:
+      - .env
     command:
       - bash
       - -lc
@@ -31,18 +27,24 @@ services:
 
         mkdir -p /photon/bin /photon/data
 
-        # 2) Télécharger et extraire la base (si photon_data absent)
+        JAR="/photon/bin/photon-opensearch-${PHOTON_VERSION}.jar"
+        if [ ! -f "$$JAR" ]; then
+          echo "Downloading Photon jar ${PHOTON_VERSION}..."
+          curl -fL -o "$$JAR" \
+            "https://github.com/komoot/photon/releases/download/${PHOTON_VERSION}/photon-opensearch-${PHOTON_VERSION}.jar"
+        else
+          echo "Jar already present: $$JAR"
+        fi
+
+        # Photon attend /photon/data/photon_data/...
         if [ ! -d "/photon/data/photon_data" ]; then
-          echo "Downloading Photon DB dump..."
-          curl -fL --insecure https://download1.graphhopper.com/public/experimental/extracts/by-country-code/fr/photon-db-fr-latest.tar.bz2 \
-            | bzip2 -cd \
-            | tar -x -C /photon/data
+          echo "Downloading & extracting Photon DB dump..."
+          curl -fL "${PHOTON_DB_URL}" | bzip2 -cd | tar -x -C /photon/data
         else
           echo "photon_data already exists, skipping DB download."
         fi
 
         echo "Init done."
-
     restart: "no"
 
   photon:
@@ -51,17 +53,18 @@ services:
     depends_on:
       photon-init:
         condition: service_completed_successfully
+    env_file:
+      - .env
     ports:
-      - "2322:2322"
+      - "${PHOTON_PORT}:2322"
     volumes:
       - ./photon:/photon
-      - ./docker/photon-0.7.4.jar:/photon/bin/photon-0.7.4.jar
     command:
       - bash
       - -lc
       - |
         set -euo pipefail
-        exec java -jar "/photon/bin/photon-0.7.4.jar" \
+        exec java -jar "/photon/bin/photon-opensearch-${PHOTON_VERSION}.jar" \
           -data-dir "/photon/data" \
           -listen-ip "0.0.0.0" \
           -listen-port "2322"

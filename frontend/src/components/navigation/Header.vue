@@ -18,6 +18,8 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: "NavigationHeader" });
+
 type Props = {
   title?: string;
   tagline?: string;
@@ -25,7 +27,7 @@ type Props = {
   loginLabel?: string;
 };
 
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Props>(), {
   title: "Rene Website",
   tagline: "Agenda culturel",
   showLogin: true,

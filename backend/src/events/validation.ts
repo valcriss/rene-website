@@ -1,7 +1,8 @@
-import { CreateEventInput } from "./types";
+import { EventDraftInput } from "./types";
+import { sanitizeEventContent } from "./sanitize";
 
 type ValidationResult =
-  | { ok: true; value: CreateEventInput }
+  | { ok: true; value: EventDraftInput }
   | { ok: false; errors: string[] };
 
 const isNonEmptyString = (value: unknown) => typeof value === "string" && value.trim().length > 0;
@@ -16,54 +17,55 @@ const asNumber = (value: unknown) => (typeof value === "number" ? value : Number
 
 export const validateCreateEvent = (input: unknown): ValidationResult => {
   if (input === null || typeof input !== "object") {
-    return { ok: false, errors: ["body must be an object"] };
+    return { ok: false, errors: ["Le corps de la requête doit être un objet."] };
   }
 
   const data = input as Record<string, unknown>;
   const errors: string[] = [];
 
-  if (!isNonEmptyString(data.title)) errors.push("title is required");
-  if (!isNonEmptyString(data.content)) errors.push("content is required");
-  if (!isNonEmptyString(data.image)) errors.push("image is required");
-  if (!isNonEmptyString(data.categoryId)) errors.push("categoryId is required");
-  if (!isNonEmptyString(data.eventStartAt)) errors.push("eventStartAt is required");
-  if (!isNonEmptyString(data.eventEndAt)) errors.push("eventEndAt is required");
-  if (typeof data.allDay !== "boolean") errors.push("allDay must be boolean");
-  if (!isNonEmptyString(data.venueName)) errors.push("venueName is required");
-  if (!isNonEmptyString(data.postalCode)) errors.push("postalCode is required");
-  if (!isNonEmptyString(data.city)) errors.push("city is required");
-  if (!isNonEmptyString(data.organizerName)) errors.push("organizerName is required");
+  if (!isNonEmptyString(data.title)) errors.push("Le titre est requis.");
+  if (!isNonEmptyString(data.content)) errors.push("Le contenu est requis.");
+  if (!isNonEmptyString(data.image)) errors.push("L'image est requise.");
+  if (!isNonEmptyString(data.categoryId)) errors.push("La catégorie est requise.");
+  if (!isNonEmptyString(data.eventStartAt)) errors.push("La date de début est requise.");
+  if (!isNonEmptyString(data.eventEndAt)) errors.push("La date de fin est requise.");
+  if (typeof data.allDay !== "boolean") errors.push("Le champ allDay doit être un booléen.");
+  if (!isNonEmptyString(data.venueName)) errors.push("Le lieu est requis.");
+  if (!isNonEmptyString(data.address)) errors.push("L'adresse est requise.");
+  if (!isNonEmptyString(data.postalCode)) errors.push("Le code postal est requis.");
+  if (!isNonEmptyString(data.city)) errors.push("La ville est requise.");
+  if (!isNonEmptyString(data.organizerName)) errors.push("L'organisateur est requis.");
 
-  if (!isOptionalString(data.address)) errors.push("address must be string");
-  if (!isOptionalString(data.organizerUrl)) errors.push("organizerUrl must be string");
-  if (!isOptionalString(data.contactEmail)) errors.push("contactEmail must be string");
-  if (!isOptionalString(data.contactPhone)) errors.push("contactPhone must be string");
-  if (!isOptionalString(data.ticketUrl)) errors.push("ticketUrl must be string");
-  if (!isOptionalString(data.websiteUrl)) errors.push("websiteUrl must be string");
+  if (!isOptionalString(data.address)) errors.push("L'adresse doit être une chaîne.");
+  if (!isOptionalString(data.organizerUrl)) errors.push("Le site de l'organisateur doit être une chaîne.");
+  if (!isOptionalString(data.contactEmail)) errors.push("L'email de contact doit être une chaîne.");
+  if (!isOptionalString(data.contactPhone)) errors.push("Le téléphone de contact doit être une chaîne.");
+  if (!isOptionalString(data.ticketUrl)) errors.push("Le lien de billetterie doit être une chaîne.");
+  if (!isOptionalString(data.websiteUrl)) errors.push("Le site web doit être une chaîne.");
 
-  const latitude = asNumber(data.latitude);
-  const longitude = asNumber(data.longitude);
+  const latitude = data.latitude === undefined ? undefined : asNumber(data.latitude);
+  const longitude = data.longitude === undefined ? undefined : asNumber(data.longitude);
 
-  if (!Number.isFinite(latitude)) errors.push("latitude must be number");
-  if (!Number.isFinite(longitude)) errors.push("longitude must be number");
+  if (data.latitude !== undefined && !Number.isFinite(latitude)) errors.push("La latitude doit être un nombre.");
+  if (data.longitude !== undefined && !Number.isFinite(longitude)) errors.push("La longitude doit être un nombre.");
 
-  if (Number.isFinite(latitude) && (latitude < -90 || latitude > 90)) {
-    errors.push("latitude must be between -90 and 90");
+  if (typeof latitude === "number" && Number.isFinite(latitude) && (latitude < -90 || latitude > 90)) {
+    errors.push("La latitude doit être comprise entre -90 et 90.");
   }
 
-  if (Number.isFinite(longitude) && (longitude < -180 || longitude > 180)) {
-    errors.push("longitude must be between -180 and 180");
+  if (typeof longitude === "number" && Number.isFinite(longitude) && (longitude < -180 || longitude > 180)) {
+    errors.push("La longitude doit être comprise entre -180 et 180.");
   }
 
   const eventStartAt = typeof data.eventStartAt === "string" ? data.eventStartAt : null;
   const eventEndAt = typeof data.eventEndAt === "string" ? data.eventEndAt : null;
 
   if (eventStartAt && eventStartAt.trim().length > 0 && !isValidDate(eventStartAt)) {
-    errors.push("eventStartAt must be a valid date");
+    errors.push("La date de début est invalide.");
   }
 
   if (eventEndAt && eventEndAt.trim().length > 0 && !isValidDate(eventEndAt)) {
-    errors.push("eventEndAt must be a valid date");
+    errors.push("La date de fin est invalide.");
   }
 
   if (
@@ -77,8 +79,13 @@ export const validateCreateEvent = (input: unknown): ValidationResult => {
     const start = new Date(eventStartAt).getTime();
     const end = new Date(eventEndAt).getTime();
     if (end < start) {
-      errors.push("eventEndAt must be after eventStartAt");
+      errors.push("La date de fin doit être après la date de début.");
     }
+  }
+
+  const sanitizedContent = typeof data.content === "string" ? sanitizeEventContent(data.content) : "";
+  if (typeof data.content === "string" && sanitizedContent.trim().length === 0) {
+    errors.push("Le contenu est requis.");
   }
 
   if (errors.length > 0) {
@@ -89,14 +96,14 @@ export const validateCreateEvent = (input: unknown): ValidationResult => {
     ok: true,
     value: {
       title: data.title as string,
-      content: data.content as string,
+      content: sanitizedContent,
       image: data.image as string,
       categoryId: data.categoryId as string,
       eventStartAt: data.eventStartAt as string,
       eventEndAt: data.eventEndAt as string,
       allDay: data.allDay as boolean,
       venueName: data.venueName as string,
-      address: data.address as string | undefined,
+      address: data.address as string,
       postalCode: data.postalCode as string,
       city: data.city as string,
       latitude,

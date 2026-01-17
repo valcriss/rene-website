@@ -38,6 +38,15 @@ describe("categories store", () => {
     expect(store.error).toBe("Impossible de charger les catégories");
   });
 
+  it("handles unknown error values", async () => {
+    vi.stubGlobal("fetch", vi.fn(() => Promise.reject("oops")));
+
+    const store = useCategoriesStore();
+    await store.loadCategories();
+
+    expect(store.error).toBe("Erreur inconnue");
+  });
+
   it("does not reload when already loaded", async () => {
     const fetchMock = vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) }));
     vi.stubGlobal("fetch", fetchMock);
@@ -47,5 +56,16 @@ describe("categories store", () => {
     await store.loadCategories();
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not load when already loading", async () => {
+    const fetchMock = vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const store = useCategoriesStore();
+    store.loading = true;
+    await store.loadCategories();
+
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

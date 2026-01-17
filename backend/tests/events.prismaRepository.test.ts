@@ -3,6 +3,7 @@ jest.mock("@prisma/client", () => {
   const findUnique = jest.fn();
   const create = jest.fn();
   const update = jest.fn();
+  const remove = jest.fn();
   const findCategory = jest.fn();
 
   return {
@@ -11,7 +12,8 @@ jest.mock("@prisma/client", () => {
         findMany,
         findUnique,
         create,
-        update
+        update,
+        delete: remove
       },
       category: {
         findUnique: findCategory
@@ -22,6 +24,7 @@ jest.mock("@prisma/client", () => {
       findUnique,
       create,
       update,
+      remove,
       findCategory
     }
   };
@@ -34,6 +37,7 @@ const prismaMocks = jest.requireMock("@prisma/client").__mocks as {
   findUnique: jest.Mock;
   create: jest.Mock;
   update: jest.Mock;
+  remove: jest.Mock;
   findCategory: jest.Mock;
 };
 
@@ -43,6 +47,7 @@ describe("createPrismaEventRepository", () => {
     prismaMocks.findUnique.mockReset();
     prismaMocks.create.mockReset();
     prismaMocks.update.mockReset();
+    prismaMocks.remove.mockReset();
     prismaMocks.findCategory.mockReset();
   });
 
@@ -165,6 +170,7 @@ describe("createPrismaEventRepository", () => {
       eventEndAt: "2026-03-01T12:00:00.000Z",
       allDay: true,
       venueName: "Bibliothèque",
+      address: "1 rue du centre",
       postalCode: "37000",
       city: "Tours",
       latitude: 47,
@@ -174,6 +180,30 @@ describe("createPrismaEventRepository", () => {
 
     expect(result.id).toBe("3");
     expect(prismaMocks.create).toHaveBeenCalled();
+  });
+
+  it("throws when category is missing", async () => {
+    const repo = createPrismaEventRepository();
+    prismaMocks.findCategory.mockResolvedValue(null);
+
+    await expect(
+      repo.create({
+        title: "Lecture",
+        content: "Livre",
+        image: "img",
+        categoryId: "book",
+        eventStartAt: "2026-03-01T10:00:00.000Z",
+        eventEndAt: "2026-03-01T12:00:00.000Z",
+        allDay: true,
+        venueName: "Bibliothèque",
+        address: "1 rue du centre",
+        postalCode: "37000",
+        city: "Tours",
+        latitude: 47,
+        longitude: 0.69,
+        organizerName: "Mairie"
+      })
+    ).rejects.toThrow("Category not found");
   });
 
   it("updates event", async () => {
@@ -218,6 +248,7 @@ describe("createPrismaEventRepository", () => {
       eventEndAt: "2026-02-01T12:00:00.000Z",
       allDay: false,
       venueName: "Galerie",
+      address: "1 rue du centre",
       postalCode: "37000",
       city: "Tours",
       latitude: 47,
@@ -242,6 +273,7 @@ describe("createPrismaEventRepository", () => {
       eventEndAt: "2026-02-01T12:00:00.000Z",
       allDay: false,
       venueName: "Galerie",
+      address: "1 rue du centre",
       postalCode: "37000",
       city: "Tours",
       latitude: 47,
@@ -250,6 +282,25 @@ describe("createPrismaEventRepository", () => {
     });
 
     expect(result).toBeNull();
+  });
+
+  it("deletes event", async () => {
+    const repo = createPrismaEventRepository();
+    prismaMocks.remove.mockResolvedValue({ id: "1" });
+
+    const result = await repo.delete("1");
+
+    expect(result).toBe(true);
+    expect(prismaMocks.remove).toHaveBeenCalled();
+  });
+
+  it("returns false when delete fails", async () => {
+    const repo = createPrismaEventRepository();
+    prismaMocks.remove.mockRejectedValue(new Error("not found"));
+
+    const result = await repo.delete("missing");
+
+    expect(result).toBe(false);
   });
 
   it("updates status", async () => {

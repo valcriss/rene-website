@@ -8,3 +8,7 @@
     </p>
   </div>
 </template>
+
+<script setup lang="ts">
+defineOptions({ name: "HomeTitle" });
+</script>

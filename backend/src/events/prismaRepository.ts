@@ -41,7 +41,7 @@ const toEvent = (data: PrismaEvent): Event => ({
   eventEndAt: data.eventEndAt.toISOString(),
   allDay: data.allDay,
   venueName: data.venueName,
-  address: data.address ?? undefined,
+  address: data.address ?? "",
   postalCode: data.postalCode,
   city: data.city,
   latitude: data.latitude,
@@ -89,7 +89,7 @@ export const createPrismaEventRepository = (): EventRepository => ({
           eventEndAt: new Date(input.eventEndAt),
           allDay: input.allDay,
           venueName: input.venueName,
-          address: input.address ?? null,
+          address: input.address,
           postalCode: input.postalCode,
           city: input.city,
           latitude: input.latitude,
@@ -122,7 +122,7 @@ export const createPrismaEventRepository = (): EventRepository => ({
           eventEndAt: new Date(input.eventEndAt),
           allDay: input.allDay,
           venueName: input.venueName,
-          address: input.address ?? null,
+          address: input.address,
           postalCode: input.postalCode,
           city: input.city,
           latitude: input.latitude,
@@ -139,6 +139,14 @@ export const createPrismaEventRepository = (): EventRepository => ({
       return toEvent(updated);
     } catch {
       return null;
+    }
+  },
+  delete: async (id: string) => {
+    try {
+      await prisma.event.delete({ where: { id } });
+      return true;
+    } catch {
+      return false;
     }
   },
   updateStatus: async (id, status, data) => {

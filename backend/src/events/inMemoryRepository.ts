@@ -38,6 +38,7 @@ export const createInMemoryEventRepository = (): EventRepository => {
       events.set(id, updated);
       return updated;
     },
+    delete: async (id) => events.delete(id),
     updateStatus: async (id, status, data) => {
       const existing = events.get(id);
       if (!existing) {

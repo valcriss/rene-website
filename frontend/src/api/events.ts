@@ -38,17 +38,30 @@ export type CreateEventPayload = {
   eventEndAt: string;
   allDay: boolean;
   venueName: string;
-  address?: string;
+  address: string;
   postalCode: string;
   city: string;
-  latitude: number;
-  longitude: number;
   organizerName: string;
   organizerUrl?: string;
   contactEmail?: string;
   contactPhone?: string;
   ticketUrl?: string;
   websiteUrl?: string;
+};
+
+const parseApiError = async (response: Response, fallback: string) => {
+  try {
+    const data = (await response.json()) as { errors?: string[]; message?: string };
+    if (data.errors && data.errors.length > 0) {
+      return data.errors.join(" · ");
+    }
+    if (data.message) {
+      return data.message;
+    }
+  } catch {
+    // ignore parsing errors
+  }
+  return fallback;
 };
 
 export const fetchEvents = async (): Promise<EventItem[]> => {
@@ -69,7 +82,7 @@ export const createEvent = async (payload: CreateEventPayload, role: string): Pr
     body: JSON.stringify(payload)
   });
   if (!response.ok) {
-    throw new Error("Impossible de créer l'événement");
+    throw new Error(await parseApiError(response, "Impossible de créer l'événement"));
   }
   return response.json() as Promise<EventItem>;
 };
@@ -88,7 +101,7 @@ export const updateEvent = async (
     body: JSON.stringify(payload)
   });
   if (!response.ok) {
-    throw new Error("Impossible de mettre à jour l'événement");
+    throw new Error(await parseApiError(response, "Impossible de mettre à jour l'événement"));
   }
   return response.json() as Promise<EventItem>;
 };
@@ -105,4 +118,18 @@ export const submitEvent = async (id: string, role: string): Promise<EventItem> 
     throw new Error("Impossible de soumettre l'événement");
   }
   return response.json() as Promise<EventItem>;
+};
+
+export const deleteEvent = async (id: string, role: string): Promise<{ id: string }> => {
+  const response = await fetch(`/api/events/${id}`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      "x-user-role": role
+    }
+  });
+  if (!response.ok) {
+    throw new Error(await parseApiError(response, "Impossible de supprimer l'événement"));
+  }
+  return response.json() as Promise<{ id: string }>;
 };

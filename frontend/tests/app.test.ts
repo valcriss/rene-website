@@ -6,6 +6,9 @@ import App from "../src/App.vue";
 import { useCategoriesStore } from "../src/stores/categories";
 import { createTestRouter } from "./testRouter";
 
+type FetchInput = string | { url: string };
+type FetchInit = { method?: string };
+
 vi.mock("../src/components/EventMap.vue", () => ({
   default: {
     name: "EventMap",
@@ -36,8 +39,15 @@ describe("App", () => {
     const router = await renderWithRouter("/login");
     await fireEvent.update(screen.getByLabelText("Rôle"), role);
     await fireEvent.click(screen.getByRole("button", { name: "Se connecter" }));
-    await waitFor(() => expect(router.currentRoute.value.path).toBe("/backoffice"));
+    await waitFor(() => expect(router.currentRoute.value.path).toBe("/backoffice/events"));
     return router;
+  };
+
+  const setDateRange = async (start: string, end: string) => {
+    const startInput = screen.getByLabelText("Du") as HTMLInputElement;
+    const endInput = screen.getByLabelText("Au") as HTMLInputElement;
+    await fireEvent.update(startInput, start);
+    await fireEvent.update(endInput, end);
   };
   beforeEach(() => {
     window.localStorage.clear();
@@ -109,6 +119,8 @@ describe("App", () => {
     );
     await renderWithRouter();
 
+    await setDateRange("2026-01-01", "2026-12-31");
+
     expect((await screen.findAllByText("Concert")).length).toBeGreaterThan(0);
   });
 
@@ -138,6 +150,8 @@ describe("App", () => {
       )
     );
     await renderWithRouter();
+
+    await setDateRange("2026-01-01", "2026-12-31");
 
     const image = await screen.findByRole("img", { name: "Concert" });
     expect(image.getAttribute("src")).toContain("event-placeholder");
@@ -169,6 +183,8 @@ describe("App", () => {
       )
     );
     await renderWithRouter();
+
+    await setDateRange("2026-01-01", "2026-12-31");
 
     const image = await screen.findByRole("img", { name: "Concert" });
     await fireEvent.error(image);
@@ -202,6 +218,8 @@ describe("App", () => {
       )
     );
     const router = await renderWithRouter();
+
+    await setDateRange("2026-01-01", "2026-12-31");
 
     const eventCard = await screen.findByTestId("event-card-1");
     await fireEvent.click(eventCard);
@@ -244,6 +262,8 @@ describe("App", () => {
       )
     );
     const router = await renderWithRouter();
+
+    await setDateRange("2026-01-01", "2026-12-31");
 
     await fireEvent.click(await screen.findByTestId("event-card-1"));
     await waitFor(() => expect(router.currentRoute.value.path).toBe("/event/1"));
@@ -295,6 +315,8 @@ describe("App", () => {
       )
     );
     const router = await renderWithRouter();
+
+    await setDateRange("2026-01-01", "2026-12-31");
 
     await fireEvent.click(await screen.findByTestId("event-card-1"));
     await waitFor(() => expect(router.currentRoute.value.path).toBe("/event/1"));
@@ -505,6 +527,11 @@ describe("App", () => {
     );
     await renderWithRouter();
 
+    const startInput = screen.getByLabelText("Du") as HTMLInputElement;
+    const endInput = screen.getByLabelText("Au") as HTMLInputElement;
+    await fireEvent.update(startInput, "");
+    await fireEvent.update(endInput, "");
+
     await screen.findAllByText("Concert");
     const searchInput = screen.getByTestId("home-search");
     await fireEvent.update(searchInput, "Inexistant");
@@ -538,6 +565,11 @@ describe("App", () => {
       )
     );
     await renderWithRouter();
+
+    const startInput = screen.getByLabelText("Du") as HTMLInputElement;
+    const endInput = screen.getByLabelText("Au") as HTMLInputElement;
+    await fireEvent.update(startInput, "");
+    await fireEvent.update(endInput, "");
 
     await screen.findAllByText("Concert");
     const searchInput = screen.getByTestId("home-search") as HTMLInputElement;
@@ -586,6 +618,11 @@ describe("App", () => {
       )
     );
     await renderWithRouter();
+
+    const startInput = screen.getByLabelText("Du") as HTMLInputElement;
+    const endInput = screen.getByLabelText("Au") as HTMLInputElement;
+    await fireEvent.update(startInput, "");
+    await fireEvent.update(endInput, "");
 
     await fireEvent.click(await screen.findByTestId("filter-city-Descartes"));
     await fireEvent.click(await screen.findByTestId("filter-type-music"));
@@ -637,7 +674,9 @@ describe("App", () => {
       });
 
     vi.stubGlobal("fetch", fetchMock);
-    await loginAsRole("MODERATOR");
+    const router = await loginAsRole("MODERATOR");
+    await router.push("/backoffice/moderation");
+    await router.isReady();
     expect((await screen.findAllByText("Concert")).length).toBeGreaterThan(0);
     await fireEvent.click(screen.getByRole("button", { name: "Publier" }));
 
@@ -670,7 +709,9 @@ describe("App", () => {
       });
 
     vi.stubGlobal("fetch", fetchMock);
-    await loginAsRole("MODERATOR");
+    const router = await loginAsRole("MODERATOR");
+    await router.push("/backoffice/moderation");
+    await router.isReady();
     expect((await screen.findAllByText("Concert")).length).toBeGreaterThan(0);
     await fireEvent.click(screen.getByRole("button", { name: "Publier" }));
 
@@ -703,7 +744,9 @@ describe("App", () => {
       });
 
     vi.stubGlobal("fetch", fetchMock);
-    await loginAsRole("MODERATOR");
+    const router = await loginAsRole("MODERATOR");
+    await router.push("/backoffice/moderation");
+    await router.isReady();
     expect((await screen.findAllByText("Concert")).length).toBeGreaterThan(0);
 
     await fireEvent.update(screen.getByPlaceholderText("Motif de refus"), "Motif");
@@ -737,7 +780,9 @@ describe("App", () => {
         })
       )
     );
-    await loginAsRole("MODERATOR");
+    const router = await loginAsRole("MODERATOR");
+    await router.push("/backoffice/moderation");
+    await router.isReady();
 
     expect(await screen.findByText("Aucun événement en attente de modération.")).toBeInTheDocument();
   });
@@ -765,7 +810,9 @@ describe("App", () => {
       .mockRejectedValueOnce("nope");
 
     vi.stubGlobal("fetch", fetchMock);
-    await loginAsRole("MODERATOR");
+    const router = await loginAsRole("MODERATOR");
+    await router.push("/backoffice/moderation");
+    await router.isReady();
     expect((await screen.findAllByText("Concert")).length).toBeGreaterThan(0);
 
     await fireEvent.click(screen.getByRole("button", { name: "Publier" }));
@@ -823,7 +870,9 @@ describe("App", () => {
       });
 
     vi.stubGlobal("fetch", fetchMock);
-    await loginAsRole("MODERATOR");
+    const router = await loginAsRole("MODERATOR");
+    await router.push("/backoffice/moderation");
+    await router.isReady();
     expect((await screen.findAllByText("Concert")).length).toBeGreaterThan(0);
     expect(await screen.findByText("Expo")).toBeInTheDocument();
 
@@ -870,7 +919,9 @@ describe("App", () => {
       });
 
     vi.stubGlobal("fetch", fetchMock);
-    await loginAsRole("MODERATOR");
+    const router = await loginAsRole("MODERATOR");
+    await router.push("/backoffice/moderation");
+    await router.isReady();
     expect((await screen.findAllByText("Concert")).length).toBeGreaterThan(0);
 
     const reasonInput = screen.getByPlaceholderText("Motif de refus") as HTMLInputElement;
@@ -901,51 +952,77 @@ describe("App", () => {
   });
 
   it("allows editor to create a draft", async () => {
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve([]) })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            id: "draft-1",
-            title: "Atelier",
-            content: "Desc",
-            image: "https://example.com",
-            categoryId: "atelier",
-            eventStartAt: "2026-01-15T20:00:00.000Z",
-            eventEndAt: "2026-01-15T22:00:00.000Z",
-            allDay: false,
-            venueName: "Salle",
-            postalCode: "37100",
-            city: "Descartes",
-            latitude: 46.97,
-            longitude: 0.7,
-            organizerName: "Asso",
-            status: "DRAFT"
-          })
-      });
+    const fetchMock = vi.fn((input: FetchInput, init?: FetchInit) => {
+      const url = typeof input === "string" ? input : input.url;
+      if (url === "/api/events" && init?.method === "POST") {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              id: "draft-1",
+              title: "Atelier",
+              content: "Desc",
+              image: "/uploads/test.png",
+              categoryId: "atelier",
+              eventStartAt: "2026-01-15T20:00:00.000Z",
+              eventEndAt: "2026-01-15T22:00:00.000Z",
+              allDay: false,
+              venueName: "Salle",
+              postalCode: "37100",
+              city: "Descartes",
+              latitude: 46.97,
+              longitude: 0.7,
+              organizerName: "Asso",
+              status: "DRAFT"
+            })
+        });
+      }
+      if (url === "/api/events") {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+      }
+      if (url === "/api/categories") {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([{ id: "atelier", name: "Atelier" }]) });
+      }
+      if (url.startsWith("/api/uploads")) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ url: "/uploads/test.png" }) });
+      }
+      if (url.startsWith("/api/geocoding")) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ latitude: 46.97, longitude: 0.7 }) });
+      }
+      return Promise.resolve({ ok: false, json: () => Promise.resolve([]) });
+    });
 
     vi.stubGlobal("fetch", fetchMock);
-    await loginAsRole("EDITOR");
+    const router = await loginAsRole("EDITOR");
+    await router.push("/backoffice/events/new");
+    await router.isReady();
 
-    const editorForm = within(screen.getByTestId("editor-form"));
+    const editorForm = within(await screen.findByTestId("editor-form"));
     await fireEvent.update(editorForm.getByLabelText("Titre"), "Atelier");
     await fireEvent.update(editorForm.getByLabelText("Catégorie"), "atelier");
-    await fireEvent.update(editorForm.getByLabelText("Image (URL)"), "https://example.com");
+    const imageInput = editorForm.getByLabelText("Image") as HTMLInputElement;
+    const imageFile = new File(["image"], "photo.png", { type: "image/png" });
+    await fireEvent.change(imageInput, { target: { files: [imageFile] } });
     await fireEvent.update(editorForm.getByLabelText("Organisateur"), "Asso");
     await fireEvent.update(editorForm.getByLabelText("Début"), "2026-01-15T20:00");
     await fireEvent.update(editorForm.getByLabelText("Fin"), "2026-01-15T22:00");
     await fireEvent.update(editorForm.getByLabelText("Lieu"), "Salle");
     await fireEvent.update(editorForm.getByLabelText("Code postal"), "37100");
     await fireEvent.update(editorForm.getByLabelText("Ville"), "Descartes");
-    await fireEvent.update(editorForm.getByLabelText("Latitude"), "46.97");
-    await fireEvent.update(editorForm.getByLabelText("Longitude"), "0.7");
-    await fireEvent.update(editorForm.getByLabelText("Description"), "Desc");
+    const richEditor = editorForm.getByLabelText("Description") as HTMLElement;
+    richEditor.innerHTML = "<p>Desc</p>";
+    await fireEvent.input(richEditor);
 
     await fireEvent.click(screen.getByRole("button", { name: "Enregistrer le brouillon" }));
 
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith("/api/events", expect.objectContaining({ method: "POST" }))
+    );
+
+    await router.push("/backoffice/events");
+    await router.isReady();
     expect(await screen.findByText("Atelier")).toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalled();
   });
 
   it("submits a draft to moderation", async () => {
@@ -1027,24 +1104,59 @@ describe("App", () => {
             }
           ])
       })
-      .mockResolvedValueOnce({ ok: false, json: () => Promise.resolve({}) });
+        .mockResolvedValueOnce({ ok: false, json: () => Promise.resolve({}) })
+        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve([{ id: "atelier", name: "Atelier" }]) });
 
     vi.stubGlobal("fetch", fetchMock);
-    await loginAsRole("EDITOR");
+      const router = await loginAsRole("EDITOR");
 
     await fireEvent.click(await screen.findByRole("button", { name: "Soumettre" }));
-    expect(await screen.findByText("Impossible de soumettre l'événement")).toBeInTheDocument();
+      await router.push("/backoffice/events/new");
+      await router.isReady();
+      expect(await screen.findByText("Impossible de soumettre l'événement")).toBeInTheDocument();
   });
 
   it("enters edit mode and resets draft form", async () => {
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve([
-            {
+    const fetchMock = vi.fn((input: FetchInput, init?: FetchInit) => {
+      const url = typeof input === "string" ? input : input.url;
+      if (url === "/api/events") {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve([
+              {
+                id: "draft-1",
+                title: "Atelier",
+                content: "Desc",
+                image: "https://example.com",
+                categoryId: "atelier",
+                eventStartAt: "2026-01-15T20:00:00.000Z",
+                eventEndAt: "2026-01-15T22:00:00.000Z",
+                allDay: false,
+                venueName: "Salle",
+                postalCode: "37100",
+                city: "Descartes",
+                latitude: 46.97,
+                longitude: 0.7,
+                organizerName: "Asso",
+                status: "DRAFT"
+              }
+            ])
+        });
+      }
+      if (url === "/api/categories") {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([{ id: "atelier", name: "Atelier" }]) });
+      }
+      if (url.startsWith("/api/geocoding")) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ latitude: 46.97, longitude: 0.7 }) });
+      }
+      if (url.startsWith("/api/events/") && init?.method === "PUT") {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
               id: "draft-1",
-              title: "Atelier",
+              title: "Atelier mis à jour",
               content: "Desc",
               image: "https://example.com",
               categoryId: "atelier",
@@ -1058,42 +1170,23 @@ describe("App", () => {
               longitude: 0.7,
               organizerName: "Asso",
               status: "DRAFT"
-            }
-          ])
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            id: "draft-1",
-            title: "Atelier mis à jour",
-            content: "Desc",
-            image: "https://example.com",
-            categoryId: "atelier",
-            eventStartAt: "2026-01-15T20:00:00.000Z",
-            eventEndAt: "2026-01-15T22:00:00.000Z",
-            allDay: false,
-            venueName: "Salle",
-            postalCode: "37100",
-            city: "Descartes",
-            latitude: 46.97,
-            longitude: 0.7,
-            organizerName: "Asso",
-            status: "DRAFT"
-          })
-      });
+            })
+        });
+      }
+      return Promise.resolve({ ok: false, json: () => Promise.resolve([]) });
+    });
 
     vi.stubGlobal("fetch", fetchMock);
     await loginAsRole("EDITOR");
 
+    expect(await screen.findByText("Atelier")).toBeInTheDocument();
     await fireEvent.click(await screen.findByRole("button", { name: "Modifier" }));
     expect(await screen.findByRole("button", { name: "Mettre à jour" })).toBeInTheDocument();
 
     await fireEvent.click(screen.getByRole("button", { name: "Mettre à jour" }));
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalled();
+    expect(await screen.findByText("Atelier mis à jour")).toBeInTheDocument();
 
-    await fireEvent.click(screen.getByRole("button", { name: "Nouveau brouillon" }));
-    expect(await screen.findByRole("button", { name: "Enregistrer le brouillon" })).toBeInTheDocument();
   });
 
   it("shows rejection reason in editor list", async () => {
@@ -1134,33 +1227,56 @@ describe("App", () => {
   });
 
   it("shows editor error on failure", async () => {
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve([]) })
-      .mockResolvedValueOnce({ ok: false, json: () => Promise.resolve({}) });
+    const fetchMock = vi.fn((input: FetchInput, init?: FetchInit) => {
+      const url = typeof input === "string" ? input : input.url;
+      if (url === "/api/events" && init?.method === "POST") {
+        return Promise.resolve({ ok: false, json: () => Promise.resolve({}) });
+      }
+      if (url === "/api/events") {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+      }
+      if (url === "/api/categories") {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([{ id: "atelier", name: "Atelier" }]) });
+      }
+      if (url.startsWith("/api/uploads")) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ url: "/uploads/test.png" }) });
+      }
+      if (url.startsWith("/api/geocoding")) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ latitude: 46.97, longitude: 0.7 }) });
+      }
+      return Promise.resolve({ ok: false, json: () => Promise.resolve([]) });
+    });
 
     vi.stubGlobal("fetch", fetchMock);
-    await loginAsRole("EDITOR");
+    const router = await loginAsRole("EDITOR");
+    await router.push("/backoffice/events/new");
+    await router.isReady();
 
-    const editorForm = within(screen.getByTestId("editor-form"));
+    const editorForm = within(await screen.findByTestId("editor-form"));
     await fireEvent.update(editorForm.getByLabelText("Titre"), "Atelier");
     await fireEvent.update(editorForm.getByLabelText("Catégorie"), "atelier");
-    await fireEvent.update(editorForm.getByLabelText("Image (URL)"), "https://example.com");
+    const imageInput = editorForm.getByLabelText("Image") as HTMLInputElement;
+    const imageFile = new File(["image"], "photo.png", { type: "image/png" });
+    await fireEvent.change(imageInput, { target: { files: [imageFile] } });
     await fireEvent.update(editorForm.getByLabelText("Organisateur"), "Asso");
     await fireEvent.update(editorForm.getByLabelText("Début"), "2026-01-15T20:00");
     await fireEvent.update(editorForm.getByLabelText("Fin"), "2026-01-15T22:00");
     await fireEvent.update(editorForm.getByLabelText("Lieu"), "Salle");
     await fireEvent.update(editorForm.getByLabelText("Code postal"), "37100");
     await fireEvent.update(editorForm.getByLabelText("Ville"), "Descartes");
-    await fireEvent.update(editorForm.getByLabelText("Latitude"), "46.97");
-    await fireEvent.update(editorForm.getByLabelText("Longitude"), "0.7");
-    await fireEvent.update(editorForm.getByLabelText("Description"), "Desc");
+    const richEditor = editorForm.getByLabelText("Description") as HTMLElement;
+    richEditor.innerHTML = "<p>Desc</p>";
+    await fireEvent.input(richEditor);
 
     await fireEvent.click(screen.getByRole("button", { name: "Enregistrer le brouillon" }));
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith("/api/events", expect.objectContaining({ method: "POST" }))
+    );
     expect(await screen.findByText("Impossible de créer l'événement")).toBeInTheDocument();
   });
 
   it("loads admin data and saves settings", async () => {
-    const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
+    const fetchMock = vi.fn((input: FetchInput, init?: FetchInit) => {
       const url = typeof input === "string" ? input : input.url;
       if (url === "/api/events") {
         return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
@@ -1200,9 +1316,11 @@ describe("App", () => {
     });
 
     vi.stubGlobal("fetch", fetchMock);
-    await loginAsRole("ADMIN");
+    const router = await loginAsRole("ADMIN");
+    await router.push("/backoffice/admin/settings");
+    await router.isReady();
 
-    expect(await screen.findByText("Admin")).toBeInTheDocument();
+    expect(await screen.findByText("Réglages du site")).toBeInTheDocument();
     const settingsForm = within(await screen.findByTestId("admin-settings-form"));
     await fireEvent.update(settingsForm.getByLabelText("Intro page d'accueil"), "Intro");
     await fireEvent.click(settingsForm.getByRole("button", { name: "Enregistrer les réglages" }));
@@ -1211,7 +1329,7 @@ describe("App", () => {
   });
 
   it("creates and deletes an admin user", async () => {
-    const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
+    const fetchMock = vi.fn((input: FetchInput, init?: FetchInit) => {
       const url = typeof input === "string" ? input : input.url;
       if (url === "/api/events") {
         return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
@@ -1241,7 +1359,9 @@ describe("App", () => {
     });
 
     vi.stubGlobal("fetch", fetchMock);
-    await loginAsRole("ADMIN");
+    const router = await loginAsRole("ADMIN");
+    await router.push("/backoffice/admin/users");
+    await router.isReady();
 
     const userForm = within(await screen.findByTestId("admin-user-form"));
     await fireEvent.update(userForm.getByLabelText("Nom"), "Marie");
@@ -1260,7 +1380,7 @@ describe("App", () => {
   });
 
   it("creates and updates an admin category", async () => {
-    const fetchMock = vi.fn((input: RequestInfo, init?: RequestInit) => {
+    const fetchMock = vi.fn((input: FetchInput, init?: FetchInit) => {
       const url = typeof input === "string" ? input : input.url;
       if (url === "/api/events") {
         return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
@@ -1287,7 +1407,9 @@ describe("App", () => {
     });
 
     vi.stubGlobal("fetch", fetchMock);
-    await loginAsRole("ADMIN");
+    const router = await loginAsRole("ADMIN");
+    await router.push("/backoffice/admin/categories");
+    await router.isReady();
 
     const categoryForm = within(await screen.findByTestId("admin-category-form"));
     await fireEvent.update(categoryForm.getByLabelText("Nom"), "Lecture");
@@ -1300,7 +1422,7 @@ describe("App", () => {
   });
 
   it("shows admin error on load failure", async () => {
-    const fetchMock = vi.fn((input: RequestInfo) => {
+    const fetchMock = vi.fn((input: FetchInput) => {
       const url = typeof input === "string" ? input : input.url;
       if (url === "/api/events") {
         return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
@@ -1309,7 +1431,9 @@ describe("App", () => {
     });
 
     vi.stubGlobal("fetch", fetchMock);
-    await loginAsRole("ADMIN");
+    const router = await loginAsRole("ADMIN");
+    await router.push("/backoffice/admin/users");
+    await router.isReady();
 
     expect(await screen.findByText("Impossible de charger les utilisateurs")).toBeInTheDocument();
   });

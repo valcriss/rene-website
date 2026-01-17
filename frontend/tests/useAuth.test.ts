@@ -1,5 +1,6 @@
 import { createPinia, setActivePinia } from "pinia";
 import { useAuthStore } from "../src/stores/auth";
+import { useAuth } from "../src/auth/useAuth";
 
 const setupStorage = () => {
   window.localStorage.clear();
@@ -45,5 +46,11 @@ describe("useAuth", () => {
     auth.resetCredentials();
     expect(auth.email).toBe("");
     expect(auth.password).toBe("");
+  });
+
+  it("useAuth returns the auth store", () => {
+    const auth = useAuth();
+    auth.login("ADMIN");
+    expect(useAuthStore().role).toBe("ADMIN");
   });
 });

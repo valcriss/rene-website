@@ -9,6 +9,7 @@ const payload = {
   eventEndAt: "2026-01-15T22:00:00.000Z",
   allDay: false,
   venueName: "Salle",
+  address: "1 rue du centre",
   postalCode: "37160",
   city: "Descartes",
   latitude: 46.97,
@@ -35,6 +36,7 @@ describe("inMemoryEventRepository", () => {
   it("returns null for missing ids", async () => {
     const repo = createInMemoryEventRepository();
     const updated = await repo.update("missing", payload);
+    const deleted = await repo.delete("missing");
     const statusUpdated = await repo.updateStatus("missing", "REJECTED", {
       publishedAt: null,
       rejectionReason: "Motif",
@@ -42,6 +44,17 @@ describe("inMemoryEventRepository", () => {
     });
 
     expect(updated).toBeNull();
+    expect(deleted).toBe(false);
     expect(statusUpdated).toBeNull();
+  });
+
+  it("deletes existing event", async () => {
+    const repo = createInMemoryEventRepository();
+    const created = await repo.create(payload);
+
+    const deleted = await repo.delete(created.id);
+
+    expect(deleted).toBe(true);
+    expect(await repo.getById(created.id)).toBeNull();
   });
 });

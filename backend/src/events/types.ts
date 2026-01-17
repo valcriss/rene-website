@@ -1,6 +1,6 @@
 export type EventStatus = "DRAFT" | "PENDING" | "PUBLISHED" | "REJECTED";
 
-export type CreateEventInput = {
+export type EventDraftInput = {
   title: string;
   content: string;
   image: string;
@@ -9,17 +9,22 @@ export type CreateEventInput = {
   eventEndAt: string;
   allDay: boolean;
   venueName: string;
-  address?: string;
+  address: string;
   postalCode: string;
   city: string;
-  latitude: number;
-  longitude: number;
+  latitude?: number;
+  longitude?: number;
   organizerName: string;
   organizerUrl?: string;
   contactEmail?: string;
   contactPhone?: string;
   ticketUrl?: string;
   websiteUrl?: string;
+};
+
+export type CreateEventInput = EventDraftInput & {
+  latitude: number;
+  longitude: number;
 };
 
 export type UpdateEventInput = CreateEventInput;

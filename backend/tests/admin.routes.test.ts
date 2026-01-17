@@ -1,5 +1,8 @@
+import express from "express";
 import request from "supertest";
 import { createApp } from "../src/app";
+import { createAdminRouter } from "../src/admin/routes";
+import { AdminRepository } from "../src/admin/repository";
 
 describe("admin routes", () => {
   it("denies access without role", async () => {
@@ -165,6 +168,24 @@ describe("admin routes", () => {
       .send({});
 
     expect(response.status).toBe(400);
+  });
+
+  it("returns 409 when category is in use", async () => {
+    const repo = {
+      deleteCategory: jest.fn(async () => {
+        throw new Error("Category in use");
+      })
+    } as unknown as AdminRepository;
+    const app = express();
+    app.use(express.json());
+    app.use("/api/admin", createAdminRouter(repo));
+
+    const response = await request(app)
+      .delete("/api/admin/categories/active")
+      .set("x-user-role", "ADMIN");
+
+    expect(response.status).toBe(409);
+    expect(response.body).toEqual({ errors: ["Category in use"] });
   });
 
   it("gets and updates settings", async () => {

@@ -13,6 +13,7 @@ export type EventFilters = {
   dateRange: DateRange;
 };
 
+const stripHtml = (value: string) => value.replace(/<[^>]*>/g, "");
 const normalize = (value: string) => value.trim().toLowerCase();
 
 const parseDateInput = (value: string, endOfDay: boolean) => {
@@ -63,7 +64,7 @@ export const filterEvents = (events: EventItem[], filters: EventFilters): EventI
       !normalize(event.title).includes(search) &&
       !normalize(event.venueName).includes(search) &&
       !normalize(event.city).includes(search) &&
-      !normalize(event.content ?? "").includes(search)
+      !normalize(stripHtml(event.content ?? "")).includes(search)
     ) {
       return false;
     }

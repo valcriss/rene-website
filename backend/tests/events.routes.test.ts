@@ -13,22 +13,31 @@ const validPayload = {
   eventEndAt: "2026-01-15T22:00:00.000Z",
   allDay: false,
   venueName: "Salle des fêtes",
+  address: "1 rue du centre",
   postalCode: "37160",
   city: "Descartes",
-  latitude: 46.97,
-  longitude: 0.70,
   organizerName: "Association"
 };
 
 describe("events routes", () => {
   const originalEnv = process.env.NODE_ENV;
+  const fetchMock = jest.fn();
 
   beforeEach(() => {
     process.env.NODE_ENV = "test";
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        features: [{ geometry: { coordinates: [0.7, 46.97] } }]
+      })
+    });
+    global.fetch = fetchMock as unknown as typeof fetch;
   });
 
   afterEach(() => {
     process.env.NODE_ENV = originalEnv;
+    fetchMock.mockReset();
   });
 
   it("lists events", async () => {
@@ -50,6 +59,7 @@ describe("events routes", () => {
         throw new Error("boom");
       },
       update: async () => null,
+      delete: async () => false,
       updateStatus: async () => null
     };
     const app = express();
@@ -59,7 +69,7 @@ describe("events routes", () => {
     const response = await request(app).get("/api/events");
 
     expect(response.status).toBe(500);
-    expect(response.body).toEqual({ message: "Internal server error" });
+    expect(response.body).toEqual({ message: "Erreur interne du serveur." });
     expect(errorSpy).toHaveBeenCalled();
 
     errorSpy.mockRestore();
@@ -70,7 +80,7 @@ describe("events routes", () => {
     const response = await request(app).get("/api/events/unknown");
 
     expect(response.status).toBe(404);
-    expect(response.body).toEqual({ message: "Event not found" });
+    expect(response.body).toEqual({ message: "Événement introuvable." });
   });
 
   it("creates and fetches event", async () => {
@@ -162,6 +172,31 @@ describe("events routes", () => {
     expect(rejectResponse.body.status).toBe("REJECTED");
   });
 
+  it("deletes event", async () => {
+    const app = createApp();
+    const createResponse = await request(app)
+      .post("/api/events")
+      .set("x-user-role", "EDITOR")
+      .send(validPayload);
+
+    const deleteResponse = await request(app)
+      .delete(`/api/events/${createResponse.body.id}`)
+      .set("x-user-role", "EDITOR");
+
+    expect(deleteResponse.status).toBe(200);
+    expect(deleteResponse.body).toEqual({ id: createResponse.body.id });
+  });
+
+  it("returns 404 when delete missing", async () => {
+    const app = createApp();
+    const response = await request(app)
+      .delete("/api/events/missing")
+      .set("x-user-role", "EDITOR");
+
+    expect(response.status).toBe(404);
+    expect(response.body.errors).toContain("Événement introuvable.");
+  });
+
   it("returns 404 for submit/publish missing event", async () => {
     const app = createApp();
     const submitResponse = await request(app)
@@ -230,6 +265,6 @@ describe("events routes", () => {
       .send({});
 
     expect(response.status).toBe(400);
-    expect(response.body.errors).toContain("title is required");
+    expect(response.body.errors).toContain("Le titre est requis.");
   });
 });

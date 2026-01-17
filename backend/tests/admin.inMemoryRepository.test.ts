@@ -49,6 +49,12 @@ describe("admin in-memory repository", () => {
     expect(missingDelete).toBe(false);
   });
 
+  it("creates category with generated id when slug is empty", async () => {
+    const repo = createInMemoryAdminRepository();
+    const created = await repo.createCategory({ name: "!!!" });
+    expect(created.id).not.toBe("");
+  });
+
   it("manages settings", async () => {
     const repo = createInMemoryAdminRepository();
     const settings = await repo.getSettings();

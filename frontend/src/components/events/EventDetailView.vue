@@ -25,9 +25,8 @@
             {{ detailEvent.venueName }} · {{ detailEvent.city }}
           </p>
 
-          <p class="mt-6 whitespace-pre-line text-sm text-slate-600">
-            {{ formatOptional(detailEvent.content) }}
-          </p>
+          <!-- eslint-disable-next-line vue/no-v-html -->
+          <div class="mt-6 text-sm text-slate-600" v-html="sanitizedContent"></div>
 
           <div class="mt-6 grid gap-2 text-sm text-slate-600">
             <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Informations pratiques</p>
@@ -68,6 +67,7 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
+import DOMPurify from "dompurify";
 import { storeToRefs } from "pinia";
 import EventMap from "../EventMap.vue";
 import { useEventsStore } from "../../stores/events";
@@ -82,6 +82,17 @@ const eventsStore = useEventsStore();
 const { isLoading } = storeToRefs(eventsStore);
 
 const detailEvent = computed(() => eventsStore.getEventById(props.eventId));
+
+const sanitizedContent = computed(() => {
+  const raw = detailEvent.value?.content ?? "";
+  if (!raw) {
+    return `<p>${formatOptional(raw)}</p>`;
+  }
+  return DOMPurify.sanitize(raw, {
+    ALLOWED_TAGS: ["p", "br", "a", "strong", "em", "u"],
+    ALLOWED_ATTR: ["href", "target", "rel"]
+  });
+});
 
 const {
   getEventImage,

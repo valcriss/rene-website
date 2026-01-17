@@ -4,7 +4,10 @@ import { nextTick } from "vue";
 import { vi } from "vitest";
 import App from "../src/App.vue";
 import { CreateEventPayload } from "../src/api/events";
+import { useEditorStore } from "../src/stores/editor";
 import { createTestRouter } from "./testRouter";
+
+type FetchInput = string | { url: string };
 
 vi.mock("../src/components/EventMap.vue", () => ({
   default: {
@@ -38,8 +41,8 @@ describe("editor handlers", () => {
   const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0));
   type Exposed = {
     setRole: (value: "VISITOR" | "EDITOR" | "MODERATOR" | "ADMIN") => void;
-    handleSaveDraft: () => Promise<void>;
-    handleSubmitDraft: (id?: string) => Promise<void>;
+    handleSaveDraft: () => Promise<boolean>;
+    handleSubmitDraft: (id?: string) => Promise<boolean>;
     getEditorFormValues: () => CreateEventPayload;
     startEdit: (event: {
       id: string;
@@ -71,7 +74,25 @@ describe("editor handlers", () => {
     submitMock.mockReset();
     createMock.mockReset();
     updateMock.mockReset();
-    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) })));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: FetchInput) => {
+        const url = typeof input === "string" ? input : input.url;
+        if (url.startsWith("/api/uploads")) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ url: "/uploads/test.png" })
+          });
+        }
+        if (url.startsWith("/api/geocoding")) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ latitude: 46.97, longitude: 0.7 })
+          });
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+      })
+    );
   });
 
   afterEach(() => {
@@ -118,6 +139,8 @@ describe("editor handlers", () => {
     await nextTick();
 
     const vm = wrapper.vm as unknown as Exposed & { getEditorError: () => string | null };
+    const editorStore = useEditorStore();
+    editorStore.editorForm.image = "/uploads/test.png";
     vm.setRole("EDITOR");
     await vm.handleSaveDraft();
 
@@ -136,6 +159,17 @@ describe("editor handlers", () => {
     expect(vm.getEditorError()).toBe("Erreur inconnue");
   });
 
+  it("requires image before saving", async () => {
+    const { wrapper } = await mountWithRouter();
+    await nextTick();
+
+    const vm = wrapper.vm as unknown as Exposed & { getEditorError: () => string | null };
+    vm.setRole("EDITOR");
+    await vm.handleSaveDraft();
+
+    expect(vm.getEditorError()).toBe("L'image est requise.");
+  });
+
   it("clears invalid date values on edit", async () => {
     const { wrapper, router } = await mountWithRouter();
     await nextTick();
@@ -143,7 +177,7 @@ describe("editor handlers", () => {
     const vm = wrapper.vm as unknown as Exposed;
     vm.setRole("EDITOR");
     await nextTick();
-    await router.push("/backoffice");
+    await router.push("/backoffice/events/new");
     await flushPromises();
     await nextTick();
     vm.startEdit({
@@ -177,7 +211,7 @@ describe("editor handlers", () => {
     const vm = wrapper.vm as unknown as Exposed;
     vm.setRole("EDITOR");
     await nextTick();
-    await router.push("/backoffice");
+    await router.push("/backoffice/events/new");
     await flushPromises();
     await nextTick();
     vm.startEdit({
@@ -220,7 +254,7 @@ describe("editor handlers", () => {
     const vm = wrapper.vm as unknown as Exposed;
     vm.setRole("EDITOR");
     for (let i = 0; i < 4; i += 1) {
-      if (router.currentRoute.value.path === "/backoffice") {
+      if (router.currentRoute.value.path === "/backoffice/events") {
         break;
       }
       await flushPromises();

@@ -1,6 +1,6 @@
 import { computed, reactive, ref } from "vue";
 import { defineStore } from "pinia";
-import { EventItem, fetchEvents } from "../api/events";
+import { EventItem, deleteEvent, fetchEvents } from "../api/events";
 import { filterEvents, type EventFilters } from "../events/filterEvents";
 import placeholderEvent from "../assets/event-placeholder.svg";
 import { publishEvent, rejectEvent, type ModeratorRole } from "../api/moderation";
@@ -27,6 +27,7 @@ export const useEventsStore = defineStore("events", () => {
   const isLoading = ref(true);
   const error = ref<string | null>(null);
   const moderationError = ref<string | null>(null);
+  const deleteError = ref<string | null>(null);
   const imageErrorById = reactive<Record<string, boolean>>({});
   const rejectionReasons = reactive<Record<string, string>>({});
 
@@ -45,6 +46,9 @@ export const useEventsStore = defineStore("events", () => {
   const editableEvents = computed(() =>
     events.value.filter((event) => event.status === "DRAFT" || event.status === "REJECTED")
   );
+  const publishedBackofficeEvents = computed(() =>
+    events.value.filter((event) => event.status === "PUBLISHED")
+  );
   const availableCities = computed(() =>
     Array.from(new Set(publishedEvents.value.map((event) => event.city))).sort()
   );
@@ -59,6 +63,10 @@ export const useEventsStore = defineStore("events", () => {
     events.value = exists
       ? events.value.map((event) => (event.id === updated.id ? updated : event))
       : [updated, ...events.value];
+  };
+
+  const removeEventState = (id: string) => {
+    events.value = events.value.filter((event) => event.id !== id);
   };
 
   const fetchEventsData = async () => {
@@ -84,7 +92,8 @@ export const useEventsStore = defineStore("events", () => {
     return eventItem.image;
   };
 
-  const getEventExcerpt = (eventItem: EventItem) => eventItem.content ?? "";
+  const stripHtml = (value: string) => value.replace(/<[^>]*>/g, "");
+  const getEventExcerpt = (eventItem: EventItem) => stripHtml(eventItem.content ?? "");
 
   const toggleCity = (city: string) => {
     const next = new Set(filters.value.cities);
@@ -251,11 +260,24 @@ export const useEventsStore = defineStore("events", () => {
     }
   };
 
+  const handleDelete = async (id: string) => {
+    deleteError.value = null;
+    const authStore = useAuthStore();
+    if (!authStore.canEdit) return;
+    try {
+      const result = await deleteEvent(id, authStore.role);
+      removeEventState(result.id);
+    } catch (err) {
+      deleteError.value = err instanceof Error ? err.message : "Erreur inconnue";
+    }
+  };
+
   const setRejectionReason = (id: string, value: string) => {
     rejectionReasons[id] = value;
   };
 
   const getModerationError = () => moderationError.value;
+  const getDeleteError = () => deleteError.value;
 
   return {
     events,
@@ -265,10 +287,12 @@ export const useEventsStore = defineStore("events", () => {
     imageErrorById,
     rejectionReasons,
     filters,
+    deleteError,
     publishedEvents,
     pendingEvents,
     filteredEvents,
     editableEvents,
+    publishedBackofficeEvents,
     availableCities,
     availableTypes,
     getEventById,
@@ -291,7 +315,9 @@ export const useEventsStore = defineStore("events", () => {
     buildCalendarUrl,
     handlePublish,
     handleReject,
+    handleDelete,
     setRejectionReason,
-    getModerationError
+    getModerationError,
+    getDeleteError
   };
 });

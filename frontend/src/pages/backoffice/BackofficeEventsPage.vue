@@ -67,6 +67,45 @@
           </li>
         </ul>
       </div>
+
+      <div>
+        <h3 class="text-lg font-semibold text-slate-900">Événements publiés</h3>
+        <p class="mt-1 text-sm text-slate-500">
+          {{ publishedBackofficeEvents.length }} événements publiés
+        </p>
+        <p v-if="deleteError" class="mt-2 text-sm text-rose-600">
+          {{ deleteError }}
+        </p>
+        <div v-if="publishedBackofficeEvents.length === 0" class="mt-4 text-slate-500">
+          Aucun événement publié.
+        </div>
+        <ul v-else class="mt-4 grid gap-4">
+          <li
+            v-for="eventItem in publishedBackofficeEvents"
+            :key="eventItem.id"
+            class="rounded-2xl border border-slate-200 bg-white p-5"
+          >
+            <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p class="text-xs uppercase tracking-[0.2em] text-slate-400">{{ eventItem.status }}</p>
+                <h4 class="mt-2 text-lg font-semibold text-slate-900">{{ eventItem.title }}</h4>
+                <p class="mt-1 text-sm text-slate-600">
+                  {{ eventItem.venueName }} · {{ eventItem.city }}
+                </p>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  class="rounded-lg border border-rose-200 px-3 py-2 text-sm text-rose-600"
+                  @click="handleDelete(eventItem.id)"
+                >
+                  Supprimer
+                </button>
+              </div>
+            </div>
+          </li>
+        </ul>
+      </div>
     </div>
   </section>
 </template>
@@ -85,8 +124,9 @@ const editorStore = useEditorStore();
 const eventsStore = useEventsStore();
 
 const { canEdit } = storeToRefs(authStore);
-const { editableEvents } = storeToRefs(eventsStore);
+const { editableEvents, publishedBackofficeEvents, deleteError } = storeToRefs(eventsStore);
 const { handleSubmitDraft } = editorStore;
+const { handleDelete } = eventsStore;
 
 const goToCreate = () => {
   router.push("/backoffice/events/new");

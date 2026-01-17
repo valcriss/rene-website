@@ -13,6 +13,7 @@ const inMemoryMock = jest.fn(() => ({
     eventEndAt: "",
     allDay: false,
     venueName: "",
+    address: "",
     postalCode: "",
     city: "",
     latitude: 0,
@@ -24,7 +25,8 @@ const inMemoryMock = jest.fn(() => ({
     rejectionReason: null,
     createdAt: "",
     updatedAt: ""
-  }))
+  })),
+  delete: jest.fn(async () => true)
 }));
 const prismaMock = jest.fn(() => ({
   list: jest.fn(async () => []),
@@ -39,6 +41,7 @@ const prismaMock = jest.fn(() => ({
     eventEndAt: "",
     allDay: false,
     venueName: "",
+    address: "",
     postalCode: "",
     city: "",
     latitude: 0,
@@ -50,7 +53,8 @@ const prismaMock = jest.fn(() => ({
     rejectionReason: null,
     createdAt: "",
     updatedAt: ""
-  }))
+  })),
+  delete: jest.fn(async () => true)
 }));
 
 jest.mock("../src/events/inMemoryRepository", () => ({

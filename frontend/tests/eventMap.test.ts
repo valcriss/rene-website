@@ -182,4 +182,54 @@ describe("EventMap", () => {
 
     expect(mapInstance.setView).toHaveBeenCalledWith([46.972, 0.705], 12);
   });
+
+  it("uses fallback date format when dates are invalid", () => {
+    render(EventMap, {
+      props: {
+        events: [
+          {
+            id: "1",
+            title: "Concert",
+            eventStartAt: "invalid",
+            eventEndAt: "invalid",
+            venueName: "Salle",
+            city: "Descartes",
+            image: "img",
+            categoryId: "music",
+            latitude: 46.97,
+            longitude: 0.7,
+            status: "PUBLISHED"
+          }
+        ]
+      }
+    });
+
+    const tooltipArg = markerInstance.bindTooltip.mock.calls[0]?.[0] ?? "";
+    expect(tooltipArg).toContain("Invalid");
+  });
+
+  it("renders range label when dates span multiple days", () => {
+    render(EventMap, {
+      props: {
+        events: [
+          {
+            id: "1",
+            title: "Festival",
+            eventStartAt: "2026-01-15T20:00:00.000Z",
+            eventEndAt: "2026-01-16T22:00:00.000Z",
+            venueName: "Salle",
+            city: "Descartes",
+            image: "img",
+            categoryId: "music",
+            latitude: 46.97,
+            longitude: 0.7,
+            status: "PUBLISHED"
+          }
+        ]
+      }
+    });
+
+    const tooltipArg = markerInstance.bindTooltip.mock.calls[0]?.[0] ?? "";
+    expect(tooltipArg).toContain("→");
+  });
 });

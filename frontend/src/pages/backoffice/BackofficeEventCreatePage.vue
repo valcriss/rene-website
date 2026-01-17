@@ -21,7 +21,7 @@
       </p>
     </div>
 
-    <div v-else class="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+    <div v-else class="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm" data-testid="editor-form">
       <div class="flex items-center justify-between">
         <h3 class="text-lg font-semibold text-slate-900">
           {{ editorMode === "edit" ? "Modifier un événement" : "Créer un événement" }}
@@ -70,13 +70,16 @@
           </p>
         </label>
         <label class="text-sm text-slate-600">
-          Image (URL)
+          Image
           <input
-            v-model="editorForm.image"
-            type="text"
+            type="file"
+            accept="image/*"
             class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-            placeholder="https://..."
+            @change="handleImageChange"
           />
+          <p v-if="editorForm.image" class="mt-2 text-xs text-slate-500">
+            Image actuelle : {{ editorForm.image }}
+          </p>
         </label>
         <label class="text-sm text-slate-600">
           Organisateur
@@ -175,42 +178,19 @@
             placeholder="https://..."
           />
         </label>
-        <label class="text-sm text-slate-600">
-          Latitude
-          <input
-            v-model.number="editorForm.latitude"
-            type="number"
-            step="0.0001"
-            class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-            placeholder="46.97"
-          />
-        </label>
-        <label class="text-sm text-slate-600">
-          Longitude
-          <input
-            v-model.number="editorForm.longitude"
-            type="number"
-            step="0.0001"
-            class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-            placeholder="0.70"
-          />
-        </label>
-        <label class="text-sm text-slate-600 md:col-span-2">
-          Description
-          <textarea
-            v-model="editorForm.content"
-            class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-            rows="4"
-            placeholder="Description de l'événement"
-          ></textarea>
-        </label>
+        <div class="text-sm text-slate-600 md:col-span-2">
+          <p>Description</p>
+          <div class="mt-2">
+            <RichTextEditor v-model="editorForm.content" />
+          </div>
+        </div>
       </div>
 
       <div class="mt-4 flex flex-wrap gap-3">
         <button
           type="button"
           class="rounded-lg bg-slate-900 px-4 py-2 text-sm text-white"
-          @click="handleSaveDraft"
+          @click="handleSaveAndRedirect"
         >
           {{ editorMode === "edit" ? "Mettre à jour" : "Enregistrer le brouillon" }}
         </button>
@@ -218,7 +198,7 @@
           v-if="editorMode === 'edit'"
           type="button"
           class="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600"
-          @click="handleSubmitDraft"
+          @click="handleSubmitAndRedirect"
         >
           Soumettre à modération
         </button>
@@ -231,6 +211,7 @@
 import { onMounted } from "vue";
 import { storeToRefs } from "pinia";
 import { useRouter } from "vue-router";
+import RichTextEditor from "../../components/form/RichTextEditor.vue";
 import { useAuthStore } from "../../stores/auth";
 import { useCategoriesStore } from "../../stores/categories";
 import { useEditorStore } from "../../stores/editor";
@@ -244,7 +225,7 @@ const { canEdit } = storeToRefs(authStore);
 const { categories, loading: categoriesLoading } = storeToRefs(categoriesStore);
 const { editorMode, editorError, editorForm } = storeToRefs(editorStore);
 
-const { resetEditorForm, handleSaveDraft, handleSubmitDraft } = editorStore;
+const { resetEditorForm, handleSaveDraft, handleSubmitDraft, setImageFile } = editorStore;
 
 onMounted(() => {
   categoriesStore.loadCategories();
@@ -252,5 +233,26 @@ onMounted(() => {
 
 const goToEvents = () => {
   router.push("/backoffice/events");
+};
+
+const handleImageChange = (event: Event) => {
+  const target = event.target as HTMLInputElement | null;
+  const file = target?.files?.[0] ?? null;
+  setImageFile(file);
+};
+
+const handleSaveAndRedirect = async () => {
+  const isEdit = editorMode.value === "edit";
+  const ok = await handleSaveDraft();
+  if (ok && isEdit) {
+    router.push("/backoffice/events");
+  }
+};
+
+const handleSubmitAndRedirect = async () => {
+  const ok = await handleSubmitDraft();
+  if (ok) {
+    router.push("/backoffice/events");
+  }
 };
 </script>

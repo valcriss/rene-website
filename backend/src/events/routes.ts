@@ -1,7 +1,7 @@
 import { Request, Response, Router } from "express";
 import { requireRole } from "../auth/roles";
 import { EventRepository } from "./repository";
-import { createEvent, getEvent, listEvents, publishEvent, rejectEvent, submitEvent, updateEvent } from "./service";
+import { createEvent, deleteEvent, getEvent, listEvents, publishEvent, rejectEvent, submitEvent, updateEvent } from "./service";
 
 type AsyncHandler = (req: Request, res: Response) => Promise<void>;
 
@@ -9,8 +9,9 @@ const withErrorHandling = (handler: AsyncHandler) => async (req: Request, res: R
   try {
     await handler(req, res);
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error("Events API error", error);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ message: "Erreur interne du serveur." });
   }
 };
 
@@ -25,7 +26,7 @@ export const createEventRouter = (repo: EventRepository) => {
   router.get("/events/:id", withErrorHandling(async (req, res) => {
     const event = await getEvent(repo, req.params.id);
     if (!event) {
-      res.status(404).json({ message: "Event not found" });
+      res.status(404).json({ message: "Événement introuvable." });
       return;
     }
     res.json(event);
@@ -44,7 +45,7 @@ export const createEventRouter = (repo: EventRepository) => {
   router.put("/events/:id", requireRole(["EDITOR", "MODERATOR", "ADMIN"]), withErrorHandling(async (req, res) => {
     const result = await updateEvent(repo, req.params.id, req.body);
     if (!result.ok) {
-      const status = result.errors.includes("Event not found") ? 404 : 400;
+      const status = result.errors.includes("Événement introuvable.") ? 404 : 400;
       res.status(status).json({ errors: result.errors });
       return;
     }
@@ -72,7 +73,17 @@ export const createEventRouter = (repo: EventRepository) => {
   router.post("/events/:id/reject", requireRole(["MODERATOR", "ADMIN"]), withErrorHandling(async (req, res) => {
     const result = await rejectEvent(repo, req.params.id, req.body?.rejectionReason);
     if (!result.ok) {
-      const status = result.errors.includes("Event not found") ? 404 : 400;
+      const status = result.errors.includes("Événement introuvable.") ? 404 : 400;
+      res.status(status).json({ errors: result.errors });
+      return;
+    }
+    res.json(result.value);
+  }));
+
+  router.delete("/events/:id", requireRole(["EDITOR", "MODERATOR", "ADMIN"]), withErrorHandling(async (req, res) => {
+    const result = await deleteEvent(repo, req.params.id);
+    if (!result.ok) {
+      const status = result.errors.includes("Événement introuvable.") ? 404 : 400;
       res.status(status).json({ errors: result.errors });
       return;
     }
