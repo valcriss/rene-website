@@ -33,8 +33,12 @@ export const getEvent = (repo: EventRepository, id: string): Promise<Event | nul
 
 export const createEvent = async (
   repo: EventRepository,
-  input: unknown
+  input: unknown,
+  createdByUserId?: string | null
 ): Promise<ServiceResult<Event>> => {
+  if (createdByUserId !== undefined && createdByUserId !== null && createdByUserId.trim().length === 0) {
+    return { ok: false, errors: ["Le créateur est requis."] };
+  }
   const validation = validateCreateEvent(input);
   if (!validation.ok) {
     return { ok: false, errors: validation.errors };
@@ -49,7 +53,8 @@ export const createEvent = async (
     const created = await repo.create({
       ...validation.value,
       latitude: coordinates.value.latitude,
-      longitude: coordinates.value.longitude
+      longitude: coordinates.value.longitude,
+      createdByUserId: createdByUserId ?? null
     });
     return { ok: true, value: created };
   } catch (error) {

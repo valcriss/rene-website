@@ -14,7 +14,15 @@ const chain = {
   run: vi.fn()
 };
 
-const editorInstance = {
+type EditorLike = {
+  isActive: (name: string) => boolean;
+  chain: () => typeof chain;
+  commands: { setContent: (value: string, emit: boolean) => void };
+  getHTML: () => string;
+  destroy: () => void;
+};
+
+const editorInstance: EditorLike = {
   isActive: vi.fn(() => false),
   chain: vi.fn(() => chain),
   commands: { setContent: vi.fn() },
@@ -22,12 +30,12 @@ const editorInstance = {
   destroy: vi.fn()
 };
 
-let onUpdateHandler: ((payload: { editor: any }) => void) | null = null;
-let editorRef = ref<any>(editorInstance);
+let onUpdateHandler: ((payload: { editor: EditorLike }) => void) | null = null;
+let editorRef = ref<EditorLike | null>(editorInstance);
 
 vi.mock("@tiptap/vue-3", () => ({
   EditorContent: { template: "<div></div>" },
-  useEditor: (options?: { onUpdate?: (payload: { editor: any }) => void }) => {
+  useEditor: (options?: { onUpdate?: (payload: { editor: EditorLike }) => void }) => {
     onUpdateHandler = options?.onUpdate ?? null;
     return editorRef;
   }
@@ -36,7 +44,7 @@ vi.mock("@tiptap/vue-3", () => ({
 describe("RichTextEditor", () => {
   beforeEach(() => {
     onUpdateHandler = null;
-    editorRef = ref<any>(editorInstance);
+    editorRef = ref<EditorLike | null>(editorInstance);
     vi.clearAllMocks();
   });
 
@@ -134,7 +142,9 @@ describe("RichTextEditor", () => {
 
   it("normalizes empty URLs", () => {
     const wrapper = mount(RichTextEditor, { props: { modelValue: "<p>hello</p>" } });
-    const setupState = (wrapper.vm as any).$.setupState as { normalizeUrl: (value: string) => string };
+    const setupState = (wrapper.vm as unknown as {
+      $: { setupState: { normalizeUrl: (value: string) => string } };
+    }).$.setupState;
     const { normalizeUrl } = setupState;
 
     expect(normalizeUrl("")).toBe("");

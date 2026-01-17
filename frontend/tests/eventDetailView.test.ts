@@ -105,9 +105,9 @@ describe("EventDetailView", () => {
 
     await wrapper.vm.$nextTick();
 
-    const setupState = (wrapper.vm as any).$.setupState as {
-      emitSelect: (id: string) => void;
-    };
+    const setupState = (wrapper.vm as unknown as {
+      $: { setupState: { emitSelect: (id: string) => void } };
+    }).$.setupState;
     expect(wrapper.html()).toContain("Texte");
     setupState.emitSelect("1");
     expect(wrapper.emitted("select")).toBeTruthy();

@@ -3,6 +3,8 @@ import request from "supertest";
 import { createApp } from "../src/app";
 import { createEventRouter } from "../src/events/routes";
 import { EventRepository } from "../src/events/repository";
+import { AuthRepository } from "../src/auth/repository";
+import { signUserToken } from "../src/auth/jwt";
 
 const validPayload = {
   title: "Concert",
@@ -20,6 +22,11 @@ const validPayload = {
 };
 
 describe("events routes", () => {
+  const authRepo: AuthRepository = {
+    getUserByEmail: async () => null,
+    getUserById: async () => null,
+    listUsersByRole: async () => []
+  };
   const originalEnv = process.env.NODE_ENV;
   const fetchMock = jest.fn();
 
@@ -64,7 +71,7 @@ describe("events routes", () => {
     };
     const app = express();
     app.use(express.json());
-    app.use("/api", createEventRouter(repo));
+    app.use("/api", createEventRouter(repo, authRepo));
 
     const response = await request(app).get("/api/events");
 
@@ -100,6 +107,39 @@ describe("events routes", () => {
     const getResponse = await request(app).get(`/api/events/${createResponse.body.id}`);
     expect(getResponse.status).toBe(200);
     expect(getResponse.body.id).toBe(createResponse.body.id);
+  });
+
+  it("stores creator from auth token", async () => {
+    process.env.JWT_SECRET = "test-secret";
+    const tokenResult = signUserToken({
+      id: "user-1",
+      name: "User",
+      email: "user@test",
+      role: "EDITOR"
+    });
+    if (!tokenResult.ok) throw new Error("Token generation failed");
+
+    const app = createApp();
+    const createResponse = await request(app)
+      .post("/api/events")
+      .set("Authorization", `Bearer ${tokenResult.value}`)
+      .set("x-user-role", "EDITOR")
+      .send(validPayload);
+
+    expect(createResponse.status).toBe(201);
+    expect(createResponse.body.createdByUserId).toBe("user-1");
+  });
+
+  it("stores creator from x-user-id header", async () => {
+    const app = createApp();
+    const createResponse = await request(app)
+      .post("/api/events")
+      .set("x-user-role", "EDITOR")
+      .set("x-user-id", "header-user")
+      .send(validPayload);
+
+    expect(createResponse.status).toBe(201);
+    expect(createResponse.body.createdByUserId).toBe("header-user");
   });
 
   it("updates event", async () => {

@@ -13,6 +13,7 @@ export const createInMemoryEventRepository = (): EventRepository => {
       const event: Event = {
         ...input,
         id: randomUUID(),
+        createdByUserId: input.createdByUserId ?? null,
         status: "DRAFT",
         publishedAt: null,
         publicationEndAt: input.eventEndAt,
@@ -32,6 +33,7 @@ export const createInMemoryEventRepository = (): EventRepository => {
       const updated: Event = {
         ...existing,
         ...input,
+        createdByUserId: existing.createdByUserId ?? null,
         publicationEndAt: input.eventEndAt,
         updatedAt: new Date().toISOString()
       };

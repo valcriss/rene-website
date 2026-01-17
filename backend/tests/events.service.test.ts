@@ -12,6 +12,7 @@ const fallbackEvent: Event = {
   title: "Fallback",
   content: "Fallback",
   image: "img",
+  createdByUserId: null,
   categoryId: "music",
   eventStartAt: "2026-01-15T20:00:00.000Z",
   eventEndAt: "2026-01-15T22:00:00.000Z",
@@ -63,6 +64,7 @@ describe("event services", () => {
     title: "Concert",
     content: "Soirée",
     image: "img",
+    createdByUserId: null,
     categoryId: "music",
     eventStartAt: "2026-01-15T20:00:00.000Z",
     eventEndAt: "2026-01-15T22:00:00.000Z",
@@ -247,6 +249,15 @@ describe("event services", () => {
     const repo = createRepo(baseEvent);
     const result = await createEvent(repo, {});
     expect(result.ok).toBe(false);
+  });
+
+  it("createEvent returns error for empty creator", async () => {
+    const repo = createRepo(baseEvent);
+    const result = await createEvent(repo, baseEvent, "   ");
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContain("Le créateur est requis.");
+    }
   });
 
   it("createEvent returns errors when geocoding fails", async () => {

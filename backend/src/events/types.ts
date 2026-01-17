@@ -25,12 +25,14 @@ export type EventDraftInput = {
 export type CreateEventInput = EventDraftInput & {
   latitude: number;
   longitude: number;
+  createdByUserId?: string | null;
 };
 
 export type UpdateEventInput = CreateEventInput;
 
 export type Event = CreateEventInput & {
   id: string;
+  createdByUserId: string | null;
   status: EventStatus;
   publishedAt: string | null;
   publicationEndAt: string;

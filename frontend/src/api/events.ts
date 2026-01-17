@@ -1,3 +1,5 @@
+import { buildAuthHeaders } from "./authHeaders";
+
 export type EventStatus = "DRAFT" | "PENDING" | "PUBLISHED" | "REJECTED";
 
 export type EventItem = {
@@ -5,6 +7,7 @@ export type EventItem = {
   title: string;
   content?: string;
   image: string;
+  createdByUserId?: string | null;
   categoryId: string;
   eventStartAt: string;
   eventEndAt: string;
@@ -75,10 +78,7 @@ export const fetchEvents = async (): Promise<EventItem[]> => {
 export const createEvent = async (payload: CreateEventPayload, role: string): Promise<EventItem> => {
   const response = await fetch("/api/events", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-user-role": role
-    },
+    headers: buildAuthHeaders(role),
     body: JSON.stringify(payload)
   });
   if (!response.ok) {
@@ -94,10 +94,7 @@ export const updateEvent = async (
 ): Promise<EventItem> => {
   const response = await fetch(`/api/events/${id}`, {
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      "x-user-role": role
-    },
+    headers: buildAuthHeaders(role),
     body: JSON.stringify(payload)
   });
   if (!response.ok) {
@@ -109,10 +106,7 @@ export const updateEvent = async (
 export const submitEvent = async (id: string, role: string): Promise<EventItem> => {
   const response = await fetch(`/api/events/${id}/submit`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-user-role": role
-    }
+    headers: buildAuthHeaders(role)
   });
   if (!response.ok) {
     throw new Error("Impossible de soumettre l'événement");
@@ -123,10 +117,7 @@ export const submitEvent = async (id: string, role: string): Promise<EventItem> 
 export const deleteEvent = async (id: string, role: string): Promise<{ id: string }> => {
   const response = await fetch(`/api/events/${id}`, {
     method: "DELETE",
-    headers: {
-      "Content-Type": "application/json",
-      "x-user-role": role
-    }
+    headers: buildAuthHeaders(role)
   });
   if (!response.ok) {
     throw new Error(await parseApiError(response, "Impossible de supprimer l'événement"));

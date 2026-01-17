@@ -28,15 +28,6 @@
             class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
           />
         </label>
-        <label class="text-sm text-slate-600">
-          Rôle
-          <select v-model="role" class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">
-            <option value="VISITOR">Visiteur</option>
-            <option value="EDITOR">Rédacteur</option>
-            <option value="MODERATOR">Modérateur</option>
-            <option value="ADMIN">Administrateur</option>
-          </select>
-        </label>
       </div>
 
       <div class="mt-6 flex flex-wrap gap-3">
@@ -55,6 +46,7 @@
           Retour au site
         </button>
         <span v-if="canEdit" class="text-sm text-emerald-600">Accès rédaction/modération activé.</span>
+        <span v-if="authError" class="text-sm text-rose-600">{{ authError }}</span>
       </div>
     </div>
   </section>
@@ -68,12 +60,17 @@ import { useAuthStore } from "../stores/auth";
 
 const router = useRouter();
 const authStore = useAuthStore();
-const { email, password, role, canEdit } = storeToRefs(authStore);
+const { email, password, canEdit, authError } = storeToRefs(authStore);
 
-const handleLogin = () => {
-  authStore.login(role.value);
-  authStore.resetCredentials();
-  router.push("/backoffice");
+const handleLogin = async () => {
+  authError.value = null;
+  try {
+    await authStore.loginWithPassword();
+    authStore.resetCredentials();
+    router.push("/backoffice");
+  } catch (error) {
+    authError.value = error instanceof Error ? error.message : "Connexion impossible";
+  }
 };
 
 const goToHome = () => {

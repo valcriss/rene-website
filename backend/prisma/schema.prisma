@@ -25,6 +25,7 @@ model Event {
   title            String
   content          String
   image            String
+  createdByUserId  String?     @db.Uuid
   categoryId       String
   eventStartAt     DateTime
   eventEndAt       DateTime
@@ -49,10 +50,12 @@ model Event {
   updatedAt        DateTime    @updatedAt
 
   category         Category    @relation(fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  createdByUser    User?       @relation(fields: [createdByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
   @@index([eventStartAt])
   @@index([status])
   @@index([categoryId])
+  @@index([createdByUserId])
 }
 
 model Category {

@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "../prisma/client";
 import { EventRepository } from "./repository";
 import { CreateEventInput, Event } from "./types";
@@ -7,6 +8,7 @@ type PrismaEvent = {
   title: string;
   content: string;
   image: string;
+  createdByUserId?: string | null;
   categoryId: string;
   eventStartAt: Date;
   eventEndAt: Date;
@@ -36,6 +38,7 @@ const toEvent = (data: PrismaEvent): Event => ({
   title: data.title,
   content: data.content,
   image: data.image,
+  createdByUserId: data.createdByUserId ?? null,
   categoryId: data.categoryId,
   eventStartAt: data.eventStartAt.toISOString(),
   eventEndAt: data.eventEndAt.toISOString(),
@@ -78,35 +81,34 @@ export const createPrismaEventRepository = (): EventRepository => ({
       .then((item: PrismaEvent | null) => (item ? toEvent(item) : null)),
   create: async (input: CreateEventInput) => {
     await ensureCategoryExists(input.categoryId);
-    return prisma.event
-      .create({
-        data: {
-          title: input.title,
-          content: input.content,
-          image: input.image,
-          categoryId: input.categoryId,
-          eventStartAt: new Date(input.eventStartAt),
-          eventEndAt: new Date(input.eventEndAt),
-          allDay: input.allDay,
-          venueName: input.venueName,
-          address: input.address,
-          postalCode: input.postalCode,
-          city: input.city,
-          latitude: input.latitude,
-          longitude: input.longitude,
-          organizerName: input.organizerName,
-          organizerUrl: input.organizerUrl ?? null,
-          contactEmail: input.contactEmail ?? null,
-          contactPhone: input.contactPhone ?? null,
-          ticketUrl: input.ticketUrl ?? null,
-          websiteUrl: input.websiteUrl ?? null,
-          status: "DRAFT",
-          publishedAt: null,
-          publicationEndAt: new Date(input.eventEndAt),
-          rejectionReason: null
-        }
-      })
-      .then(toEvent);
+    const data = {
+      title: input.title,
+      content: input.content,
+      image: input.image,
+      createdByUserId: input.createdByUserId ?? null,
+      categoryId: input.categoryId,
+      eventStartAt: new Date(input.eventStartAt),
+      eventEndAt: new Date(input.eventEndAt),
+      allDay: input.allDay,
+      venueName: input.venueName,
+      address: input.address,
+      postalCode: input.postalCode,
+      city: input.city,
+      latitude: input.latitude,
+      longitude: input.longitude,
+      organizerName: input.organizerName,
+      organizerUrl: input.organizerUrl ?? null,
+      contactEmail: input.contactEmail ?? null,
+      contactPhone: input.contactPhone ?? null,
+      ticketUrl: input.ticketUrl ?? null,
+      websiteUrl: input.websiteUrl ?? null,
+      status: "DRAFT",
+      publishedAt: null,
+      publicationEndAt: new Date(input.eventEndAt),
+      rejectionReason: null
+    } as unknown as Prisma.EventCreateInput;
+
+    return prisma.event.create({ data }).then(toEvent);
   },
   update: async (id: string, input: CreateEventInput) => {
     await ensureCategoryExists(input.categoryId);

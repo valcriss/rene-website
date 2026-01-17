@@ -81,7 +81,8 @@ describe("BackofficeEventCreatePage", () => {
     const input = await screen.findByLabelText("Image");
     const file = new File(["image"], "photo.png", { type: "image/png" });
 
-    await fireEvent.change(input, { target: { files: [file] } });
+    Object.defineProperty(input, "files", { value: [file], configurable: true });
+    await fireEvent.update(input, "photo.png");
 
     expect(spy).toHaveBeenCalled();
   });
@@ -97,7 +98,8 @@ describe("BackofficeEventCreatePage", () => {
     renderPage(setup);
     const input = await screen.findByLabelText("Image");
 
-    await fireEvent.change(input, { target: { files: [] } });
+    Object.defineProperty(input, "files", { value: [], configurable: true });
+    await fireEvent.update(input, "");
 
     expect(spy).toHaveBeenCalledWith(null);
   });
@@ -124,12 +126,16 @@ describe("BackofficeEventCreatePage", () => {
       }
     });
 
-    const setupState = (wrapper.vm as any).$.setupState as {
-      handleSaveAndRedirect: () => Promise<void>;
-      handleSubmitAndRedirect: () => Promise<void>;
-      handleImageChange: (event: Event) => void;
-      goToEvents: () => void;
-    };
+    const setupState = (wrapper.vm as unknown as {
+      $: {
+        setupState: {
+          handleSaveAndRedirect: () => Promise<void>;
+          handleSubmitAndRedirect: () => Promise<void>;
+          handleImageChange: (event: Event) => void;
+          goToEvents: () => void;
+        };
+      };
+    }).$.setupState;
 
     await setupState.handleSaveAndRedirect();
     await setupState.handleSubmitAndRedirect();

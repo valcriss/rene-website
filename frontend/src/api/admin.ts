@@ -1,3 +1,5 @@
+import { buildAuthHeaders } from "./authHeaders";
+
 export type AdminUserRole = "EDITOR" | "MODERATOR" | "ADMIN";
 
 export type AdminUser = {
@@ -18,10 +20,7 @@ export type AdminSettings = {
   homepageIntro: string;
 };
 
-const jsonHeaders = (role: string) => ({
-  "Content-Type": "application/json",
-  "x-user-role": role
-});
+const jsonHeaders = (role: string) => buildAuthHeaders(role);
 
 export const fetchAdminUsers = async (role: string): Promise<AdminUser[]> => {
   const response = await fetch("/api/admin/users", { headers: jsonHeaders(role) });

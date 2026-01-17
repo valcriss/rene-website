@@ -1,4 +1,5 @@
 import type { EventItem } from "./events";
+import { buildAuthHeaders } from "./authHeaders";
 
 export type ModeratorRole = "MODERATOR" | "ADMIN";
 
@@ -9,10 +10,7 @@ const callModerationEndpoint = async <T>(
 ): Promise<T> => {
   const response = await fetch(url, {
     method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-user-role": role
-    },
+    headers: buildAuthHeaders(role),
     body: body ? JSON.stringify(body) : undefined
   });
 

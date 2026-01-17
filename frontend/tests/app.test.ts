@@ -36,8 +36,29 @@ describe("App", () => {
   };
 
   const loginAsRole = async (role: "EDITOR" | "MODERATOR" | "ADMIN") => {
+    const previousFetch = global.fetch;
+    const loginResponse = {
+      token: "token",
+      user: { id: "user-1", name: "User", email: "user@test", role }
+    };
+    const fetchMock = vi.fn((input: FetchInput, init?: FetchInit) => {
+      const url = typeof input === "string" ? input : input.url;
+      if (url.includes("/api/auth/login")) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(loginResponse) });
+      }
+      if (previousFetch) {
+        return (previousFetch as unknown as (i: FetchInput, n?: FetchInit) => Promise<unknown>)(
+          input,
+          init
+        );
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
     const router = await renderWithRouter("/login");
-    await fireEvent.update(screen.getByLabelText("Rôle"), role);
+    await fireEvent.update(screen.getByLabelText("Email"), "user@test");
+    await fireEvent.update(screen.getByLabelText("Mot de passe"), "secret");
     await fireEvent.click(screen.getByRole("button", { name: "Se connecter" }));
     await waitFor(() => expect(router.currentRoute.value.path).toBe("/backoffice/events"));
     return router;
@@ -1002,7 +1023,8 @@ describe("App", () => {
     await fireEvent.update(editorForm.getByLabelText("Catégorie"), "atelier");
     const imageInput = editorForm.getByLabelText("Image") as HTMLInputElement;
     const imageFile = new File(["image"], "photo.png", { type: "image/png" });
-    await fireEvent.change(imageInput, { target: { files: [imageFile] } });
+    Object.defineProperty(imageInput, "files", { value: [imageFile], configurable: true });
+    await fireEvent.update(imageInput, "photo.png");
     await fireEvent.update(editorForm.getByLabelText("Organisateur"), "Asso");
     await fireEvent.update(editorForm.getByLabelText("Début"), "2026-01-15T20:00");
     await fireEvent.update(editorForm.getByLabelText("Fin"), "2026-01-15T22:00");
@@ -1257,7 +1279,8 @@ describe("App", () => {
     await fireEvent.update(editorForm.getByLabelText("Catégorie"), "atelier");
     const imageInput = editorForm.getByLabelText("Image") as HTMLInputElement;
     const imageFile = new File(["image"], "photo.png", { type: "image/png" });
-    await fireEvent.change(imageInput, { target: { files: [imageFile] } });
+    Object.defineProperty(imageInput, "files", { value: [imageFile], configurable: true });
+    await fireEvent.update(imageInput, "photo.png");
     await fireEvent.update(editorForm.getByLabelText("Organisateur"), "Asso");
     await fireEvent.update(editorForm.getByLabelText("Début"), "2026-01-15T20:00");
     await fireEvent.update(editorForm.getByLabelText("Fin"), "2026-01-15T22:00");

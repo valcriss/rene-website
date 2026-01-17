@@ -12,7 +12,8 @@ const parseRole = (value: string | undefined): UserRole | null => {
 export const requireRole = (allowed: UserRole[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     const headerValue = req.header("x-user-role") ?? undefined;
-    const role = parseRole(headerValue);
+    const headerRole = parseRole(headerValue);
+    const role = req.user?.role ?? headerRole;
 
     if (!role) {
       res.status(401).json({ message: "Authentication required" });

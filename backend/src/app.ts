@@ -1,6 +1,9 @@
 import express from "express";
 import { createAdminRouter } from "./admin/routes";
 import { createAdminRepository } from "./admin/repositoryFactory";
+import { authenticateOptional } from "./auth/middleware";
+import { createAuthRouter } from "./auth/routes";
+import { createAuthRepository } from "./auth/repositoryFactory";
 import { createCategoriesRouter } from "./categories/routes";
 import { createEventRouter } from "./events/routes";
 import { createEventRepository } from "./events/repositoryFactory";
@@ -13,6 +16,7 @@ export const createApp = () => {
   const app = express();
 
   app.use(express.json());
+  app.use(authenticateOptional);
 
   app.use((req, res, next) => {
     const start = Date.now();
@@ -25,7 +29,9 @@ export const createApp = () => {
   });
 
   const eventRepository = createEventRepository();
-  app.use("/api", createEventRouter(eventRepository));
+  const authRepository = createAuthRepository();
+  app.use("/api", createAuthRouter(authRepository));
+  app.use("/api", createEventRouter(eventRepository, authRepository));
   app.use("/api", createGeocodingRouter());
   app.use("/api", createUploadRouter());
   app.use("/uploads", express.static(getUploadDir()));
