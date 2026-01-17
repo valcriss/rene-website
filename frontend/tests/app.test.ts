@@ -36,7 +36,7 @@ describe("App", () => {
   };
 
   const loginAsRole = async (role: "EDITOR" | "MODERATOR" | "ADMIN") => {
-    const previousFetch = global.fetch;
+    const previousFetch = globalThis.fetch;
     const loginResponse = {
       token: "token",
       user: { id: "user-1", name: "User", email: "user@test", role }
