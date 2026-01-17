@@ -50,7 +50,7 @@ model Event {
   updatedAt        DateTime    @updatedAt
 
   category         Category    @relation(fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  createdByUser    User?       @relation(fields: [createdByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  createdByUser    User?       @relation("UserCreatedEvents", fields: [createdByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
   @@index([eventStartAt])
   @@index([status])
@@ -75,4 +75,6 @@ model User {
   passwordHash String
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  createdEvents Event[] @relation("UserCreatedEvents")
 }
