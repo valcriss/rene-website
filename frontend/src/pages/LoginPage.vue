@@ -10,6 +10,19 @@
       </p>
 
       <div class="mt-6 grid gap-4">
+        <label v-if="isDev" class="text-sm text-slate-600">
+          Compte de test (dev)
+          <select
+            v-model="quickLogin"
+            class="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+            @change="applyQuickLogin"
+          >
+            <option value="">Choisir un compte</option>
+            <option v-for="option in quickLoginOptions" :key="option.email" :value="option.email">
+              {{ option.label }}
+            </option>
+          </select>
+        </label>
         <label class="text-sm text-slate-600">
           Email
           <input
@@ -53,6 +66,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from "vue";
 import { storeToRefs } from "pinia";
 import { useRouter } from "vue-router";
 import NavigationHeader from "../components/navigation/Header.vue";
@@ -61,6 +75,21 @@ import { useAuthStore } from "../stores/auth";
 const router = useRouter();
 const authStore = useAuthStore();
 const { email, password, canEdit, authError } = storeToRefs(authStore);
+const isDev = import.meta.env.DEV;
+const quickLogin = ref("");
+const quickLoginOptions = [
+  { label: "Rédacteur", email: "editor@rene-website.local", password: "editor-rene-2026" },
+  { label: "Modérateur", email: "moderator@rene-website.local", password: "moderator-rene-2026" },
+  { label: "Administrateur", email: "admin@rene-website.local", password: "admin-rene-2026" }
+];
+
+const applyQuickLogin = () => {
+  const selected = quickLoginOptions.find((option) => option.email === quickLogin.value);
+  if (!selected) return;
+  email.value = selected.email;
+  password.value = selected.password;
+  authError.value = null;
+};
 
 const handleLogin = async () => {
   authError.value = null;

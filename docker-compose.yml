@@ -5,6 +5,7 @@ services:
     environment:
       PORT: 3000
       DATABASE_URL: postgres://rene:rene@db:5432/rene
+      JWT_SECRET: change-me
       PHOTON_URL: http://photon:2322
       UPLOAD_DIR: /app/uploads
     ports:
