@@ -1,56 +1,64 @@
 <template>
-  <section class="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-    <div class="flex items-center justify-between">
-      <h2 class="text-xl font-medium">Gestion des catégories</h2>
-      <span class="text-sm text-slate-500">Rôle requis: administrateur</span>
+  <section class="grid gap-6">
+    <div class="rounded-[1.75rem] border border-sky-100 bg-[linear-gradient(135deg,rgba(240,249,255,0.96),rgba(255,255,255,0.98))] p-6 shadow-[0_24px_60px_-38px_rgba(15,23,42,0.24)]">
+      <p class="text-xs uppercase tracking-[0.3em] text-sky-700/70">Administration</p>
+      <h2 class="mt-3 text-2xl font-semibold text-slate-950">Catégories</h2>
+      <p class="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
+        Gérez la taxonomie éditoriale du site dans une vue qui sépare clairement création, édition et inventaire existant.
+      </p>
     </div>
 
-    <div v-if="!isAdmin" class="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-6">
+    <div v-if="!isAdmin" class="rounded-[1.75rem] border border-slate-200 bg-white p-8 shadow-sm">
       <h3 class="text-lg font-medium text-slate-900">Accès refusé</h3>
       <p class="mt-2 text-sm text-slate-500">
         Vous n'avez pas les droits nécessaires pour gérer les catégories.
       </p>
     </div>
 
-    <div v-else class="mt-6 grid gap-8">
-      <div v-if="adminError" class="rounded-xl bg-rose-50 p-4 text-rose-700">
+    <div v-else class="grid gap-6">
+      <div v-if="adminError" class="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-sm text-rose-700">
         {{ adminError }}
       </div>
 
-      <div v-if="adminLoading" class="text-slate-500">Chargement de l'administration…</div>
+      <div v-if="adminLoading" class="rounded-2xl border border-slate-200 bg-white p-6 text-slate-500">
+        Chargement de l'administration…
+      </div>
 
-      <div v-else class="grid gap-6 lg:grid-cols-2">
-        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-6" data-testid="admin-category-form">
-          <div class="flex items-center justify-between">
-            <h3 class="text-lg font-semibold text-slate-900">
-              {{ adminCategoryEditingId ? "Modifier une catégorie" : "Créer une catégorie" }}
-            </h3>
+      <div v-else class="grid gap-6 xl:grid-cols-[minmax(22rem,28rem)_minmax(0,1fr)]">
+        <div class="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-[0_24px_60px_-40px_rgba(15,23,42,0.22)]" data-testid="admin-category-form">
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <p class="text-xs uppercase tracking-[0.3em] text-slate-500">Action en cours</p>
+              <h3 class="mt-2 text-lg font-semibold text-slate-950">
+                {{ adminCategoryEditingId ? "Modifier une catégorie" : "Créer une catégorie" }}
+              </h3>
+            </div>
             <button
               v-if="adminCategoryEditingId"
               type="button"
-              class="text-sm text-slate-500 hover:text-slate-700"
+              class="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-sky-200 hover:bg-sky-50/70 hover:text-slate-900"
               @click="resetAdminCategoryForm"
             >
               Nouveau
             </button>
           </div>
 
-          <div class="mt-4 grid gap-4">
+          <div class="mt-5 grid gap-4">
             <label class="text-sm text-slate-600">
               Nom
               <input
                 v-model="adminCategoryForm.name"
                 type="text"
-                class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm"
                 placeholder="Nom de la catégorie"
               />
             </label>
           </div>
 
-          <div class="mt-4 flex flex-wrap gap-3">
+          <div class="mt-5 flex flex-wrap gap-3">
             <button
               type="button"
-              class="rounded-lg bg-slate-900 px-4 py-2 text-sm text-white"
+              class="rounded-full bg-slate-950 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
               @click="handleSaveAdminCategory"
             >
               {{ adminCategoryEditingId ? "Mettre à jour" : "Créer" }}
@@ -58,28 +66,39 @@
           </div>
         </div>
 
-        <div>
-          <h3 class="text-lg font-semibold text-slate-900">Catégories</h3>
-          <p class="mt-1 text-sm text-slate-500">{{ adminCategories.length }} catégories</p>
-          <ul class="mt-4 grid gap-3" data-testid="admin-category-list">
+        <div class="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-[0_24px_60px_-40px_rgba(15,23,42,0.22)]">
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p class="text-xs uppercase tracking-[0.3em] text-slate-500">Référentiel</p>
+              <h3 class="mt-2 text-lg font-semibold text-slate-950">Catégories existantes</h3>
+              <p class="mt-2 text-sm leading-6 text-slate-500">
+                Gardez une lecture simple de la taxonomie et ouvrez le bon mode d’édition en un clic.
+              </p>
+            </div>
+            <span class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-sm font-medium text-slate-600">
+              {{ adminCategories.length }} catégorie<span v-if="adminCategories.length > 1">s</span>
+            </span>
+          </div>
+
+          <ul class="mt-6 grid gap-3" data-testid="admin-category-list">
             <li
               v-for="category in adminCategories"
               :key="category.id"
-              class="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+              class="rounded-[1.35rem] border border-slate-200 bg-slate-50/70 p-4"
             >
-              <div class="flex items-center justify-between">
+              <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <p class="text-sm font-semibold text-slate-900">{{ category.name }}</p>
-                <div class="flex gap-2">
+                <div class="flex flex-wrap gap-2">
                   <button
                     type="button"
-                    class="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600"
+                    class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-sky-200 hover:bg-sky-50/70"
                     @click="startAdminCategoryEdit(category)"
                   >
                     Modifier
                   </button>
                   <button
                     type="button"
-                    class="rounded-lg bg-rose-500 px-3 py-2 text-sm text-white"
+                    class="rounded-full bg-rose-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-700"
                     @click="handleDeleteAdminCategory(category.id)"
                   >
                     Supprimer

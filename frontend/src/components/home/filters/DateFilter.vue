@@ -1,31 +1,31 @@
 <template>
-  <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-    <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Dates</p>
+  <div class="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm">
+    <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Dates</p>
     <div class="mt-3 grid gap-3">
-      <label class="text-sm text-slate-600">
+      <label class="text-sm font-medium text-slate-600">
         Du
         <input
           :value="modelValue.dateRange.start"
           type="date"
-          class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+          class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700"
           @input="onStartChange"
         />
       </label>
-      <label class="text-sm text-slate-600">
+      <label class="text-sm font-medium text-slate-600">
         Au
         <input
           :value="modelValue.dateRange.end"
           type="date"
-          class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+          class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700"
           @input="onEndChange"
         />
       </label>
     </div>
-    <label class="mt-4 block text-sm text-slate-600">
+    <label class="mt-4 block text-sm font-medium text-slate-600">
       Préselection
       <select
         :value="modelValue.preset"
-        class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+        class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700"
         @change="onPresetChange"
       >
         <option value="">Personnalisé</option>

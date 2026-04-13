@@ -1,5 +1,5 @@
 <template>
-  <aside class="space-y-6 lg:col-span-3">
+  <aside class="grid gap-4 lg:grid-cols-3">
     <HomeDateFilter
       :model-value="modelValue"
       @update:model-value="updateFilters"

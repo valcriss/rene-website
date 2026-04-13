@@ -1,5 +1,5 @@
 <template>
-  <div class="h-96 w-full overflow-hidden rounded-2xl border border-slate-200">
+  <div class="h-80 w-full overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm sm:h-96 xl:h-[420px]">
     <div ref="mapContainer" class="h-full w-full"></div>
   </div>
 </template>

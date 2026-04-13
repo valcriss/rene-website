@@ -95,7 +95,7 @@ describe("App", () => {
     vi.stubGlobal("fetch", vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) })));
     const router = await loginAsRole("MODERATOR");
 
-    expect(await screen.findByText("Tableau de bord")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 2, name: "Événements" })).toBeInTheDocument();
     await fireEvent.click(screen.getByRole("button", { name: "Se déconnecter" }));
 
     await waitFor(() => expect(router.currentRoute.value.path).toBe("/login"));
@@ -277,6 +277,23 @@ describe("App", () => {
                 ticketUrl: "https://billetterie.test",
                 websiteUrl: "https://evenement.test",
                 status: "PUBLISHED"
+              },
+              {
+                id: "2",
+                title: "Festival voisin",
+                content: "A découvrir aussi.",
+                eventStartAt: "2026-01-16T20:00:00.000Z",
+                eventEndAt: "2026-01-16T22:00:00.000Z",
+                venueName: "Place",
+                address: "1 rue du centre",
+                postalCode: "37100",
+                city: "Descartes",
+                image: "https://example.com/2",
+                categoryId: "art",
+                latitude: 46.971,
+                longitude: 0.701,
+                organizerName: "Association Arts",
+                status: "PUBLISHED"
               }
             ])
         })
@@ -293,7 +310,7 @@ describe("App", () => {
     expect(await screen.findByRole("img", { name: "Concert" })).toBeInTheDocument();
     expect((await screen.findAllByText("Concert")).length).toBeGreaterThan(0);
     expect((await screen.findAllByText(/Salle/)).length).toBeGreaterThan(0);
-    expect(await screen.findByText("Une soirée dédiée au jazz.")).toBeInTheDocument();
+    expect((await screen.findAllByText("Une soirée dédiée au jazz.")).length).toBeGreaterThan(0);
     expect(await screen.findByText("Association Musique")).toBeInTheDocument();
     expect(await screen.findByText("12 rue de la musique")).toBeInTheDocument();
     expect(await screen.findByText("37100")).toBeInTheDocument();
@@ -304,10 +321,12 @@ describe("App", () => {
     expect(await screen.findByText("https://evenement.test")).toBeInTheDocument();
 
     const directionsLink = await screen.findByRole("link", { name: "Itinéraire" });
-    const calendarLink = await screen.findByRole("link", { name: "Ajouter au calendrier" });
+    const calendarLink = await screen.findByRole("link", { name: /Ajouter au calendrier/i });
 
     expect(directionsLink).toHaveAttribute("href", expect.stringContaining("google.com/maps/dir"));
     expect(calendarLink).toHaveAttribute("href", expect.stringContaining("data:text/calendar"));
+    expect(await screen.findByTestId("related-events")).toBeInTheDocument();
+    expect(await screen.findByText("Festival voisin")).toBeInTheDocument();
   });
 
   it("shows placeholders when optional details are missing", async () => {
@@ -1245,7 +1264,7 @@ describe("App", () => {
     await renderWithRouter();
     await loginAsRole("EDITOR");
 
-    expect(await screen.findByText("Motif: Manque une info")).toBeInTheDocument();
+    expect(await screen.findByText("Motif : Manque une info")).toBeInTheDocument();
   });
 
   it("shows editor error on failure", async () => {
@@ -1343,7 +1362,7 @@ describe("App", () => {
     await router.push("/backoffice/admin/settings");
     await router.isReady();
 
-    expect(await screen.findByText("Réglages du site")).toBeInTheDocument();
+    expect(await screen.findAllByText("Réglages du site")).toHaveLength(2);
     const settingsForm = within(await screen.findByTestId("admin-settings-form"));
     await fireEvent.update(settingsForm.getByLabelText("Intro page d'accueil"), "Intro");
     await fireEvent.click(settingsForm.getByRole("button", { name: "Enregistrer les réglages" }));

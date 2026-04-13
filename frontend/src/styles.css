@@ -1,3 +1,39 @@
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  :root {
+    --font-display: "Fraunces", "Georgia", serif;
+    --font-body: "Manrope", "Segoe UI", sans-serif;
+  }
+
+  html {
+    font-family: var(--font-body);
+  }
+
+  body {
+    @apply bg-sky-50/40 text-slate-950;
+    font-family: var(--font-body);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    font-feature-settings: "liga" 1, "kern" 1;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display);
+  }
+
+  .font-body {
+    font-family: var(--font-body);
+  }
+}

@@ -35,27 +35,50 @@ services:
       - -lc
       - |
         set -euo pipefail
+        export DEBIAN_FRONTEND=noninteractive
         apt-get update
         apt-get install -y --no-install-recommends ca-certificates curl bzip2 tar
         rm -rf /var/lib/apt/lists/*
 
         mkdir -p /photon/bin /photon/data
 
-        JAR="/photon/bin/photon-opensearch-${PHOTON_VERSION}.jar"
-        if [ ! -f "$${JAR}" ]; then
-          echo "Downloading Photon jar ${PHOTON_VERSION}..."
-          curl -fL -o "$${JAR}" \
-            "https://github.com/komoot/photon/releases/download/${PHOTON_VERSION}/photon-opensearch-${PHOTON_VERSION}.jar"
+        JAR_OPENSEARCH="/photon/bin/photon-opensearch-$${PHOTON_VERSION}.jar"
+        JAR_STANDARD="/photon/bin/photon-$${PHOTON_VERSION}.jar"
+        JAR="/photon/bin/photon.jar"
+        if curl -fsI "https://github.com/komoot/photon/releases/download/$${PHOTON_VERSION}/photon-opensearch-$${PHOTON_VERSION}.jar" >/dev/null; then
+          JAR_VERSIONED="$${JAR_OPENSEARCH}"
+          JAR_FLAVOR="opensearch"
+          JAR_URL="https://github.com/komoot/photon/releases/download/$${PHOTON_VERSION}/photon-opensearch-$${PHOTON_VERSION}.jar"
         else
-          echo "Jar already present: $${JAR}"
+          JAR_VERSIONED="$${JAR_STANDARD}"
+          JAR_FLAVOR="standard"
+          JAR_URL="https://github.com/komoot/photon/releases/download/$${PHOTON_VERSION}/photon-$${PHOTON_VERSION}.jar"
         fi
 
-        # Photon attend /photon/data/photon_data/...
-        if [ ! -d "/photon/data/photon_data" ]; then
+        if [ ! -f "$${JAR_VERSIONED}" ]; then
+          echo "Downloading Photon jar ${PHOTON_VERSION}..."
+          curl -fL -o "$${JAR_VERSIONED}" "$${JAR_URL}"
+        else
+          echo "Jar already present: $${JAR_VERSIONED}"
+        fi
+        ln -sf "$${JAR_VERSIONED}" "$${JAR}"
+
+        DB_MARKER="/photon/data/.photon-db-source"
+        EXPECTED_DB_SOURCE="$${PHOTON_VERSION}:$${JAR_FLAVOR}:$${PHOTON_DB_URL}"
+
+        # Photon attend un index OpenSearch sous /photon/data/photon_data/...
+        if [ -d "/photon/data/photon_data/node_1/data/nodes/0/indices" ] && \
+          [ -f "$${DB_MARKER}" ] && \
+          [ "$$(cat "$${DB_MARKER}")" = "$${EXPECTED_DB_SOURCE}" ] && \
+          find "/photon/data/photon_data/node_1/data/nodes/0/indices" -mindepth 1 -print -quit | grep -q .; then
+          echo "Photon index already present, skipping DB download."
+        else
+          echo "Photon index missing, incomplete, or built for another runtime. Resetting local data."
+          rm -rf /photon/data/photon_data
+          rm -f "$${DB_MARKER}"
           echo "Downloading & extracting Photon DB dump..."
           curl -fL "${PHOTON_DB_URL}" | bzip2 -cd | tar -x -C /photon/data
-        else
-          echo "photon_data already exists, skipping DB download."
+          printf '%s' "$${EXPECTED_DB_SOURCE}" > "$${DB_MARKER}"
         fi
 
         echo "Init done."
@@ -76,7 +99,7 @@ services:
       - -lc
       - |
         set -euo pipefail
-        exec java -jar "/photon/bin/photon-opensearch-${PHOTON_VERSION}.jar" \
+        exec java -jar "/photon/bin/photon.jar" \
           -data-dir "/photon/data" \
           -listen-ip "0.0.0.0" \
           -listen-port "2322"

@@ -1,14 +1,14 @@
 <template>
-  <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-    <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Types d'événements</p>
+  <div class="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm">
+    <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Types d'événements</p>
     <div v-if="availableCategories.length === 0" class="mt-3 text-sm text-slate-500">
       Aucun type disponible.
     </div>
-    <div v-else class="mt-3 max-h-48 space-y-2 overflow-auto pr-1">
+    <div v-else class="mt-3 max-h-56 space-y-2 overflow-auto pr-1">
       <label
         v-for="category in availableCategories"
         :key="category.id"
-        class="flex items-center gap-2 text-sm text-slate-600"
+        class="flex items-center gap-2 rounded-xl px-2 py-1.5 text-sm text-slate-600 transition hover:bg-slate-50"
       >
         <input
           type="checkbox"

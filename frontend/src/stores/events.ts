@@ -58,6 +58,42 @@ export const useEventsStore = defineStore("events", () => {
 
   const getEventById = (id: string) => events.value.find((event) => event.id === id) ?? null;
 
+  const getRelatedPublishedEvents = (id: string, limit = 3) => {
+    const current = getEventById(id);
+    if (!current) {
+      return [];
+    }
+
+    const referenceStart = new Date(current.eventStartAt).getTime();
+    const distanceScore = (eventItem: EventItem) =>
+      Math.hypot(eventItem.latitude - current.latitude, eventItem.longitude - current.longitude);
+    const timeScore = (eventItem: EventItem) => {
+      const eventStart = new Date(eventItem.eventStartAt).getTime();
+      if (Number.isNaN(referenceStart) || Number.isNaN(eventStart)) {
+        return Number.POSITIVE_INFINITY;
+      }
+      return Math.abs(eventStart - referenceStart);
+    };
+
+    return publishedEvents.value
+      .filter((eventItem) => eventItem.id !== id)
+      .sort((left, right) => {
+        const leftSameCity = left.city === current.city ? 0 : 1;
+        const rightSameCity = right.city === current.city ? 0 : 1;
+        if (leftSameCity !== rightSameCity) {
+          return leftSameCity - rightSameCity;
+        }
+
+        const distanceDelta = distanceScore(left) - distanceScore(right);
+        if (distanceDelta !== 0) {
+          return distanceDelta;
+        }
+
+        return timeScore(left) - timeScore(right);
+      })
+      .slice(0, limit);
+  };
+
   const updateEventState = (updated: EventItem) => {
     const exists = events.value.some((event) => event.id === updated.id);
     events.value = exists
@@ -296,6 +332,7 @@ export const useEventsStore = defineStore("events", () => {
     availableCities,
     availableTypes,
     getEventById,
+    getRelatedPublishedEvents,
     updateEventState,
     fetchEvents: fetchEventsData,
     markImageError,
