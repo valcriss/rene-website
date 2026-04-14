@@ -1,12 +1,15 @@
+import { createRequire } from "node:module";
 import { AdminRepository } from "./repository";
 import { createInMemoryAdminRepository } from "./inMemoryRepository";
-import { createPrismaAdminRepository } from "./prismaRepository";
+
+const moduleRequire = createRequire(__filename);
 
 export const createAdminRepository = (): AdminRepository => {
   if (process.env.NODE_ENV === "test") {
     return createInMemoryAdminRepository();
   }
   if (process.env.DATABASE_URL && process.env.DATABASE_URL.trim().length > 0) {
+    const { createPrismaAdminRepository } = moduleRequire("./prismaRepository") as typeof import("./prismaRepository");
     // eslint-disable-next-line no-console
     console.info("DATABASE_URL is set, using Prisma admin repository (categories)");
     return createPrismaAdminRepository();

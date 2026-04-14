@@ -74,12 +74,26 @@ const buildRepo = (event: Event): EventRepository => ({
 });
 
 describe("events routes notification warnings", () => {
+  const fetchMock = jest.fn();
+
   beforeEach(() => {
     notificationMocks.notifyEventSubmitted.mockClear();
     notificationMocks.notifyEventResubmitted.mockClear();
     notificationMocks.notifyEventPublished.mockClear();
     notificationMocks.notifyEventRejected.mockClear();
     notificationMocks.notifyEventDeleted.mockClear();
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        features: [{ geometry: { coordinates: [0.7, 46.97] } }]
+      })
+    });
+    global.fetch = fetchMock as unknown as typeof fetch;
+  });
+
+  afterEach(() => {
+    fetchMock.mockReset();
   });
 
   it("does not log warning when saving a published revision draft", async () => {

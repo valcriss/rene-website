@@ -1,12 +1,15 @@
+import { createRequire } from "node:module";
 import { EventRepository } from "./repository";
 import { createInMemoryEventRepository } from "./inMemoryRepository";
-import { createPrismaEventRepository } from "./prismaRepository";
+
+const moduleRequire = createRequire(__filename);
 
 export const createEventRepository = (): EventRepository => {
   if (process.env.NODE_ENV === "test") {
     return createInMemoryEventRepository();
   }
   if (process.env.DATABASE_URL && process.env.DATABASE_URL.trim().length > 0) {
+    const { createPrismaEventRepository } = moduleRequire("./prismaRepository") as typeof import("./prismaRepository");
     // eslint-disable-next-line no-console
     console.info("DATABASE_URL is set, using Prisma event repository");
     return createPrismaEventRepository();
