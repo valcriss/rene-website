@@ -6,6 +6,7 @@ COPY backend/package.json backend/package.json
 COPY frontend/package.json frontend/package.json
 
 RUN npm ci
+RUN npm install --no-save @rollup/rollup-linux-x64-musl
 
 COPY backend backend
 COPY frontend frontend
