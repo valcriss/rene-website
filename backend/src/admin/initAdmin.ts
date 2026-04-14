@@ -34,6 +34,8 @@ type Logger = {
   info: (message: string) => void;
 };
 
+type Env = Record<string, string | undefined>;
+
 type RunInitAdminDependencies = {
   loadEnv?: () => void;
   createClient?: () => Promise<BootstrapClient>;
@@ -55,7 +57,7 @@ const readOptionValue = (args: string[], index: number, option: string) => {
 
 export const parseInitAdminOptions = (
   args: string[],
-  env: NodeJS.ProcessEnv = process.env
+  env: Env = process.env
 ): InitAdminOptions => {
   let name = env.ADMIN_INIT_NAME?.trim() || "Administrateur";
   let email = env.ADMIN_INIT_EMAIL?.trim() || "";
@@ -143,7 +145,7 @@ export const ensureAdminUser = async (client: BootstrapClient, options: InitAdmi
 
 export const runInitAdminCli = async (
   args: string[] = process.argv.slice(2),
-  env: NodeJS.ProcessEnv = process.env,
+  env: Env = process.env,
   dependencies?: RunInitAdminDependencies
 ) => {
   const resolvedDependencies = Object.assign(
