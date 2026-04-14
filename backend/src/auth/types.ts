@@ -10,3 +10,9 @@ export type AuthUser = {
 export type AuthUserWithPassword = AuthUser & {
   passwordHash: string;
 };
+
+export type CreateAuthUserInput = {
+  name: string;
+  email: string;
+  passwordHash: string;
+};

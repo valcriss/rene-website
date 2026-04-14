@@ -1,5 +1,5 @@
 import { vi } from "vitest";
-import { login } from "../src/api/auth";
+import { login, signup } from "../src/api/auth";
 
 describe("auth api", () => {
   afterEach(() => {
@@ -44,5 +44,39 @@ describe("auth api", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(login("u@test", "secret")).rejects.toThrow("Connexion impossible");
+  });
+
+  it("signs up", async () => {
+    const fetchMock = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ token: "t", user: { id: "1", name: "U", email: "u@test", role: "EDITOR" } })
+      })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await signup({
+      name: "U",
+      email: "u@test",
+      password: "secret123",
+      passwordConfirmation: "secret123"
+    });
+
+    expect(result.user.email).toBe("u@test");
+    expect(fetchMock).toHaveBeenCalledWith("/api/auth/signup", expect.any(Object));
+  });
+
+  it("throws signup fallback when parsing fails", async () => {
+    const fetchMock = vi.fn(() => Promise.resolve({ ok: false, json: () => Promise.reject("boom") }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      signup({
+        name: "U",
+        email: "u@test",
+        password: "secret123",
+        passwordConfirmation: "secret123"
+      })
+    ).rejects.toThrow("Inscription impossible");
   });
 });

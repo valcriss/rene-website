@@ -61,6 +61,17 @@
         <span v-if="canEdit" class="text-sm text-emerald-600">{{ t("login.editorModerationAccess") }}</span>
         <span v-if="authError" class="text-sm text-rose-600">{{ authError }}</span>
       </div>
+
+      <div class="mt-8 border-t border-slate-200 pt-6 text-sm text-slate-600">
+        <p>{{ t("login.noAccount") }}</p>
+        <button
+          type="button"
+          class="mt-3 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700"
+          @click="goToSignup"
+        >
+          {{ t("login.createAccount") }}
+        </button>
+      </div>
     </div>
   </section>
 </template>
@@ -106,5 +117,9 @@ const handleLogin = async () => {
 
 const goToHome = () => {
   router.push("/");
+};
+
+const goToSignup = () => {
+  router.push("/signup");
 };
 </script>

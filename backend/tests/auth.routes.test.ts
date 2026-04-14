@@ -16,7 +16,9 @@ const buildRepo = (passwordHash: string | null): AuthRepository => ({
         }
       : null,
   getUserById: async () => null,
-  listUsersByRole: async () => []
+  listUsersByRole: async () => [],
+  createEditorUser: async ({ name, email }) => ({ id: "created-user", name, email, role: "EDITOR" }),
+  updatePasswordHash: async () => undefined
 });
 
 describe("auth routes", () => {
@@ -27,7 +29,7 @@ describe("auth routes", () => {
   it("returns 400 on invalid payload", async () => {
     const app = express();
     app.use(express.json());
-    app.use("/api", createAuthRouter(buildRepo(hashPassword("secret"))));
+    app.use("/api", createAuthRouter(buildRepo(await hashPassword("secret"))));
 
     const response = await request(app).post("/api/auth/login").send({});
 
@@ -38,7 +40,7 @@ describe("auth routes", () => {
   it("returns 401 on invalid credentials", async () => {
     const app = express();
     app.use(express.json());
-    app.use("/api", createAuthRouter(buildRepo(hashPassword("secret"))));
+    app.use("/api", createAuthRouter(buildRepo(await hashPassword("secret"))));
 
     const response = await request(app)
       .post("/api/auth/login")
@@ -50,7 +52,7 @@ describe("auth routes", () => {
   it("returns token on success", async () => {
     const app = express();
     app.use(express.json());
-    app.use("/api", createAuthRouter(buildRepo(hashPassword("secret"))));
+    app.use("/api", createAuthRouter(buildRepo(await hashPassword("secret"))));
 
     const response = await request(app)
       .post("/api/auth/login")
@@ -59,5 +61,49 @@ describe("auth routes", () => {
     expect(response.status).toBe(200);
     expect(response.body.token).toBeDefined();
     expect(response.body.user.email).toBe("test@example.com");
+  });
+
+  it("returns 400 on invalid signup payload", async () => {
+    const app = express();
+    app.use(express.json());
+    app.use("/api", createAuthRouter(buildRepo(await hashPassword("secret"))));
+
+    const response = await request(app).post("/api/auth/signup").send({});
+
+    expect(response.status).toBe(400);
+    expect(response.body.errors).toContain("Le nom est requis.");
+  });
+
+  it("returns 409 on duplicate signup email", async () => {
+    const app = express();
+    app.use(express.json());
+    app.use("/api", createAuthRouter(buildRepo(await hashPassword("secret"))));
+
+    const response = await request(app).post("/api/auth/signup").send({
+      name: "Test",
+      email: "test@example.com",
+      password: "secret123",
+      passwordConfirmation: "secret123"
+    });
+
+    expect(response.status).toBe(409);
+    expect(response.body.errors).toContain("Un compte existe déjà avec cet email.");
+  });
+
+  it("returns session payload on signup success", async () => {
+    const app = express();
+    app.use(express.json());
+    app.use("/api", createAuthRouter(buildRepo(null)));
+
+    const response = await request(app).post("/api/auth/signup").send({
+      name: "New User",
+      email: "new@example.com",
+      password: "secret123",
+      passwordConfirmation: "secret123"
+    });
+
+    expect(response.status).toBe(201);
+    expect(response.body.token).toBeDefined();
+    expect(response.body.user.role).toBe("EDITOR");
   });
 });

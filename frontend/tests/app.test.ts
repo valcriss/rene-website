@@ -113,6 +113,19 @@ describe("App", () => {
     expect(screen.getByRole("heading", { level: 1, name: "Rene Website" })).toBeInTheDocument();
   });
 
+  it("redirects authenticated users away from signup", async () => {
+    window.localStorage.setItem("rene-auth-role", "EDITOR");
+    window.localStorage.setItem("rene-auth-token", "token");
+    window.localStorage.setItem("rene-auth-user-id", "user-1");
+    window.localStorage.setItem("rene-auth-user-name", "User");
+    window.localStorage.setItem("rene-auth-user-email", "user@test");
+    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) })));
+
+    const router = await renderWithRouter("/signup");
+
+    await waitFor(() => expect(router.currentRoute.value.path).toBe("/backoffice/events"));
+  });
+
   it("shows events when available", async () => {
     vi.stubGlobal(
       "fetch",

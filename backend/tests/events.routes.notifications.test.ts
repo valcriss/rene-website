@@ -43,7 +43,9 @@ const baseEvent: Event = {
 const authRepo: AuthRepository = {
   getUserByEmail: async () => null,
   getUserById: async () => null,
-  listUsersByRole: async () => []
+  listUsersByRole: async () => [],
+  createEditorUser: async () => null,
+  updatePasswordHash: async () => undefined
 };
 
 const notificationMocks = jest.requireMock("../src/notifications/service") as {

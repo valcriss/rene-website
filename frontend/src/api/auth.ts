@@ -10,6 +10,13 @@ export type AuthResponse = {
   user: AuthUser;
 };
 
+export type SignupPayload = {
+  name: string;
+  email: string;
+  password: string;
+  passwordConfirmation: string;
+};
+
 const parseApiError = async (response: Response, fallback: string) => {
   try {
     const data = (await response.json()) as { errors?: string[]; message?: string };
@@ -25,18 +32,24 @@ const parseApiError = async (response: Response, fallback: string) => {
   return fallback;
 };
 
-export const login = async (email: string, password: string): Promise<AuthResponse> => {
-  const response = await fetch("/api/auth/login", {
+const postAuthRequest = async (path: string, body: Record<string, string>, fallback: string): Promise<AuthResponse> => {
+  const response = await fetch(path, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({ email, password })
+    body: JSON.stringify(body)
   });
 
   if (!response.ok) {
-    throw new Error(await parseApiError(response, "Connexion impossible"));
+    throw new Error(await parseApiError(response, fallback));
   }
 
   return response.json() as Promise<AuthResponse>;
 };
+
+export const login = async (email: string, password: string): Promise<AuthResponse> =>
+  postAuthRequest("/api/auth/login", { email, password }, "Connexion impossible");
+
+export const signup = async (payload: SignupPayload): Promise<AuthResponse> =>
+  postAuthRequest("/api/auth/signup", payload, "Inscription impossible");

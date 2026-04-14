@@ -1,6 +1,6 @@
 import { computed, ref } from "vue";
 import { defineStore } from "pinia";
-import { login as loginApi } from "../api/auth";
+import { login as loginApi, signup as signupApi } from "../api/auth";
 import { TOKEN_STORAGE_KEY, USER_ID_STORAGE_KEY } from "../api/authHeaders";
 
 export type Role = "VISITOR" | "EDITOR" | "MODERATOR" | "ADMIN";
@@ -30,6 +30,10 @@ export const useAuthStore = defineStore("auth", () => {
   const userEmail = ref(loadUserEmail());
   const email = ref("");
   const password = ref("");
+  const signupName = ref("");
+  const signupEmail = ref("");
+  const signupPassword = ref("");
+  const signupPasswordConfirmation = ref("");
   const authError = ref<string | null>(null);
 
   const isAuthenticated = computed(() => role.value !== "VISITOR");
@@ -61,6 +65,17 @@ export const useAuthStore = defineStore("auth", () => {
     setSession(result);
   };
 
+  const signupWithPassword = async () => {
+    authError.value = null;
+    const result = await signupApi({
+      name: signupName.value,
+      email: signupEmail.value,
+      password: signupPassword.value,
+      passwordConfirmation: signupPasswordConfirmation.value
+    });
+    setSession(result);
+  };
+
   const setRole = (nextRole: Role) => {
     login(nextRole);
   };
@@ -83,6 +98,13 @@ export const useAuthStore = defineStore("auth", () => {
     password.value = "";
   };
 
+  const resetSignupForm = () => {
+    signupName.value = "";
+    signupEmail.value = "";
+    signupPassword.value = "";
+    signupPasswordConfirmation.value = "";
+  };
+
   return {
     role,
     token,
@@ -91,6 +113,10 @@ export const useAuthStore = defineStore("auth", () => {
     userEmail,
     email,
     password,
+    signupName,
+    signupEmail,
+    signupPassword,
+    signupPasswordConfirmation,
     authError,
     isAuthenticated,
     canModerate,
@@ -98,8 +124,10 @@ export const useAuthStore = defineStore("auth", () => {
     isAdmin,
     login,
     loginWithPassword,
+    signupWithPassword,
     setRole,
     logout,
-    resetCredentials
+    resetCredentials,
+    resetSignupForm
   };
 });

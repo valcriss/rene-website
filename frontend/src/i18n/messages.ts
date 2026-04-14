@@ -116,6 +116,8 @@ export const messages = {
       password: "Mot de passe",
       submit: "Se connecter",
       backToSite: "Retour au site",
+      noAccount: "Vous n'avez pas de compte ?",
+      createAccount: "Cr\u00e9er un compte",
       editorModerationAccess: "Acc\u00e8s r\u00e9daction/mod\u00e9ration activ\u00e9.",
       placeholderEmail: "prenom.example.fr",
       roles: {
@@ -123,6 +125,16 @@ export const messages = {
         moderator: "Mod\u00e9rateur",
         admin: "Administrateur"
       }
+    },
+    signup: {
+      eyebrow: "Premi\u00e8re connexion",
+      title: "Cr\u00e9er un compte r\u00e9dacteur",
+      lead: "Ouvrez votre acc\u00e8s au backoffice pour proposer et suivre vos \u00e9v\u00e9nements culturels.",
+      passwordConfirmation: "Confirmer le mot de passe",
+      submit: "Cr\u00e9er mon compte",
+      backToLogin: "J'ai d\u00e9j\u00e0 un compte",
+      alreadyAccount: "Vous avez d\u00e9j\u00e0 un compte ?",
+      errorFallback: "Inscription impossible"
     },
     backoffice: {
       title: "Backoffice",
@@ -486,6 +498,8 @@ export const messages = {
       password: "Password",
       submit: "Log in",
       backToSite: "Back to site",
+      noAccount: "Don't have an account?",
+      createAccount: "Create one",
       editorModerationAccess: "Editorial/moderation access enabled.",
       placeholderEmail: "name.example.com",
       roles: {
@@ -493,6 +507,16 @@ export const messages = {
         moderator: "Moderator",
         admin: "Administrator"
       }
+    },
+    signup: {
+      eyebrow: "First access",
+      title: "Create an editor account",
+      lead: "Open your back-office access to submit and track your cultural events.",
+      passwordConfirmation: "Confirm password",
+      submit: "Create my account",
+      backToLogin: "I already have an account",
+      alreadyAccount: "Already have an account?",
+      errorFallback: "Signup failed"
     },
     backoffice: {
       title: "Back office",

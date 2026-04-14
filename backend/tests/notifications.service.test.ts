@@ -50,7 +50,9 @@ describe("notifications service", () => {
     listUsersByRole: async () => [
       { id: "m1", name: "Mod", email: "mod@test", role: "MODERATOR", passwordHash: "hash" },
       { id: "a1", name: "Admin", email: "admin@test", role: "ADMIN", passwordHash: "hash" }
-    ]
+    ],
+    createEditorUser: async () => null,
+    updatePasswordHash: async () => undefined
   };
 
   beforeEach(() => {
@@ -74,7 +76,9 @@ describe("notifications service", () => {
     const emptyRepo: AuthRepository = {
       getUserByEmail: async () => null,
       getUserById: async () => null,
-      listUsersByRole: async () => []
+      listUsersByRole: async () => [],
+      createEditorUser: async () => null,
+      updatePasswordHash: async () => undefined
     };
 
     await notifyEventSubmitted(baseEvent, emptyRepo);

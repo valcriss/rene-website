@@ -23,7 +23,7 @@ const adminStore = useAdminStore();
 watch(
   [() => route.path, () => authStore.isAuthenticated],
   ([path, authenticated]) => {
-    if (path === "/login" && authenticated) {
+    if ((path === "/login" || path === "/signup") && authenticated) {
       router.replace("/backoffice");
       return;
     }

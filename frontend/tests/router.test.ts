@@ -11,6 +11,7 @@ describe("router", () => {
       expect.arrayContaining([
         "/",
         "/login",
+        "/signup",
         "/backoffice",
         "/backoffice/events",
         "/backoffice/events/new",

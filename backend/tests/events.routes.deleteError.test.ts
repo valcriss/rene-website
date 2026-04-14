@@ -18,7 +18,9 @@ describe("events routes delete errors", () => {
   const authRepo: AuthRepository = {
     getUserByEmail: async () => null,
     getUserById: async () => null,
-    listUsersByRole: async () => []
+    listUsersByRole: async () => [],
+    createEditorUser: async () => null,
+    updatePasswordHash: async () => undefined
   };
 
   it("returns 400 for delete errors", async () => {

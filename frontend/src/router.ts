@@ -2,6 +2,7 @@ import { createRouter, createWebHistory, type RouterHistory } from "vue-router";
 
 const HomePage = () => import("./pages/HomePage.vue");
 const LoginPage = () => import("./pages/LoginPage.vue");
+const SignupPage = () => import("./pages/SignupPage.vue");
 const EventDetailPage = () => import("./pages/EventDetailPage.vue");
 const BackofficeLayout = () => import("./pages/backoffice/BackofficeLayout.vue");
 const BackofficeEventsPage = () => import("./pages/backoffice/BackofficeEventsPage.vue");
@@ -17,6 +18,7 @@ const BackofficeAdminSettingsPage = () => import("./pages/backoffice/BackofficeA
 const routes = [
   { path: "/", name: "home", component: HomePage },
   { path: "/login", name: "login", component: LoginPage },
+  { path: "/signup", name: "signup", component: SignupPage },
   {
     path: "/backoffice",
     component: BackofficeLayout,

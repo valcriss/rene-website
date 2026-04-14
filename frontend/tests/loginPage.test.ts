@@ -47,4 +47,13 @@ describe("LoginPage", () => {
 
     expect(pushSpy).toHaveBeenCalledWith("/");
   });
+
+  it("navigates to signup", async () => {
+    const { router } = await setup();
+    const pushSpy = vi.spyOn(router, "push");
+
+    await fireEvent.click(screen.getByRole("button", { name: "Créer un compte" }));
+
+    expect(pushSpy).toHaveBeenCalledWith("/signup");
+  });
 });

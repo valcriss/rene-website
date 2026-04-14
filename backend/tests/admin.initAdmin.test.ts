@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-import { hashPassword } from "../src/auth/password";
+import { verifyPassword } from "../src/auth/password";
 import {
   createBootstrapPrismaClient,
   ensureAdminUser,
@@ -231,14 +231,16 @@ describe("admin init", () => {
 
     const result = await ensureAdminUser(client, options);
 
-    expect(create).toHaveBeenCalledWith({
+    const createArgs = create.mock.calls[0][0];
+
+    expect(createArgs).toMatchObject({
       data: {
         name: "Admin",
         email: "admin@example.com",
-        role: "ADMIN",
-        passwordHash: hashPassword("secret")
+        role: "ADMIN"
       }
     });
+    await expect(verifyPassword("secret", createArgs.data.passwordHash)).resolves.toBe(true);
     expect(result).toEqual({ action: "created", user: createdUser });
   });
 
@@ -261,14 +263,16 @@ describe("admin init", () => {
 
     const result = await ensureAdminUser(client, { ...options, forceUpdate: true });
 
-    expect(update).toHaveBeenCalledWith({
+    const updateArgs = update.mock.calls[0][0];
+
+    expect(updateArgs).toMatchObject({
       where: { email: "admin@example.com" },
       data: {
         name: "Admin",
-        role: "ADMIN",
-        passwordHash: hashPassword("secret")
+        role: "ADMIN"
       }
     });
+    await expect(verifyPassword("secret", updateArgs.data.passwordHash)).resolves.toBe(true);
     expect(result).toEqual({ action: "updated", user: updatedUser });
   });
 

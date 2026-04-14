@@ -181,7 +181,7 @@ export const ensureAdminUser = async (client: BootstrapClient, options: InitAdmi
         name: options.name,
         email: options.email,
         role: "ADMIN",
-        passwordHash: hashPassword(options.password)
+        passwordHash: await hashPassword(options.password)
       }
     });
 
@@ -198,7 +198,7 @@ export const ensureAdminUser = async (client: BootstrapClient, options: InitAdmi
       data: {
         name: options.name,
         role: "ADMIN",
-        passwordHash: hashPassword(options.password)
+        passwordHash: await hashPassword(options.password)
       }
     });
 

@@ -26,7 +26,9 @@ describe("events routes", () => {
   const authRepo: AuthRepository = {
     getUserByEmail: async () => null,
     getUserById: async () => null,
-    listUsersByRole: async () => []
+    listUsersByRole: async () => [],
+    createEditorUser: async () => null,
+    updatePasswordHash: async () => undefined
   };
   const originalEnv = process.env.NODE_ENV;
   const fetchMock = jest.fn();
