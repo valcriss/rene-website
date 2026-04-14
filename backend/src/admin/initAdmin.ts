@@ -47,6 +47,39 @@ export const loadInitAdminEnv = () => {
   dotenv.config({ path: path.resolve(process.cwd(), ".env") });
 };
 
+const readEnvValue = (env: Env, ...keys: string[]) => {
+  for (const key of keys) {
+    const value = env[key]?.trim();
+    if (!value) {
+      continue;
+    }
+
+    if (key.startsWith("npm_config_") && (value === "true" || value === "false")) {
+      continue;
+    }
+
+    if (value) {
+      return value;
+    }
+  }
+
+  return undefined;
+};
+
+const readEnvFlag = (env: Env, ...keys: string[]) => {
+  for (const key of keys) {
+    const value = env[key]?.trim().toLowerCase();
+    if (value === "true") {
+      return true;
+    }
+    if (value === "false") {
+      return false;
+    }
+  }
+
+  return false;
+};
+
 const readOptionValue = (args: string[], index: number, option: string) => {
   const value = args[index + 1];
   if (!value || value.startsWith("--")) {
@@ -59,34 +92,66 @@ export const parseInitAdminOptions = (
   args: string[],
   env: Env = process.env
 ): InitAdminOptions => {
-  let name = env.ADMIN_INIT_NAME?.trim() || "Administrateur";
-  let email = env.ADMIN_INIT_EMAIL?.trim() || "";
-  let password = env.ADMIN_INIT_PASSWORD?.trim() || "";
-  let forceUpdate = env.ADMIN_INIT_FORCE_UPDATE === "true";
+  let name = readEnvValue(env, "ADMIN_INIT_NAME", "npm_config_name") || "Administrateur";
+  let email = readEnvValue(env, "ADMIN_INIT_EMAIL", "npm_config_email") || "";
+  let password = readEnvValue(env, "ADMIN_INIT_PASSWORD", "npm_config_password") || "";
+  let forceUpdate = readEnvFlag(env, "ADMIN_INIT_FORCE_UPDATE", "npm_config_force_update");
+  const positionalArgs: string[] = [];
+  let hasNamedOptions = false;
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
     if (arg === "--name") {
+      hasNamedOptions = true;
       name = readOptionValue(args, index, arg).trim();
       index += 1;
       continue;
     }
     if (arg === "--email") {
+      hasNamedOptions = true;
       email = readOptionValue(args, index, arg).trim();
       index += 1;
       continue;
     }
     if (arg === "--password") {
+      hasNamedOptions = true;
       password = readOptionValue(args, index, arg).trim();
       index += 1;
       continue;
     }
     if (arg === "--force-update") {
+      hasNamedOptions = true;
       forceUpdate = true;
       continue;
     }
 
-    throw new Error(`Unknown option: ${arg}`);
+    if (arg.startsWith("--")) {
+      throw new Error(`Unknown option: ${arg}`);
+    }
+
+    positionalArgs.push(arg.trim());
+  }
+
+  if (positionalArgs.length > 0) {
+    if (hasNamedOptions) {
+      throw new Error(`Unknown option: ${positionalArgs[0]}`);
+    }
+
+    if (positionalArgs.length === 1) {
+      if (!email) {
+        email = positionalArgs[0];
+      } else if (!password) {
+        password = positionalArgs[0];
+      } else {
+        throw new Error(`Unknown option: ${positionalArgs[0]}`);
+      }
+    } else if (positionalArgs.length === 2) {
+      [email, password] = positionalArgs;
+    } else if (positionalArgs.length === 3) {
+      [name, email, password] = positionalArgs;
+    } else {
+      throw new Error(`Unknown option: ${positionalArgs[0]}`);
+    }
   }
 
   if (!name) {

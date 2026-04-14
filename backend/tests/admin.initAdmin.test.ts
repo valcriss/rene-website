@@ -113,6 +113,41 @@ describe("admin init", () => {
     });
   });
 
+  it("parses options from npm config env defaults", () => {
+    const result = parseInitAdminOptions([], {
+      npm_config_name: "  Npm Admin  ",
+      npm_config_email: "  npm-admin@example.com  ",
+      npm_config_password: "  npm-secret  ",
+      npm_config_force_update: "true"
+    });
+
+    expect(result).toEqual({
+      name: "Npm Admin",
+      email: "npm-admin@example.com",
+      password: "npm-secret",
+      forceUpdate: true
+    });
+  });
+
+  it("ignores boolean npm config placeholders and preserves false flags", () => {
+    expect(parseInitAdminOptions(["admin@example.com"], {
+      npm_config_email: "true",
+      npm_config_password: "secret",
+      npm_config_force_update: "false"
+    })).toEqual({
+      name: "Administrateur",
+      email: "admin@example.com",
+      password: "secret",
+      forceUpdate: false
+    });
+
+    expect(parseInitAdminOptions([], {
+      ADMIN_INIT_EMAIL: "admin@example.com",
+      ADMIN_INIT_PASSWORD: "secret",
+      ADMIN_INIT_FORCE_UPDATE: "false"
+    }).forceUpdate).toBe(false);
+  });
+
   it("parses cli options over env", () => {
     const result = parseInitAdminOptions(
       ["--name", "Boss", "--email", "boss@example.com", "--password", "pwd", "--force-update"],
@@ -132,6 +167,31 @@ describe("admin init", () => {
     });
   });
 
+  it("parses positional args for npm run compatibility", () => {
+    expect(parseInitAdminOptions(["admin@example.com", "secret"], {})).toEqual({
+      name: "Administrateur",
+      email: "admin@example.com",
+      password: "secret",
+      forceUpdate: false
+    });
+
+    expect(parseInitAdminOptions(["Boss", "boss@example.com", "secret"], {})).toEqual({
+      name: "Boss",
+      email: "boss@example.com",
+      password: "secret",
+      forceUpdate: false
+    });
+
+    expect(parseInitAdminOptions(["secret"], {
+      ADMIN_INIT_EMAIL: "admin@example.com"
+    })).toEqual({
+      name: "Administrateur",
+      email: "admin@example.com",
+      password: "secret",
+      forceUpdate: false
+    });
+  });
+
   it("uses default admin name", () => {
     const result = parseInitAdminOptions([], {
       ADMIN_INIT_EMAIL: "admin@example.com",
@@ -144,6 +204,12 @@ describe("admin init", () => {
   it("rejects missing option values and unknown args", () => {
     expect(() => parseInitAdminOptions(["--email"], {})).toThrow("Missing value for --email");
     expect(() => parseInitAdminOptions(["--unknown"], {})).toThrow("Unknown option: --unknown");
+    expect(() => parseInitAdminOptions(["--email", "admin@example.com", "secret"], {})).toThrow("Unknown option: secret");
+    expect(() => parseInitAdminOptions(["extra"], {
+      ADMIN_INIT_EMAIL: "admin@example.com",
+      ADMIN_INIT_PASSWORD: "secret"
+    })).toThrow("Unknown option: extra");
+    expect(() => parseInitAdminOptions(["one", "two", "three", "four"], {})).toThrow("Unknown option: one");
   });
 
   it("rejects missing required values", () => {
