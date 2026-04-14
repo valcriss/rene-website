@@ -1,0 +1,3 @@
+-- No-op.
+-- This migration was generated before the Audience table was introduced.
+-- The actual Audience creation and wiring happen in 20260414181500_add_audiences.

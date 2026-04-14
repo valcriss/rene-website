@@ -79,6 +79,7 @@ describe("createPrismaEventRepository", () => {
       publishedAt: null,
       publicationEndAt: new Date("2026-01-15T22:00:00.000Z"),
       rejectionReason: null,
+      pendingRevision: null,
       createdAt: new Date("2026-01-01T00:00:00.000Z"),
       updatedAt: new Date("2026-01-02T00:00:00.000Z")
     };
@@ -87,7 +88,7 @@ describe("createPrismaEventRepository", () => {
     const result = await repo.list();
 
     expect(result[0].eventStartAt).toBe("2026-01-15T20:00:00.000Z");
-    expect(prismaMocks.findMany).toHaveBeenCalledWith({ orderBy: { eventStartAt: "asc" } });
+    expect(prismaMocks.findMany).toHaveBeenCalledWith({ include: { pendingRevision: true }, orderBy: { eventStartAt: "asc" } });
   });
 
   it("maps single event", async () => {
@@ -118,6 +119,7 @@ describe("createPrismaEventRepository", () => {
       publishedAt: new Date("2026-02-01T09:00:00.000Z"),
       publicationEndAt: new Date("2026-02-01T12:00:00.000Z"),
       rejectionReason: null,
+      pendingRevision: null,
       createdAt: new Date("2026-01-01T00:00:00.000Z"),
       updatedAt: new Date("2026-01-02T00:00:00.000Z")
     };
@@ -158,6 +160,7 @@ describe("createPrismaEventRepository", () => {
       publishedAt: null,
       publicationEndAt: new Date("2026-03-01T12:00:00.000Z"),
       rejectionReason: null,
+      pendingRevision: null,
       createdAt: new Date("2026-01-01T00:00:00.000Z"),
       updatedAt: new Date("2026-01-02T00:00:00.000Z")
     };
@@ -238,6 +241,7 @@ describe("createPrismaEventRepository", () => {
       publishedAt: null,
       publicationEndAt: new Date("2026-02-01T12:00:00.000Z"),
       rejectionReason: null,
+      pendingRevision: null,
       createdAt: new Date("2026-01-01T00:00:00.000Z"),
       updatedAt: new Date("2026-01-02T00:00:00.000Z")
     };
@@ -336,6 +340,7 @@ describe("createPrismaEventRepository", () => {
       publishedAt: new Date("2026-01-01T10:00:00.000Z"),
       publicationEndAt: new Date("2026-02-01T12:00:00.000Z"),
       rejectionReason: null,
+      pendingRevision: null,
       createdAt: new Date("2026-01-01T00:00:00.000Z"),
       updatedAt: new Date("2026-01-02T00:00:00.000Z")
     };

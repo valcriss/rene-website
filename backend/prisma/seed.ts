@@ -1,6 +1,6 @@
 import path from "path";
 import dotenv from "dotenv";
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 import { createHash } from "node:crypto";
 
 dotenv.config({ path: path.resolve(process.cwd(), "..", ".env") });
@@ -9,6 +9,10 @@ dotenv.config({ path: path.resolve(process.cwd(), ".env") });
 const prisma = new PrismaClient();
 
 const hashPassword = (password: string) => createHash("sha256").update(password).digest("hex");
+
+type SeedEventInput = Omit<Prisma.EventCreateManyInput, "audienceId"> & {
+  audienceId?: Prisma.EventCreateManyInput["audienceId"];
+};
 
 const getDatabaseInfo = () => {
   const url = process.env.DATABASE_URL;
@@ -29,12 +33,13 @@ const seed = async () => {
   console.log(`Seed démarré (${getDatabaseInfo()}).`);
 
   const deletedEvents = await prisma.event.deleteMany();
+  const deletedAudiences = await prisma.audience.deleteMany();
   const deletedCategories = await prisma.category.deleteMany();
   const deletedUsers = await prisma.user.deleteMany();
 
   // eslint-disable-next-line no-console
   console.log(
-    `Suppression avant seed: ${deletedUsers.count} utilisateurs, ${deletedCategories.count} catégories, ${deletedEvents.count} événements.`
+    `Suppression avant seed: ${deletedUsers.count} utilisateurs, ${deletedCategories.count} catégories, ${deletedAudiences.count} publics, ${deletedEvents.count} événements.`
   );
 
   const usersResult = await prisma.user.createMany({
@@ -75,13 +80,23 @@ const seed = async () => {
     ]
   });
 
-  const eventsResult = await prisma.event.createMany({
+  const audiencesResult = await prisma.audience.createMany({
     data: [
+      { id: "all", name: "Tous publics" },
+      { id: "children", name: "Enfants" },
+      { id: "teens", name: "Adolescents" },
+      { id: "adults", name: "Adultes" },
+      { id: "seniors", name: "Seniors" }
+    ]
+  });
+
+  const eventSeedData = [
       {
         title: "Concert du Nouvel An",
         content: "Concert festif pour lancer l'année culturelle.",
         image: "https://source.unsplash.com/featured/?concert",
         categoryId: "music",
+        audienceId: "all",
         eventStartAt: new Date("2026-01-18T18:00:00.000Z"),
         eventEndAt: new Date("2026-01-18T21:00:00.000Z"),
         allDay: false,
@@ -107,6 +122,7 @@ const seed = async () => {
         content: "Soirée jazz avec trio local.",
         image: "https://source.unsplash.com/featured/?jazz",
         categoryId: "music",
+        audienceId: "adults",
         eventStartAt: new Date("2026-01-25T19:00:00.000Z"),
         eventEndAt: new Date("2026-01-25T22:00:00.000Z"),
         allDay: false,
@@ -132,6 +148,7 @@ const seed = async () => {
         content: "Lecture d'auteurs locaux et échanges.",
         image: "https://source.unsplash.com/featured/?reading",
         categoryId: "lecture",
+        audienceId: "all",
         eventStartAt: new Date("2026-02-02T14:00:00.000Z"),
         eventEndAt: new Date("2026-02-02T16:00:00.000Z"),
         allDay: false,
@@ -157,6 +174,7 @@ const seed = async () => {
         content: "Atelier participatif pour ados.",
         image: "https://source.unsplash.com/featured/?theatre",
         categoryId: "theatre",
+        audienceId: "teens",
         eventStartAt: new Date("2026-02-07T09:00:00.000Z"),
         eventEndAt: new Date("2026-02-07T12:00:00.000Z"),
         allDay: false,
@@ -182,6 +200,7 @@ const seed = async () => {
         content: "Regards contemporains sur la vallée.",
         image: "https://source.unsplash.com/featured/?photo-exhibition",
         categoryId: "expo",
+        audienceId: "adults",
         eventStartAt: new Date("2026-02-10T10:00:00.000Z"),
         eventEndAt: new Date("2026-02-10T18:00:00.000Z"),
         allDay: false,
@@ -207,6 +226,7 @@ const seed = async () => {
         content: "Projection familiale au parc.",
         image: "https://source.unsplash.com/featured/?outdoor-cinema",
         categoryId: "cinema",
+        audienceId: "children",
         eventStartAt: new Date("2026-02-14T19:30:00.000Z"),
         eventEndAt: new Date("2026-02-14T21:30:00.000Z"),
         allDay: false,
@@ -232,6 +252,7 @@ const seed = async () => {
         content: "Trois jours de spectacles et ateliers.",
         image: "https://source.unsplash.com/featured/?festival",
         categoryId: "festival",
+        audienceId: "all",
         eventStartAt: new Date("2026-02-20T09:00:00.000Z"),
         eventEndAt: new Date("2026-02-22T20:00:00.000Z"),
         allDay: false,
@@ -952,12 +973,18 @@ const seed = async () => {
         publicationEndAt: new Date("2026-03-27T00:00:00.000Z"),
         rejectionReason: null
       }
-    ]
+    ] satisfies SeedEventInput[];
+
+  const eventsResult = await prisma.event.createMany({
+    data: eventSeedData.map((event): Prisma.EventCreateManyInput => ({
+      ...event,
+      audienceId: event.audienceId ?? "all"
+    }))
   });
 
   // eslint-disable-next-line no-console
   console.log(
-    `Seed terminé: ${usersResult.count} utilisateurs, ${categoriesResult.count} catégories, ${eventsResult.count} événements.`
+    `Seed terminé: ${usersResult.count} utilisateurs, ${categoriesResult.count} catégories, ${audiencesResult.count} publics, ${eventsResult.count} événements.`
   );
 };
 

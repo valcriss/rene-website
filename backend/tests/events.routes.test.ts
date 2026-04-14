@@ -11,6 +11,7 @@ const validPayload = {
   content: "Soirée jazz",
   image: "https://example.com/image.jpg",
   categoryId: "music",
+  audienceId: "all",
   eventStartAt: "2026-01-15T20:00:00.000Z",
   eventEndAt: "2026-01-15T22:00:00.000Z",
   allDay: false,
@@ -66,6 +67,10 @@ describe("events routes", () => {
         throw new Error("boom");
       },
       update: async () => null,
+      upsertPendingRevision: async () => null,
+      submitPendingRevision: async () => null,
+      rejectPendingRevision: async () => null,
+      publishPendingRevision: async () => null,
       delete: async () => false,
       updateStatus: async () => null
     };
@@ -184,7 +189,7 @@ describe("events routes", () => {
     expect(response.status).toBe(400);
   });
 
-  it("submits publishes and rejects event", async () => {
+  it("submits, publishes, and rejects pending content", async () => {
     const app = createApp();
     const createResponse = await request(app)
       .post("/api/events")
@@ -204,12 +209,57 @@ describe("events routes", () => {
     expect(publishResponse.status).toBe(200);
     expect(publishResponse.body.status).toBe("PUBLISHED");
 
+    const createRejectedCandidateResponse = await request(app)
+      .post("/api/events")
+      .set("x-user-role", "EDITOR")
+      .send({ ...validPayload, title: "Concert à refuser" });
+    const rejectedCandidateId = createRejectedCandidateResponse.body.id;
+
+    const submitRejectedCandidateResponse = await request(app)
+      .post(`/api/events/${rejectedCandidateId}/submit`)
+      .set("x-user-role", "EDITOR");
+    expect(submitRejectedCandidateResponse.status).toBe(200);
+
     const rejectResponse = await request(app)
-      .post(`/api/events/${id}/reject`)
+      .post(`/api/events/${rejectedCandidateId}/reject`)
       .set("x-user-role", "MODERATOR")
       .send({ rejectionReason: "Motif" });
     expect(rejectResponse.status).toBe(200);
     expect(rejectResponse.body.status).toBe("REJECTED");
+  });
+
+  it("saves a published update as draft revision before explicit submit", async () => {
+    const app = createApp();
+    const createResponse = await request(app)
+      .post("/api/events")
+      .set("x-user-role", "EDITOR")
+      .send(validPayload);
+    const id = createResponse.body.id;
+
+    await request(app)
+      .post(`/api/events/${id}/submit`)
+      .set("x-user-role", "EDITOR");
+
+    await request(app)
+      .post(`/api/events/${id}/publish`)
+      .set("x-user-role", "MODERATOR");
+
+    const updateResponse = await request(app)
+      .put(`/api/events/${id}`)
+      .set("x-user-role", "EDITOR")
+      .send({ ...validPayload, title: "Concert révisé" });
+
+    expect(updateResponse.status).toBe(200);
+    expect(updateResponse.body.status).toBe("PUBLISHED");
+    expect(updateResponse.body.pendingRevision.status).toBe("DRAFT");
+    expect(updateResponse.body.pendingRevision.title).toBe("Concert révisé");
+
+    const submitResponse = await request(app)
+      .post(`/api/events/${id}/submit`)
+      .set("x-user-role", "EDITOR");
+
+    expect(submitResponse.status).toBe(200);
+    expect(submitResponse.body.pendingRevision.status).toBe("PENDING");
   });
 
   it("deletes event", async () => {

@@ -10,6 +10,7 @@ import {
   notifyEventSubmitted,
   notifyEventResubmitted
 } from "../notifications/service";
+import { Event } from "./types";
 
 type AsyncHandler = (req: Request, res: Response) => Promise<void>;
 
@@ -21,6 +22,26 @@ const withErrorHandling = (handler: AsyncHandler) => async (req: Request, res: R
     console.error("Events API error", error);
     res.status(500).json({ message: "Erreur interne du serveur." });
   }
+};
+
+const toRevisionSnapshot = (event: Event): Event => {
+  if (!event.pendingRevision) {
+    return event;
+  }
+
+  return {
+    ...event,
+    ...event.pendingRevision,
+    id: event.id,
+    createdByUserId: event.createdByUserId,
+    status: event.pendingRevision.status,
+    publishedAt: event.publishedAt,
+    publicationEndAt: event.pendingRevision.eventEndAt,
+    rejectionReason: event.pendingRevision.rejectionReason,
+    pendingRevision: event.pendingRevision,
+    createdAt: event.createdAt,
+    updatedAt: event.updatedAt
+  };
 };
 
 export const createEventRouter = (repo: EventRepository, authRepo: AuthRepository) => {
@@ -60,6 +81,7 @@ export const createEventRouter = (repo: EventRepository, authRepo: AuthRepositor
       res.status(status).json({ errors: result.errors });
       return;
     }
+
     res.json(result.value);
   }));
 
@@ -67,13 +89,15 @@ export const createEventRouter = (repo: EventRepository, authRepo: AuthRepositor
     const current = await getEvent(repo, req.params.id);
     const result = await submitEvent(repo, req.params.id);
     if (!result.ok) {
-      res.status(404).json({ errors: result.errors });
+      const status = result.errors.some((error) => error.includes("introuvable")) ? 404 : 400;
+      res.status(status).json({ errors: result.errors });
       return;
     }
-    const wasRejected = current?.status === "REJECTED";
+    const wasRejected = current?.status === "REJECTED" || current?.pendingRevision?.status === "REJECTED";
+    const notificationEvent = current?.status === "PUBLISHED" ? toRevisionSnapshot(result.value) : result.value;
     const notification = wasRejected
-      ? await notifyEventResubmitted(result.value, authRepo)
-      : await notifyEventSubmitted(result.value, authRepo);
+      ? await notifyEventResubmitted(notificationEvent, authRepo)
+      : await notifyEventSubmitted(notificationEvent, authRepo);
     if (!notification.ok) {
       // eslint-disable-next-line no-console
       console.warn("Notifications submit failed", notification.errors);
@@ -96,13 +120,15 @@ export const createEventRouter = (repo: EventRepository, authRepo: AuthRepositor
   }));
 
   router.post("/events/:id/reject", requireRole(["MODERATOR", "ADMIN"]), withErrorHandling(async (req, res) => {
+    const current = await getEvent(repo, req.params.id);
     const result = await rejectEvent(repo, req.params.id, req.body?.rejectionReason);
     if (!result.ok) {
-      const status = result.errors.includes("Événement introuvable.") ? 404 : 400;
+      const status = result.errors.some((error) => error.includes("introuvable")) ? 404 : 400;
       res.status(status).json({ errors: result.errors });
       return;
     }
-    const notification = await notifyEventRejected(result.value, authRepo);
+    const notificationEvent = current?.status === "PUBLISHED" ? toRevisionSnapshot(result.value) : result.value;
+    const notification = await notifyEventRejected(notificationEvent, authRepo);
     if (!notification.ok) {
       // eslint-disable-next-line no-console
       console.warn("Notifications reject failed", notification.errors);

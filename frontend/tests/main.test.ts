@@ -7,9 +7,13 @@ const createAppMock = vi.fn(() => ({
   mount: mountMock
 }));
 
-vi.mock("vue", () => ({
-  createApp: createAppMock
-}));
+vi.mock("vue", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("vue")>();
+  return {
+    ...actual,
+    createApp: createAppMock
+  };
+});
 
 vi.mock("../src/App.vue", () => ({
   default: { name: "App" }
@@ -18,6 +22,10 @@ vi.mock("../src/App.vue", () => ({
 const routerMock = { name: "router" };
 vi.mock("../src/router", () => ({
   createAppRouter: () => routerMock
+}));
+
+vi.mock("../src/i18n", () => ({
+  installI18n: vi.fn()
 }));
 
 vi.mock("../src/styles.css", () => ({}));

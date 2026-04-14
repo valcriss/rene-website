@@ -101,7 +101,10 @@ describe("home components", () => {
 
   it("Header emits login", async () => {
     const wrapper = mount(Header, { props: { showLogin: true } });
-    const button = wrapper.find("button");
+    const button = wrapper.findAll("button").at(-1);
+    if (!button) {
+      throw new Error("Login button not found");
+    }
     await button.trigger("click");
     expect(wrapper.emitted("login")).toBeTruthy();
   });

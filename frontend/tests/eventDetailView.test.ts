@@ -138,6 +138,7 @@ describe("EventDetailView", () => {
     await wrapper.vm.$nextTick();
 
     expect(wrapper.html()).toContain("Texte");
+    expect(wrapper.text().match(/Texte/g)?.length ?? 0).toBe(1);
     expect(wrapper.find("[data-testid='related-events']").exists()).toBe(true);
 
     await wrapper.find("[data-testid='related-event-card-2']").trigger("click");
@@ -148,5 +149,55 @@ describe("EventDetailView", () => {
     }).$.setupState;
     setupState.emitSelect("1");
     expect(wrapper.emitted("select")?.[1]).toEqual(["1"]);
+  });
+
+  it("renders sanitized pricing info when available", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const categoriesStore = useCategoriesStore();
+    categoriesStore.categories = [{ id: "music", name: "Musique", createdAt: "", updatedAt: "" }];
+
+    const wrapper = mount(EventDetailView, {
+      props: {
+        eventId: "1",
+        event: {
+          id: "1",
+          title: "Concert",
+          content: "<p>Texte</p>",
+          image: "img",
+          categoryId: "music",
+          eventStartAt: "2026-01-15T20:00:00.000Z",
+          eventEndAt: "2026-01-15T22:00:00.000Z",
+          allDay: false,
+          venueName: "Salle",
+          address: "",
+          postalCode: "",
+          city: "Descartes",
+          latitude: 46.97,
+          longitude: 0.7,
+          organizerName: "Org",
+          ticketUrl: "https://tickets.example.com",
+          pricingInfo: "<ul><li><strong>Plein tarif</strong> : 12 €</li></ul><script>alert(1)</script>",
+          status: "PUBLISHED",
+          publishedAt: null,
+          publicationEndAt: "2026-01-15T22:00:00.000Z",
+          rejectionReason: null,
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z"
+        }
+      },
+      global: {
+        plugins: [pinia],
+        stubs: {
+          EventMap: { template: "<div></div>" }
+        }
+      }
+    });
+
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.html()).toContain("Information sur le tarif");
+    expect(wrapper.html()).toContain("<strong>Plein tarif</strong>");
+    expect(wrapper.html()).not.toContain("<script>");
   });
 });

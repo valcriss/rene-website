@@ -51,7 +51,7 @@ describe("BackofficeEventCreatePage", () => {
     await fireEvent.update(select, "music");
 
     expect((select as HTMLSelectElement).value).toBe("music");
-    expect(screen.getByText("Musique")).toBeInTheDocument();
+    expect(screen.getAllByText("Musique").length).toBeGreaterThan(0);
   });
 
   it("shows empty state when no categories", async () => {
@@ -78,7 +78,10 @@ describe("BackofficeEventCreatePage", () => {
     const setup = await setupPage();
     const spy = vi.spyOn(setup.editorStore, "setImageFile");
     renderPage(setup);
-    const input = await screen.findByLabelText("Image");
+    const input = document.querySelector("section label input[type='file']") as HTMLInputElement | null;
+    if (!input) {
+      throw new Error("Main image input not found");
+    }
     const file = new File(["image"], "photo.png", { type: "image/png" });
 
     Object.defineProperty(input, "files", { value: [file], configurable: true });
@@ -96,7 +99,10 @@ describe("BackofficeEventCreatePage", () => {
     const setup = await setupPage();
     const spy = vi.spyOn(setup.editorStore, "setImageFile");
     renderPage(setup);
-    const input = await screen.findByLabelText("Image");
+    const input = document.querySelector("section label input[type='file']") as HTMLInputElement | null;
+    if (!input) {
+      throw new Error("Main image input not found");
+    }
 
     Object.defineProperty(input, "files", { value: [], configurable: true });
     await fireEvent.update(input, "");
@@ -114,8 +120,10 @@ describe("BackofficeEventCreatePage", () => {
     setup.categoriesStore.hasLoaded = true;
     setup.editorStore.editorMode = "edit";
     const saveSpy = vi.spyOn(setup.editorStore, "handleSaveDraft").mockResolvedValue(true);
-    const submitSpy = vi.spyOn(setup.editorStore, "handleSubmitDraft").mockResolvedValue(true);
+    const submitSpy = vi.spyOn(setup.editorStore, "handleSaveAndSubmit").mockResolvedValue(true);
+    const previewSpy = vi.spyOn(setup.editorStore, "savePreviewSnapshot").mockReturnValue("preview-1");
     const pushSpy = vi.spyOn(setup.router, "push");
+    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
 
     const wrapper = mount(BackofficeEventCreatePage, {
       global: {
@@ -131,6 +139,7 @@ describe("BackofficeEventCreatePage", () => {
         setupState: {
           handleSaveAndRedirect: () => Promise<void>;
           handleSubmitAndRedirect: () => Promise<void>;
+          handlePreview: () => void;
           handleImageChange: (event: Event) => void;
           goToEvents: () => void;
         };
@@ -139,12 +148,46 @@ describe("BackofficeEventCreatePage", () => {
 
     await setupState.handleSaveAndRedirect();
     await setupState.handleSubmitAndRedirect();
+    setupState.handlePreview();
     setupState.handleImageChange({ target: { files: [] } } as unknown as Event);
     setupState.goToEvents();
 
     expect(saveSpy).toHaveBeenCalled();
     expect(submitSpy).toHaveBeenCalled();
+    expect(previewSpy).toHaveBeenCalled();
+    expect(openSpy).toHaveBeenCalled();
     expect(pushSpy).toHaveBeenCalledWith("/backoffice/events");
+  });
+
+  it("shows submit button from create mode", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) }))
+    );
+
+    const setup = await setupPage();
+    setup.categoriesStore.hasLoaded = true;
+    renderPage(setup);
+
+    expect(await screen.findByRole("button", { name: "Soumettre à modération" })).toBeInTheDocument();
+  });
+
+  it("adapts actions when editing a published event revision", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) }))
+    );
+
+    const setup = await setupPage();
+    setup.categoriesStore.hasLoaded = true;
+    setup.editorStore.editorMode = "edit";
+    setup.editorStore.editingPublishedEvent = true;
+    setup.editorStore.editingPublishedRevisionStatus = "DRAFT";
+    renderPage(setup);
+
+    expect(await screen.findByText(/Une révision brouillon existe déjà/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Enregistrer le brouillon" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Soumettre à modération" })).toBeInTheDocument();
   });
 
   it("resets editor form in edit mode", async () => {
@@ -188,5 +231,34 @@ describe("BackofficeEventCreatePage", () => {
 
     await wrapper.find("[data-testid='editor-update']").trigger("click");
     expect(setup.editorStore.editorForm.content).toBe("<p>Nouveau</p>");
+  });
+
+  it("updates pricing info from dedicated rich text editor", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) }))
+    );
+
+    const setup = await setupPage();
+    setup.categoriesStore.hasLoaded = true;
+
+    const RichTextEditorStub = {
+      props: ["modelValue", "ariaLabel"],
+      template:
+        "<button data-testid='pricing-editor-update' @click=\"$emit('update:modelValue','<p>Plein tarif : 12 €</p>')\">{{ ariaLabel }}</button>"
+    };
+
+    const wrapper = mount(BackofficeEventCreatePage, {
+      global: {
+        plugins: [setup.pinia, setup.router],
+        stubs: {
+          RichTextEditor: RichTextEditorStub
+        }
+      }
+    });
+
+    const buttons = wrapper.findAll("[data-testid='pricing-editor-update']");
+    await buttons[1].trigger("click");
+    expect(setup.editorStore.editorForm.pricingInfo).toBe("<p>Plein tarif : 12 €</p>");
   });
 });

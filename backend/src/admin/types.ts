@@ -16,6 +16,13 @@ export type AdminCategory = {
   updatedAt: string;
 };
 
+export type AdminAudience = {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type AdminSettings = {
   contactEmail: string;
   contactPhone: string;
@@ -35,5 +42,11 @@ export type CreateAdminCategoryInput = {
 };
 
 export type UpdateAdminCategoryInput = CreateAdminCategoryInput;
+
+export type CreateAdminAudienceInput = {
+  name: string;
+};
+
+export type UpdateAdminAudienceInput = CreateAdminAudienceInput;
 
 export type UpdateAdminSettingsInput = AdminSettings;

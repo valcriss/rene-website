@@ -2,9 +2,11 @@ import { randomUUID } from "node:crypto";
 import { AdminRepository } from "./repository";
 import { slugifyCategoryId } from "./slug";
 import {
+  AdminAudience,
   AdminCategory,
   AdminSettings,
   AdminUser,
+  CreateAdminAudienceInput,
   CreateAdminCategoryInput,
   CreateAdminUserInput
 } from "./types";
@@ -12,6 +14,7 @@ import {
 export const createInMemoryAdminRepository = (): AdminRepository => {
   const users = new Map<string, AdminUser>();
   const categories = new Map<string, AdminCategory>();
+  const audiences = new Map<string, AdminAudience>();
   let settings: AdminSettings = {
     contactEmail: "contact@rene-website.test",
     contactPhone: "0102030405",
@@ -30,10 +33,17 @@ export const createInMemoryAdminRepository = (): AdminRepository => {
     const timestamp = now();
     categories.set(id, { id, ...input, createdAt: timestamp, updatedAt: timestamp });
   };
+  const seedAudience = (input: CreateAdminAudienceInput) => {
+    const id = slugifyCategoryId(input.name) || randomUUID();
+    const timestamp = now();
+    audiences.set(id, { id, ...input, createdAt: timestamp, updatedAt: timestamp });
+  };
 
   seedUser({ name: "Admin", email: "admin@rene-website.test", role: "ADMIN" });
   seedCategory({ name: "Musique" });
   seedCategory({ name: "Théâtre" });
+  seedAudience({ name: "Tous publics" });
+  seedAudience({ name: "Enfants" });
 
   return {
     listUsers: async () => Array.from(users.values()),
@@ -71,6 +81,24 @@ export const createInMemoryAdminRepository = (): AdminRepository => {
       return updated;
     },
     deleteCategory: async (id) => categories.delete(id),
+
+    listAudiences: async () => Array.from(audiences.values()),
+    getAudienceById: async (id) => audiences.get(id) ?? null,
+    createAudience: async (input) => {
+      const id = slugifyCategoryId(input.name) || randomUUID();
+      const timestamp = now();
+      const audience: AdminAudience = { id, ...input, createdAt: timestamp, updatedAt: timestamp };
+      audiences.set(id, audience);
+      return audience;
+    },
+    updateAudience: async (id, input) => {
+      const existing = audiences.get(id);
+      if (!existing) return null;
+      const updated: AdminAudience = { ...existing, ...input, updatedAt: now() };
+      audiences.set(id, updated);
+      return updated;
+    },
+    deleteAudience: async (id) => audiences.delete(id),
 
     getSettings: async () => settings,
     updateSettings: async (input) => {

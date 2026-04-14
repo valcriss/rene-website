@@ -8,6 +8,7 @@
 import { onMounted, onBeforeUnmount, ref, watch } from "vue";
 import * as L from "leaflet";
 import type { EventItem } from "../api/events";
+import { formatDateRange } from "../utils/formatters";
 
 const props = defineProps<{ events: EventItem[]; selectedId?: string | null }>();
 const emit = defineEmits<{ (event: "select", id: string): void }>();
@@ -19,23 +20,6 @@ const markersById = new Map<string, L.Marker>();
 
 const defaultCenter = { lat: 46.972, lng: 0.705 };
 const defaultZoom = 12;
-
-const formatDate = (value: string) => new Date(value).toLocaleDateString("fr-FR");
-const formatDateRange = (start: string, end: string) => {
-  const startDate = new Date(start);
-  const endDate = new Date(end);
-  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
-    return `${formatDate(start)} → ${formatDate(end)}`;
-  }
-  const sameDay =
-    startDate.getFullYear() === endDate.getFullYear() &&
-    startDate.getMonth() === endDate.getMonth() &&
-    startDate.getDate() === endDate.getDate();
-  if (sameDay) {
-    return formatDate(start);
-  }
-  return `${formatDate(start)} → ${formatDate(end)}`;
-};
 
 const updateMarkers = (items: EventItem[]) => {
   markersLayer.value.clearLayers();

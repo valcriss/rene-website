@@ -6,6 +6,7 @@ describe("validateCreateEvent", () => {
     content: "Soirée jazz",
     image: "https://example.com/image.jpg",
     categoryId: "music",
+    audienceId: "all",
     eventStartAt: "2026-01-15T20:00:00.000Z",
     eventEndAt: "2026-01-15T22:00:00.000Z",
     allDay: false,
@@ -18,6 +19,7 @@ describe("validateCreateEvent", () => {
     contactEmail: "contact@example.com",
     contactPhone: "0102030405",
     ticketUrl: "https://tickets.example.com",
+    pricingInfo: "<p>Plein tarif : 12 €</p>",
     websiteUrl: "https://example.com/site"
   };
 
@@ -42,7 +44,12 @@ describe("validateCreateEvent", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.errors).toEqual(
-        expect.arrayContaining(["Le titre est requis.", "Le contenu est requis.", "L'adresse est requise."])
+        expect.arrayContaining([
+          "Le titre est requis.",
+          "Le contenu est requis.",
+          "Le public concerné est requis.",
+          "L'adresse est requise."
+        ])
       );
     }
   });
@@ -125,6 +132,7 @@ describe("validateCreateEvent", () => {
       contactEmail: 789,
       contactPhone: 101,
       ticketUrl: 202,
+      pricingInfo: 404,
       websiteUrl: 303
     });
     expect(result.ok).toBe(false);
@@ -136,9 +144,24 @@ describe("validateCreateEvent", () => {
           "L'email de contact doit être une chaîne.",
           "Le téléphone de contact doit être une chaîne.",
           "Le lien de billetterie doit être une chaîne.",
+          "Les informations tarifaires doivent être une chaîne.",
           "Le site web doit être une chaîne."
         ])
       );
+    }
+  });
+
+  it("sanitizes pricing info while preserving lightweight formatting", () => {
+    const result = validateCreateEvent({
+      ...validPayload,
+      pricingInfo: "<ul><li><strong>Plein tarif</strong> : 12 €</li></ul><img src='x' /><script>alert(1)</script>"
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.pricingInfo).toContain("<ul>");
+      expect(result.value.pricingInfo).toContain("<strong>Plein tarif</strong>");
+      expect(result.value.pricingInfo).not.toContain("<img");
+      expect(result.value.pricingInfo).not.toContain("<script>");
     }
   });
 

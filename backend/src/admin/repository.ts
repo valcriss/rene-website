@@ -1,4 +1,12 @@
-import { AdminCategory, AdminSettings, AdminUser, CreateAdminCategoryInput, CreateAdminUserInput } from "./types";
+import {
+  AdminAudience,
+  AdminCategory,
+  AdminSettings,
+  AdminUser,
+  CreateAdminAudienceInput,
+  CreateAdminCategoryInput,
+  CreateAdminUserInput
+} from "./types";
 
 export type AdminRepository = {
   listUsers: () => Promise<AdminUser[]>;
@@ -12,6 +20,12 @@ export type AdminRepository = {
   createCategory: (input: CreateAdminCategoryInput) => Promise<AdminCategory>;
   updateCategory: (id: string, input: CreateAdminCategoryInput) => Promise<AdminCategory | null>;
   deleteCategory: (id: string) => Promise<boolean>;
+
+  listAudiences: () => Promise<AdminAudience[]>;
+  getAudienceById: (id: string) => Promise<AdminAudience | null>;
+  createAudience: (input: CreateAdminAudienceInput) => Promise<AdminAudience>;
+  updateAudience: (id: string, input: CreateAdminAudienceInput) => Promise<AdminAudience | null>;
+  deleteAudience: (id: string) => Promise<boolean>;
 
   getSettings: () => Promise<AdminSettings>;
   updateSettings: (input: AdminSettings) => Promise<AdminSettings>;

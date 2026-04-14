@@ -2,13 +2,17 @@ import { buildAuthHeaders } from "./authHeaders";
 
 export type EventStatus = "DRAFT" | "PENDING" | "PUBLISHED" | "REJECTED";
 
-export type EventItem = {
+export type EventRevisionStatus = "DRAFT" | "PENDING" | "REJECTED";
+
+export type EventPendingRevision = {
   id: string;
+  eventId: string;
   title: string;
   content?: string;
   image: string;
   createdByUserId?: string | null;
   categoryId: string;
+  audienceId: string;
   eventStartAt: string;
   eventEndAt: string;
   allDay?: boolean;
@@ -23,11 +27,43 @@ export type EventItem = {
   contactEmail?: string;
   contactPhone?: string;
   ticketUrl?: string;
+  pricingInfo?: string;
+  websiteUrl?: string;
+  status: EventRevisionStatus;
+  rejectionReason?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type EventItem = {
+  id: string;
+  title: string;
+  content?: string;
+  image: string;
+  createdByUserId?: string | null;
+  categoryId: string;
+  audienceId: string;
+  eventStartAt: string;
+  eventEndAt: string;
+  allDay?: boolean;
+  venueName: string;
+  address?: string;
+  postalCode?: string;
+  city: string;
+  latitude: number;
+  longitude: number;
+  organizerName?: string;
+  organizerUrl?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  ticketUrl?: string;
+  pricingInfo?: string;
   websiteUrl?: string;
   status: EventStatus;
   publishedAt?: string | null;
   publicationEndAt?: string;
   rejectionReason?: string | null;
+  pendingRevision?: EventPendingRevision | null;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -37,6 +73,7 @@ export type CreateEventPayload = {
   content: string;
   image: string;
   categoryId: string;
+  audienceId: string;
   eventStartAt: string;
   eventEndAt: string;
   allDay: boolean;
@@ -49,6 +86,7 @@ export type CreateEventPayload = {
   contactEmail?: string;
   contactPhone?: string;
   ticketUrl?: string;
+  pricingInfo?: string;
   websiteUrl?: string;
 };
 

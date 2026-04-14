@@ -9,11 +9,11 @@
       <div class="rounded-[2rem] border border-white/90 bg-white/72 p-4 shadow-[0_24px_80px_-48px_rgba(30,41,59,0.16)] backdrop-blur sm:p-6">
         <slot name="header" />
 
-        <div v-if="isLoading" class="mt-6 rounded-[1.75rem] border border-dashed border-sky-100 bg-sky-50/60 p-6 text-slate-500">
-          Chargement de l'événement…
+        <div v-if="isLoading && !props.event" class="mt-6 rounded-[1.75rem] border border-dashed border-sky-100 bg-sky-50/60 p-6 text-slate-500">
+          {{ t("detail.loading") }}
         </div>
         <div v-else-if="!detailEvent" class="mt-6 rounded-[1.75rem] border border-dashed border-sky-100 bg-sky-50/60 p-6 text-slate-500">
-          Événement introuvable.
+          {{ t("detail.notFound") }}
         </div>
         <div v-else class="mt-6 space-y-8" data-testid="event-detail">
           <article
@@ -33,12 +33,12 @@
                 @error="markImageError(detailEvent.id)"
               />
               <div
-                class="absolute inset-0"
-                :class="
-                  hasPoster
-                    ? 'bg-[linear-gradient(180deg,rgba(15,23,42,0.18)_0%,rgba(15,23,42,0.56)_58%,rgba(15,23,42,0.92)_100%)]'
-                    : 'bg-[linear-gradient(135deg,rgba(15,23,42,0.45)_0%,rgba(30,41,59,0.28)_35%,rgba(15,23,42,0.82)_100%)] xl:bg-[linear-gradient(90deg,rgba(15,23,42,0.14)_0%,rgba(15,23,42,0.78)_52%,rgba(15,23,42,0.92)_100%)]'
-                "
+                v-if="hasPoster"
+                class="pointer-events-none absolute inset-x-0 bottom-0 h-[44%] bg-gradient-to-t from-slate-950/74 via-slate-950/34 to-transparent"
+              ></div>
+              <div
+                v-if="!hasPoster"
+                class="absolute inset-0 bg-[linear-gradient(135deg,rgba(15,23,42,0.45)_0%,rgba(30,41,59,0.28)_35%,rgba(15,23,42,0.82)_100%)] xl:bg-[linear-gradient(90deg,rgba(15,23,42,0.14)_0%,rgba(15,23,42,0.78)_52%,rgba(15,23,42,0.92)_100%)]"
               ></div>
               <div
                 class="inset-x-0 bottom-0 p-6 sm:p-8 xl:p-10"
@@ -56,16 +56,13 @@
                     {{ categoryName }}
                   </span>
                 </div>
-                <div class="mt-5 max-w-3xl space-y-4">
-                  <p class="text-sm font-medium uppercase tracking-[0.28em] text-white/75">
+                <div class="mt-5 max-w-3xl space-y-4 rounded-[1.5rem] border border-white/10 bg-slate-950/28 p-5 backdrop-blur-md sm:p-6">
+                  <p class="text-sm font-medium uppercase tracking-[0.28em] text-white/88 [text-shadow:0_1px_10px_rgba(15,23,42,0.8)]">
                     {{ detailEvent.venueName }} · {{ detailEvent.city }}
                   </p>
-                  <h1 class="font-display text-4xl font-semibold leading-tight tracking-tight text-white sm:text-5xl">
+                  <h1 class="font-display text-4xl font-semibold leading-tight tracking-tight text-white [text-shadow:0_4px_18px_rgba(15,23,42,0.82)] sm:text-5xl">
                     {{ detailEvent.title }}
                   </h1>
-                  <p class="max-w-2xl text-base leading-7 text-white/85 sm:text-lg">
-                    {{ heroSummary }}
-                  </p>
                 </div>
               </div>
             </div>
@@ -76,8 +73,8 @@
               <section class="rounded-[2rem] border border-white/90 bg-white p-6 shadow-[0_20px_72px_-54px_rgba(30,41,59,0.24)] sm:p-8">
                 <div class="flex flex-wrap items-start justify-between gap-4">
                   <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700/70">En résumé</p>
-                    <h2 class="font-display mt-2 text-2xl font-semibold tracking-tight text-slate-950">Tout ce qu'il faut savoir</h2>
+                    <p class="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700/70">{{ t("detail.summaryEyebrow") }}</p>
+                    <h2 class="font-display mt-2 text-2xl font-semibold tracking-tight text-slate-950">{{ t("detail.summaryTitle") }}</h2>
                   </div>
                   <div class="rounded-full border border-sky-100 bg-sky-50/70 px-4 py-2 text-sm font-medium text-sky-900">
                     {{ detailEvent.venueName }} · {{ detailEvent.city }}
@@ -86,27 +83,32 @@
 
                 <div class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                   <div class="rounded-[1.5rem] border border-sky-100 bg-sky-50/60 p-4">
-                    <p class="text-xs font-semibold uppercase tracking-[0.22em] text-sky-700/70">Quand</p>
+                    <p class="text-xs font-semibold uppercase tracking-[0.22em] text-sky-700/70">{{ t("detail.when") }}</p>
                     <p class="mt-2 text-sm leading-6 text-slate-700">{{ formatDateTimeRange(detailEvent.eventStartAt, detailEvent.eventEndAt) }}</p>
                   </div>
                   <div class="rounded-[1.5rem] border border-sky-100 bg-sky-50/60 p-4">
-                    <p class="text-xs font-semibold uppercase tracking-[0.22em] text-sky-700/70">Où</p>
+                    <p class="text-xs font-semibold uppercase tracking-[0.22em] text-sky-700/70">{{ t("detail.where") }}</p>
                     <p class="mt-2 text-sm leading-6 text-slate-700">{{ detailEvent.venueName }} · {{ detailEvent.city }}</p>
                   </div>
                   <div class="rounded-[1.5rem] border border-sky-100 bg-sky-50/60 p-4">
-                    <p class="text-xs font-semibold uppercase tracking-[0.22em] text-sky-700/70">Catégorie</p>
-                    <p class="mt-2 text-sm leading-6 text-slate-700">{{ categoryName || "Agenda culturel" }}</p>
+                    <p class="text-xs font-semibold uppercase tracking-[0.22em] text-sky-700/70">{{ t("common.category") }}</p>
+                    <p class="mt-2 text-sm leading-6 text-slate-700">{{ categoryName || t("detail.categoryFallback") }}</p>
+                  </div>
+                  <div class="rounded-[1.5rem] border border-sky-100 bg-sky-50/60 p-4">
+                    <p class="text-xs font-semibold uppercase tracking-[0.22em] text-sky-700/70">{{ t("common.audience") }}</p>
+                    <p class="mt-2 text-sm leading-6 text-slate-700">{{ audienceName || t("common.notProvided") }}</p>
                   </div>
                 </div>
 
+                <!-- eslint-disable-next-line vue/no-v-html -->
                 <div class="prose prose-slate mt-8 max-w-none prose-p:text-slate-600 prose-a:text-sky-700 prose-strong:text-slate-900" v-html="sanitizedContent"></div>
               </section>
 
               <section class="rounded-[2rem] border border-sky-100 bg-gradient-to-br from-white to-sky-50/70 p-5 shadow-[0_20px_72px_-54px_rgba(30,41,59,0.18)] sm:p-6">
                 <div class="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700/75">Localiser l'événement</p>
-                    <h2 class="font-display mt-2 text-xl font-semibold tracking-tight text-slate-950">Repère géographique</h2>
+                    <p class="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700/75">{{ t("detail.mapEyebrow") }}</p>
+                    <h2 class="font-display mt-2 text-xl font-semibold tracking-tight text-slate-950">{{ t("detail.mapTitle") }}</h2>
                   </div>
                   <p class="text-sm text-slate-500">{{ detailEvent.venueName }} · {{ detailEvent.city }}</p>
                 </div>
@@ -118,56 +120,61 @@
 
             <aside class="xl:flex">
               <section class="flex h-full w-full flex-col rounded-[2rem] border border-white/90 bg-white p-6 shadow-[0_20px_72px_-54px_rgba(30,41,59,0.24)]">
-                <p class="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700/70">Informations pratiques</p>
-                <h2 class="font-display mt-2 text-2xl font-semibold tracking-tight text-slate-950">Préparer sa venue</h2>
+                <p class="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700/70">{{ t("detail.practicalEyebrow") }}</p>
+                <h2 class="font-display mt-2 text-2xl font-semibold tracking-tight text-slate-950">{{ t("detail.practicalTitle") }}</h2>
 
                 <div class="mt-6 flex-1 space-y-5 text-sm text-slate-600">
                   <div class="space-y-2">
-                    <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Lieu et accès</p>
+                    <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">{{ t("detail.venueAccess") }}</p>
                     <p class="flex items-center gap-3">
                       <font-awesome-icon class="h-4 w-4 text-sky-700" :icon="faLocationDot" />
-                      <span><span class="font-medium text-slate-700">Adresse :</span> {{ optionalAddress }}</span>
+                      <span><span class="font-medium text-slate-700">{{ t("common.address") }}:</span> {{ optionalAddress }}</span>
                     </p>
                     <p class="flex items-center gap-3">
                       <font-awesome-icon class="h-4 w-4 text-sky-700" :icon="faMapPin" />
-                      <span><span class="font-medium text-slate-700">Code postal :</span> {{ formatOptional(detailEvent.postalCode) }}</span>
+                      <span><span class="font-medium text-slate-700">{{ t("common.postalCode") }}:</span> {{ formatOptional(detailEvent.postalCode) }}</span>
                     </p>
                   </div>
 
                   <div class="space-y-2">
-                    <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Organisation</p>
+                    <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">{{ t("detail.organization") }}</p>
                     <p class="flex items-center gap-3">
                       <font-awesome-icon class="h-4 w-4 text-sky-700" :icon="faUserGroup" />
-                      <span><span class="font-medium text-slate-700">Organisateur :</span> {{ formatOptional(detailEvent.organizerName) }}</span>
+                      <span><span class="font-medium text-slate-700">{{ t("common.organizer") }}:</span> {{ formatOptional(detailEvent.organizerName) }}</span>
                     </p>
                     <p class="flex items-center gap-3">
                       <font-awesome-icon class="h-4 w-4 text-sky-700" :icon="faGlobe" />
-                      <span><span class="font-medium text-slate-700">Site organisateur :</span> {{ formatOptional(detailEvent.organizerUrl) }}</span>
+                      <span><span class="font-medium text-slate-700">{{ t("detail.organizerWebsite") }}:</span> {{ formatOptional(detailEvent.organizerUrl) }}</span>
                     </p>
                   </div>
 
                   <div class="space-y-2">
-                    <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Contact</p>
+                    <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">{{ t("detail.contact") }}</p>
                     <p class="flex items-center gap-3">
                       <font-awesome-icon class="h-4 w-4 text-sky-700" :icon="faEnvelope" />
-                      <span><span class="font-medium text-slate-700">Email :</span> {{ formatOptional(detailEvent.contactEmail) }}</span>
+                      <span><span class="font-medium text-slate-700">{{ t("common.email") }}:</span> {{ formatOptional(detailEvent.contactEmail) }}</span>
                     </p>
                     <p class="flex items-center gap-3">
                       <font-awesome-icon class="h-4 w-4 text-sky-700" :icon="faPhone" />
-                      <span><span class="font-medium text-slate-700">Téléphone :</span> {{ formatOptional(detailEvent.contactPhone) }}</span>
+                      <span><span class="font-medium text-slate-700">{{ t("common.phone") }}:</span> {{ formatOptional(detailEvent.contactPhone) }}</span>
                     </p>
                   </div>
 
                   <div class="space-y-2">
-                    <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Liens utiles</p>
+                    <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">{{ t("detail.usefulLinks") }}</p>
                     <p class="flex items-center gap-3">
                       <font-awesome-icon class="h-4 w-4 text-sky-700" :icon="faTicket" />
-                      <span><span class="font-medium text-slate-700">Billetterie :</span> {{ formatOptional(detailEvent.ticketUrl) }}</span>
+                      <span><span class="font-medium text-slate-700">{{ t("common.ticketing") }}:</span> {{ formatOptional(detailEvent.ticketUrl) }}</span>
                     </p>
                     <p class="flex items-center gap-3">
                       <font-awesome-icon class="h-4 w-4 text-sky-700" :icon="faArrowUpRightFromSquare" />
-                      <span><span class="font-medium text-slate-700">Site web :</span> {{ formatOptional(detailEvent.websiteUrl) }}</span>
+                      <span><span class="font-medium text-slate-700">{{ t("common.website") }}:</span> {{ formatOptional(detailEvent.websiteUrl) }}</span>
                     </p>
+                    <div v-if="sanitizedPricingInfo" class="rounded-[1.25rem] border border-sky-100 bg-sky-50/50 px-4 py-4">
+                      <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">{{ t("detail.pricingInfo") }}</p>
+                      <!-- eslint-disable-next-line vue/no-v-html -->
+                      <div class="prose prose-slate mt-3 max-w-none text-sm prose-p:my-2 prose-p:text-slate-600 prose-ul:my-2 prose-ol:my-2 prose-li:my-1 prose-a:text-sky-700 prose-strong:text-slate-900" v-html="sanitizedPricingInfo"></div>
+                    </div>
                   </div>
                 </div>
 
@@ -180,7 +187,7 @@
                       rel="noopener noreferrer"
                     >
                       <font-awesome-icon class="h-4 w-4" :icon="faRoute" />
-                      <span>Itinéraire</span>
+                      <span>{{ t("detail.directions") }}</span>
                     </a>
                     <a
                       class="inline-flex items-center justify-center gap-2 rounded-full border border-sky-200 bg-white px-5 py-3 text-sm font-semibold text-sky-900 shadow-sm shadow-sky-100/70 transition hover:border-sky-300 hover:bg-sky-50"
@@ -190,7 +197,7 @@
                       <span class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-sky-100 text-sky-700">
                         <font-awesome-icon class="h-3.5 w-3.5" :icon="faCalendarPlus" />
                       </span>
-                      <span>Ajouter au calendrier</span>
+                      <span>{{ t("detail.addToCalendar") }}</span>
                     </a>
                   </div>
                 </div>
@@ -209,6 +216,7 @@
 import { computed } from "vue";
 import DOMPurify from "dompurify";
 import { storeToRefs } from "pinia";
+import { useI18n } from "vue-i18n";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import {
   faArrowUpRightFromSquare,
@@ -224,6 +232,8 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import EventMap from "../EventMap.vue";
 import RelatedEvents from "./RelatedEvents.vue";
+import type { EventItem } from "../../api/events";
+import { useAudiencesStore } from "../../stores/audiences";
 import { useCategoriesStore } from "../../stores/categories";
 import { useEventsStore } from "../../stores/events";
 
@@ -233,20 +243,26 @@ type CategoryTheme = {
   borderColor: string;
 };
 
-const props = defineProps<{ eventId: string }>();
+const props = defineProps<{ eventId: string; event?: EventItem | null }>();
 
 const emit = defineEmits<{
   (event: "select", id: string): void;
 }>();
 
+const { t } = useI18n();
 const eventsStore = useEventsStore();
 const categoriesStore = useCategoriesStore();
+const audiencesStore = useAudiencesStore();
 const { isLoading, imageErrorById } = storeToRefs(eventsStore);
 const { categories } = storeToRefs(categoriesStore);
+const { audiences } = storeToRefs(audiencesStore);
 
-const detailEvent = computed(() => eventsStore.getEventById(props.eventId));
+const detailEvent = computed(() => props.event ?? eventsStore.getEventById(props.eventId));
 const categoryNames = computed(() =>
   new Map(categories.value.map((category) => [category.id, category.name]))
+);
+const audienceNames = computed(() =>
+  new Map(audiences.value.map((audience) => [audience.id, audience.name]))
 );
 
 const sanitizedContent = computed(() => {
@@ -260,15 +276,15 @@ const sanitizedContent = computed(() => {
   });
 });
 
-const heroSummary = computed(() => {
-  if (!detailEvent.value) {
+const sanitizedPricingInfo = computed(() => {
+  const raw = detailEvent.value?.pricingInfo ?? "";
+  if (!raw || raw.trim().length === 0) {
     return "";
   }
-  const excerpt = getEventExcerpt(detailEvent.value);
-  if (excerpt.trim().length > 0) {
-    return excerpt;
-  }
-  return "Retrouve ici toutes les informations utiles pour découvrir cet événement, préparer ta venue et poursuivre l'exploration du calendrier.";
+  return DOMPurify.sanitize(raw, {
+    ALLOWED_TAGS: ["p", "br", "a", "strong", "em", "u", "ul", "ol", "li"],
+    ALLOWED_ATTR: ["href", "target", "rel"]
+  });
 });
 
 const optionalAddress = computed(() => {
@@ -276,17 +292,18 @@ const optionalAddress = computed(() => {
     return "";
   }
   const address = formatOptional(detailEvent.value.address);
-  if (address === "Non renseigné") {
+  if (address === t("common.notProvided")) {
     return `${detailEvent.value.venueName} · ${detailEvent.value.city}`;
   }
   return address;
 });
 
 const categoryName = computed(() => {
-  if (!detailEvent.value) {
-    return "";
-  }
-  return categoryNames.value.get(detailEvent.value.categoryId) ?? "";
+  return categoryNames.value.get(detailEvent.value?.categoryId ?? "") ?? "";
+});
+
+const audienceName = computed(() => {
+  return audienceNames.value.get(detailEvent.value?.audienceId ?? "") ?? "";
 });
 
 const categoryThemeMap: Record<string, CategoryTheme> = {
@@ -312,13 +329,12 @@ const categoryTheme = computed(() => {
 });
 
 const hasPoster = computed(() => {
-  if (!detailEvent.value) {
-    return false;
-  }
-  return Boolean(detailEvent.value.image) && !imageErrorById.value[detailEvent.value.id];
+  return Boolean(detailEvent.value?.image) && !imageErrorById.value[detailEvent.value?.id ?? ""];
 });
 
-const relatedEvents = computed(() => eventsStore.getRelatedPublishedEvents(props.eventId, 3));
+const relatedEvents = computed(() => (props.event ? [] : eventsStore.getRelatedPublishedEvents(props.eventId, 3)));
+
+audiencesStore.loadAudiences();
 
 const {
   getEventImage,
@@ -326,8 +342,7 @@ const {
   formatDateTimeRange,
   formatOptional,
   buildDirectionsUrl,
-  buildCalendarUrl,
-  getEventExcerpt
+  buildCalendarUrl
 } = eventsStore;
 
 const emitSelect = (id: string) => {

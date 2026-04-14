@@ -2,13 +2,17 @@ import { Router } from "express";
 import { requireRole } from "../auth/roles";
 import { AdminRepository } from "./repository";
 import {
+  createAdminAudience,
   createAdminCategory,
   createAdminUser,
+  deleteAdminAudience,
   deleteAdminCategory,
   deleteAdminUser,
   getAdminSettings,
+  listAdminAudiences,
   listAdminCategories,
   listAdminUsers,
+  updateAdminAudience,
   updateAdminCategory,
   updateAdminSettings,
   updateAdminUser
@@ -80,6 +84,40 @@ export const createAdminRouter = (repo: AdminRepository) => {
     const result = await deleteAdminCategory(repo, req.params.id);
     if (!result.ok) {
       const status = result.errors.includes("Category in use") ? 409 : 404;
+      res.status(status).json({ errors: result.errors });
+      return;
+    }
+    res.status(204).send();
+  });
+
+  router.get("/audiences", async (_req, res) => {
+    const audiences = await listAdminAudiences(repo);
+    res.json(audiences);
+  });
+
+  router.post("/audiences", async (req, res) => {
+    const result = await createAdminAudience(repo, req.body);
+    if (!result.ok) {
+      res.status(400).json({ errors: result.errors });
+      return;
+    }
+    res.status(201).json(result.value);
+  });
+
+  router.put("/audiences/:id", async (req, res) => {
+    const result = await updateAdminAudience(repo, req.params.id, req.body);
+    if (!result.ok) {
+      const status = result.errors.includes("Audience not found") ? 404 : 400;
+      res.status(status).json({ errors: result.errors });
+      return;
+    }
+    res.json(result.value);
+  });
+
+  router.delete("/audiences/:id", async (req, res) => {
+    const result = await deleteAdminAudience(repo, req.params.id);
+    if (!result.ok) {
+      const status = result.errors.includes("Audience in use") ? 409 : 404;
       res.status(status).json({ errors: result.errors });
       return;
     }

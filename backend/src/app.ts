@@ -2,6 +2,7 @@ import express from "express";
 import { createAdminRouter } from "./admin/routes";
 import { createAdminRepository } from "./admin/repositoryFactory";
 import { authenticateOptional } from "./auth/middleware";
+import { createAudiencesRouter } from "./audiences/routes";
 import { createAuthRouter } from "./auth/routes";
 import { createAuthRepository } from "./auth/repositoryFactory";
 import { createCategoriesRouter } from "./categories/routes";
@@ -39,6 +40,7 @@ export const createApp = () => {
   const adminRepository = createAdminRepository();
   app.use("/api/admin", createAdminRouter(adminRepository));
   app.use("/api/categories", createCategoriesRouter(adminRepository));
+  app.use("/api/audiences", createAudiencesRouter(adminRepository));
 
   app.get("/api/health", (_req, res) => {
     res.json({ status: "ok" });

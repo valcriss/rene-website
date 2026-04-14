@@ -57,6 +57,7 @@ defineExpose({
   resetEditorForm: editorStore.resetEditorForm,
   startEdit: editorStore.startEdit,
   handleSaveDraft: editorStore.handleSaveDraft,
+  handleSaveAndSubmit: editorStore.handleSaveAndSubmit,
   handleSubmitDraft: editorStore.handleSubmitDraft,
   getEditorError: editorStore.getEditorError,
   getEditorFormValues: editorStore.getEditorFormValues,

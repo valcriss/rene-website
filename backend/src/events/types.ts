@@ -1,10 +1,13 @@
 export type EventStatus = "DRAFT" | "PENDING" | "PUBLISHED" | "REJECTED";
 
+export type EventRevisionStatus = "DRAFT" | "PENDING" | "REJECTED";
+
 export type EventDraftInput = {
   title: string;
   content: string;
   image: string;
   categoryId: string;
+  audienceId: string;
   eventStartAt: string;
   eventEndAt: string;
   allDay: boolean;
@@ -19,6 +22,7 @@ export type EventDraftInput = {
   contactEmail?: string;
   contactPhone?: string;
   ticketUrl?: string;
+  pricingInfo?: string;
   websiteUrl?: string;
 };
 
@@ -30,6 +34,16 @@ export type CreateEventInput = EventDraftInput & {
 
 export type UpdateEventInput = CreateEventInput;
 
+export type EventRevision = CreateEventInput & {
+  id: string;
+  eventId: string;
+  createdByUserId: string | null;
+  status: EventRevisionStatus;
+  rejectionReason: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type Event = CreateEventInput & {
   id: string;
   createdByUserId: string | null;
@@ -37,6 +51,7 @@ export type Event = CreateEventInput & {
   publishedAt: string | null;
   publicationEndAt: string;
   rejectionReason: string | null;
+  pendingRevision: EventRevision | null;
   createdAt: string;
   updatedAt: string;
 };

@@ -4,6 +4,12 @@ import { EventItem, deleteEvent, fetchEvents } from "../api/events";
 import { filterEvents, type EventFilters } from "../events/filterEvents";
 import placeholderEvent from "../assets/event-placeholder.svg";
 import { publishEvent, rejectEvent, type ModeratorRole } from "../api/moderation";
+import {
+  formatDate,
+  formatDateRange,
+  formatDateTimeRange,
+  formatOptional
+} from "../utils/formatters";
 import { useAuthStore } from "./auth";
 
 const pad = (value: number) => value.toString().padStart(2, "0");
@@ -15,6 +21,7 @@ const defaultFilters = (): EventFilters => ({
   search: "",
   cities: [],
   types: [],
+  audiences: [],
   preset: "",
   dateRange: {
     start: formatDateInput(new Date()),
@@ -33,22 +40,91 @@ export const useEventsStore = defineStore("events", () => {
 
   const filters = ref<EventFilters>(defaultFilters());
 
+  const getPendingRevisionSnapshot = (event: EventItem): EventItem => {
+    if (!event.pendingRevision) {
+      return event;
+    }
+
+    return {
+      ...event,
+      ...event.pendingRevision,
+      id: event.id,
+      createdByUserId: event.createdByUserId,
+      status: "PENDING",
+      publishedAt: event.publishedAt,
+      publicationEndAt: event.pendingRevision.eventEndAt,
+      rejectionReason: event.pendingRevision.rejectionReason,
+      pendingRevision: event.pendingRevision,
+      createdAt: event.createdAt,
+      updatedAt: event.updatedAt
+    };
+  };
+
+  const getEditionSnapshot = (event: EventItem): EventItem => {
+    if (!event.pendingRevision) {
+      return event;
+    }
+
+    return {
+      ...event,
+      ...event.pendingRevision,
+      id: event.id,
+      createdByUserId: event.createdByUserId,
+      status: event.pendingRevision.status,
+      publishedAt: event.publishedAt,
+      publicationEndAt: event.pendingRevision.eventEndAt,
+      rejectionReason: event.pendingRevision.rejectionReason,
+      pendingRevision: event.pendingRevision,
+      createdAt: event.createdAt,
+      updatedAt: event.updatedAt
+    };
+  };
+
   const publishedEvents = computed(() => events.value.filter((event) => event.status === "PUBLISHED"));
-  const pendingEvents = computed(() => events.value.filter((event) => event.status === "PENDING"));
+  const pendingEvents = computed(() =>
+    events.value
+      .filter((event) => event.status === "PENDING" || event.pendingRevision?.status === "PENDING")
+      .map((event) => (event.pendingRevision?.status === "PENDING" ? getPendingRevisionSnapshot(event) : event))
+  );
   const filteredEvents = computed(() =>
     filterEvents(publishedEvents.value, {
       search: filters.value.search,
       cities: filters.value.cities,
       types: filters.value.types,
+      audiences: filters.value.audiences,
       dateRange: filters.value.dateRange
     })
   );
-  const editableEvents = computed(() =>
-    events.value.filter((event) => event.status === "DRAFT" || event.status === "REJECTED")
+  const authStore = useAuthStore();
+  const isOwnedByCurrentUser = (event: EventItem) =>
+    authStore.userId !== null && event.createdByUserId === authStore.userId;
+  const myDraftEvents = computed(() =>
+    events.value.filter((event) => event.status === "DRAFT" && isOwnedByCurrentUser(event))
   );
-  const publishedBackofficeEvents = computed(() =>
-    events.value.filter((event) => event.status === "PUBLISHED")
+  const myEditorialReviewEvents = computed(() =>
+    events.value.filter((event) => event.status === "REJECTED" && isOwnedByCurrentUser(event))
   );
+  const myPublishedEvents = computed(() =>
+    events.value.filter((event) => event.status === "PUBLISHED" && isOwnedByCurrentUser(event))
+  );
+  const publishedRevisionDraftEvents = computed(() =>
+    myPublishedEvents.value.filter((event) => event.pendingRevision?.status === "DRAFT")
+  );
+  const publishedRevisionPendingEvents = computed(() =>
+    myPublishedEvents.value.filter((event) => event.pendingRevision?.status === "PENDING")
+  );
+  const publishedRevisionRejectedEvents = computed(() =>
+    myPublishedEvents.value.filter((event) => event.pendingRevision?.status === "REJECTED")
+  );
+  const editableEvents = computed(() => [...myDraftEvents.value, ...myEditorialReviewEvents.value]);
+  const publishedBackofficeEvents = computed(() => myPublishedEvents.value);
+  const otherEditableEvents = computed(() => {
+    if (!authStore.canModerate) {
+      return [];
+    }
+
+    return events.value.filter((event) => authStore.userId !== null && event.createdByUserId !== authStore.userId);
+  });
   const availableCities = computed(() =>
     Array.from(new Set(publishedEvents.value.map((event) => event.city))).sort()
   );
@@ -57,6 +133,19 @@ export const useEventsStore = defineStore("events", () => {
   );
 
   const getEventById = (id: string) => events.value.find((event) => event.id === id) ?? null;
+
+  const getModerationEventById = (id: string) => {
+    const event = getEventById(id);
+    if (!event) {
+      return null;
+    }
+
+    if (event.pendingRevision?.status === "PENDING") {
+      return getPendingRevisionSnapshot(event);
+    }
+
+    return event.status === "PENDING" ? event : null;
+  };
 
   const getRelatedPublishedEvents = (id: string, limit = 3) => {
     const current = getEventById(id);
@@ -129,7 +218,26 @@ export const useEventsStore = defineStore("events", () => {
   };
 
   const stripHtml = (value: string) => value.replace(/<[^>]*>/g, "");
-  const getEventExcerpt = (eventItem: EventItem) => stripHtml(eventItem.content ?? "");
+  const normalizeText = (value: string) => stripHtml(value).replace(/\s+/g, " ").trim();
+  const getEventExcerpt = (eventItem: EventItem) => normalizeText(eventItem.content ?? "");
+  const getEventShortExcerpt = (eventItem: EventItem, maxSentences = 2, maxLength = 180) => {
+    const excerpt = getEventExcerpt(eventItem);
+    if (!excerpt) {
+      return "";
+    }
+
+    const sentences = excerpt.match(/[^.!?…]+[.!?…]?/g)?.map((sentence) => sentence.trim()).filter(Boolean) ?? [];
+    const shortBySentences = sentences.slice(0, maxSentences).join(" ").trim();
+    if (shortBySentences) {
+      return shortBySentences;
+    }
+
+    if (excerpt.length <= maxLength) {
+      return excerpt;
+    }
+
+    return `${excerpt.slice(0, maxLength).trimEnd()}…`;
+  };
 
   const toggleCity = (city: string) => {
     const next = new Set(filters.value.cities);
@@ -149,6 +257,16 @@ export const useEventsStore = defineStore("events", () => {
       next.add(type);
     }
     filters.value.types = Array.from(next);
+  };
+
+  const toggleAudience = (audience: string) => {
+    const next = new Set(filters.value.audiences);
+    if (next.has(audience)) {
+      next.delete(audience);
+    } else {
+      next.add(audience);
+    }
+    filters.value.audiences = Array.from(next);
   };
 
   const handleDateRangeChange = () => {
@@ -184,54 +302,6 @@ export const useEventsStore = defineStore("events", () => {
 
   const resetFilters = () => {
     filters.value = defaultFilters();
-  };
-
-  const formatDate = (value: string) => new Date(value).toLocaleDateString("fr-FR");
-  const formatDateRange = (start: string, end: string) => {
-    const startDate = new Date(start);
-    const endDate = new Date(end);
-    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
-      return `${formatDate(start)} → ${formatDate(end)}`;
-    }
-    const sameDay =
-      startDate.getFullYear() === endDate.getFullYear() &&
-      startDate.getMonth() === endDate.getMonth() &&
-      startDate.getDate() === endDate.getDate();
-    if (sameDay) {
-      return formatDate(start);
-    }
-    return `${formatDate(start)} → ${formatDate(end)}`;
-  };
-
-  const formatDateTime = (value: string) =>
-    new Date(value).toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short" });
-  const formatDateTimeRange = (start: string, end: string) => {
-    const startDate = new Date(start);
-    const endDate = new Date(end);
-    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
-      return `${formatDateTime(start)} → ${formatDateTime(end)}`;
-    }
-    const sameDay =
-      startDate.getFullYear() === endDate.getFullYear() &&
-      startDate.getMonth() === endDate.getMonth() &&
-      startDate.getDate() === endDate.getDate();
-    if (sameDay) {
-      const dateLabel = startDate.toLocaleDateString("fr-FR", { dateStyle: "medium" });
-      const startTime = startDate.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
-      const endTime = endDate.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
-      if (startTime === endTime) {
-        return `${dateLabel}, à ${startTime}`;
-      }
-      return `${dateLabel}, de ${startTime} à ${endTime}`;
-    }
-    return `${formatDateTime(start)} → ${formatDateTime(end)}`;
-  };
-
-  const formatOptional = (value?: string | null) => {
-    if (!value || value.trim().length === 0) {
-      return "Non renseigné";
-    }
-    return value;
   };
 
   const formatDateTimeInput = (value: string) => {
@@ -327,19 +397,30 @@ export const useEventsStore = defineStore("events", () => {
     publishedEvents,
     pendingEvents,
     filteredEvents,
+    myDraftEvents,
+    myEditorialReviewEvents,
+    myPublishedEvents,
+    publishedRevisionDraftEvents,
+    publishedRevisionPendingEvents,
+    publishedRevisionRejectedEvents,
     editableEvents,
     publishedBackofficeEvents,
+    otherEditableEvents,
     availableCities,
     availableTypes,
     getEventById,
+    getModerationEventById,
+    getEditionSnapshot,
     getRelatedPublishedEvents,
     updateEventState,
     fetchEvents: fetchEventsData,
     markImageError,
     getEventImage,
     getEventExcerpt,
+    getEventShortExcerpt,
     toggleCity,
     toggleType,
+    toggleAudience,
     handleDateRangeChange,
     applyPreset,
     resetFilters,

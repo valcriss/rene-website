@@ -9,7 +9,7 @@
         @click="goToHome"
       >
         <font-awesome-icon class="h-4 w-4" :icon="faArrowLeft" />
-        <span>Retour à l'agenda</span>
+        <span>{{ $t("detail.backToAgenda") }}</span>
       </button>
     </template>
   </EventDetailView>

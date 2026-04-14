@@ -2,15 +2,37 @@ import { randomUUID } from "node:crypto";
 import { prisma } from "../prisma/client";
 import { AdminRepository } from "./repository";
 import {
+  AdminAudience,
   AdminCategory,
   AdminSettings,
   AdminUser,
+  CreateAdminAudienceInput,
   CreateAdminCategoryInput,
   CreateAdminUserInput
 } from "./types";
 import { slugifyCategoryId } from "./slug";
 
+type PrismaWithAudience = typeof prisma & {
+  audience: {
+    findMany(args: unknown): Promise<PrismaAudience[]>;
+    findUnique(args: unknown): Promise<PrismaAudience | null>;
+    create(args: unknown): Promise<PrismaAudience>;
+    update(args: unknown): Promise<PrismaAudience>;
+    delete(args: unknown): Promise<unknown>;
+  };
+  event: {
+    count(args: unknown): Promise<number>;
+  };
+};
+
 type PrismaCategory = {
+  id: string;
+  name: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+type PrismaAudience = {
   id: string;
   name: string;
   createdAt: Date;
@@ -24,7 +46,15 @@ const toAdminCategory = (data: PrismaCategory): AdminCategory => ({
   updatedAt: data.updatedAt.toISOString()
 });
 
+const toAdminAudience = (data: PrismaAudience): AdminAudience => ({
+  id: data.id,
+  name: data.name,
+  createdAt: data.createdAt.toISOString(),
+  updatedAt: data.updatedAt.toISOString()
+});
+
 export const createPrismaAdminRepository = (): AdminRepository => {
+  const prismaWithAudience = prisma as PrismaWithAudience;
   const users = new Map<string, AdminUser>();
   let settings: AdminSettings = {
     contactEmail: "contact@rene-website.test",
@@ -104,6 +134,55 @@ export const createPrismaAdminRepository = (): AdminRepository => {
       }
       try {
         await prisma.category.delete({ where: { id } });
+        return true;
+      } catch {
+        return false;
+      }
+    },
+
+    listAudiences: async () =>
+      prismaWithAudience.audience
+        .findMany({ orderBy: { name: "asc" } })
+        .then((items: PrismaAudience[]) => items.map(toAdminAudience)),
+    getAudienceById: async (id) =>
+      prismaWithAudience.audience
+        .findUnique({ where: { id } })
+        .then((item: PrismaAudience | null) => (item ? toAdminAudience(item) : null)),
+    createAudience: async (input: CreateAdminAudienceInput) => {
+      const id = slugifyCategoryId(input.name);
+      if (!id) {
+        throw new Error("Audience name is invalid");
+      }
+      const existing = await prismaWithAudience.audience.findUnique({ where: { id } });
+      if (existing) {
+        throw new Error("Audience already exists");
+      }
+      const created = await prismaWithAudience.audience.create({
+        data: {
+          id,
+          name: input.name.trim()
+        }
+      });
+      return toAdminAudience(created);
+    },
+    updateAudience: async (id, input) => {
+      try {
+        const updated = await prismaWithAudience.audience.update({
+          where: { id },
+          data: { name: input.name.trim() }
+        });
+        return toAdminAudience(updated);
+      } catch {
+        return null;
+      }
+    },
+    deleteAudience: async (id) => {
+      const eventsCount = await prismaWithAudience.event.count({ where: { audienceId: id } });
+      if (eventsCount > 0) {
+        throw new Error("Audience in use");
+      }
+      try {
+        await prismaWithAudience.audience.delete({ where: { id } });
         return true;
       } catch {
         return false;

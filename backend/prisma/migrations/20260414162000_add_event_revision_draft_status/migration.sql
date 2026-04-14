@@ -1,0 +1,1 @@
+ALTER TYPE "EventRevisionStatus" ADD VALUE IF NOT EXISTS 'DRAFT';

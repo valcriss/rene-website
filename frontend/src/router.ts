@@ -8,8 +8,10 @@ const BackofficeEventsPage = () => import("./pages/backoffice/BackofficeEventsPa
 const BackofficeEventCreatePage = () => import("./pages/backoffice/BackofficeEventCreatePage.vue");
 const BackofficeModerationPage = () => import("./pages/backoffice/BackofficeModerationPage.vue");
 const BackofficeModerationViewPage = () => import("./pages/backoffice/BackofficeModerationViewPage.vue");
+const BackofficeEventPreviewPage = () => import("./pages/backoffice/BackofficeEventPreviewPage.vue");
 const BackofficeAdminUsersPage = () => import("./pages/backoffice/BackofficeAdminUsersPage.vue");
 const BackofficeAdminCategoriesPage = () => import("./pages/backoffice/BackofficeAdminCategoriesPage.vue");
+const BackofficeAdminAudiencesPage = () => import("./pages/backoffice/BackofficeAdminAudiencesPage.vue");
 const BackofficeAdminSettingsPage = () => import("./pages/backoffice/BackofficeAdminSettingsPage.vue");
 
 const routes = [
@@ -22,6 +24,7 @@ const routes = [
       { path: "", redirect: "/backoffice/events" },
       { path: "events", name: "backoffice-events", component: BackofficeEventsPage },
       { path: "events/new", name: "backoffice-events-new", component: BackofficeEventCreatePage },
+      { path: "events/preview", name: "backoffice-events-preview", component: BackofficeEventPreviewPage },
       { path: "moderation", name: "backoffice-moderation", component: BackofficeModerationPage },
       {
         path: "moderation/view/:id",
@@ -31,6 +34,7 @@ const routes = [
       { path: "admin", redirect: "/backoffice/admin/users" },
       { path: "admin/users", name: "backoffice-admin-users", component: BackofficeAdminUsersPage },
       { path: "admin/categories", name: "backoffice-admin-categories", component: BackofficeAdminCategoriesPage },
+      { path: "admin/audiences", name: "backoffice-admin-audiences", component: BackofficeAdminAudiencesPage },
       { path: "admin/settings", name: "backoffice-admin-settings", component: BackofficeAdminSettingsPage }
     ]
   },

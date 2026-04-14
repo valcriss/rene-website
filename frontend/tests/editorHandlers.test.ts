@@ -42,6 +42,7 @@ describe("editor handlers", () => {
   type Exposed = {
     setRole: (value: "VISITOR" | "EDITOR" | "MODERATOR" | "ADMIN") => void;
     handleSaveDraft: () => Promise<boolean>;
+    handleSaveAndSubmit: () => Promise<boolean>;
     handleSubmitDraft: (id?: string) => Promise<boolean>;
     getEditorFormValues: () => CreateEventPayload;
     startEdit: (event: {
@@ -168,6 +169,253 @@ describe("editor handlers", () => {
     await vm.handleSaveDraft();
 
     expect(vm.getEditorError()).toBe("L'image est requise.");
+  });
+
+  it("creates then submits from create mode", async () => {
+    createMock.mockResolvedValue({
+      id: "created-1",
+      title: "Concert",
+      image: "/uploads/test.png",
+      categoryId: "music",
+      eventStartAt: "2026-01-15T20:00:00.000Z",
+      eventEndAt: "2026-01-15T22:00:00.000Z",
+      venueName: "Salle",
+      city: "Descartes",
+      latitude: 46.97,
+      longitude: 0.7,
+      status: "DRAFT"
+    });
+    submitMock.mockResolvedValue({
+      id: "created-1",
+      title: "Concert",
+      image: "/uploads/test.png",
+      categoryId: "music",
+      eventStartAt: "2026-01-15T20:00:00.000Z",
+      eventEndAt: "2026-01-15T22:00:00.000Z",
+      venueName: "Salle",
+      city: "Descartes",
+      latitude: 46.97,
+      longitude: 0.7,
+      status: "PENDING"
+    });
+
+    const { wrapper } = await mountWithRouter();
+    await nextTick();
+
+    const vm = wrapper.vm as unknown as Exposed;
+    const editorStore = useEditorStore();
+    editorStore.editorForm.image = "/uploads/test.png";
+    editorStore.editorForm.title = "Concert";
+    editorStore.editorForm.categoryId = "music";
+    editorStore.editorForm.eventStartAt = "2026-01-15T20:00";
+    editorStore.editorForm.eventEndAt = "2026-01-15T22:00";
+    editorStore.editorForm.venueName = "Salle";
+    editorStore.editorForm.city = "Descartes";
+    vm.setRole("EDITOR");
+
+    await vm.handleSaveAndSubmit();
+
+    expect(createMock).toHaveBeenCalledOnce();
+    expect(submitMock).toHaveBeenCalledWith("created-1", "EDITOR");
+  });
+
+  it("does not submit when create step fails in save and submit flow", async () => {
+    createMock.mockRejectedValue(new Error("Création impossible"));
+
+    const { wrapper } = await mountWithRouter();
+    await nextTick();
+
+    const vm = wrapper.vm as unknown as Exposed & { getEditorError: () => string | null };
+    const editorStore = useEditorStore();
+    editorStore.editorForm.image = "/uploads/test.png";
+    vm.setRole("EDITOR");
+
+    await vm.handleSaveAndSubmit();
+
+    expect(submitMock).not.toHaveBeenCalled();
+    expect(vm.getEditorError()).toBe("Création impossible");
+  });
+
+  it("keeps created event and surfaces submit error in save and submit flow", async () => {
+    createMock.mockResolvedValue({
+      id: "created-2",
+      title: "Concert",
+      image: "/uploads/test.png",
+      categoryId: "music",
+      eventStartAt: "2026-01-15T20:00:00.000Z",
+      eventEndAt: "2026-01-15T22:00:00.000Z",
+      venueName: "Salle",
+      city: "Descartes",
+      latitude: 46.97,
+      longitude: 0.7,
+      status: "DRAFT"
+    });
+    submitMock.mockRejectedValue(new Error("Soumission impossible"));
+
+    const { wrapper } = await mountWithRouter();
+    await nextTick();
+
+    const vm = wrapper.vm as unknown as Exposed & { getEditorError: () => string | null };
+    const editorStore = useEditorStore();
+    editorStore.editorForm.image = "/uploads/test.png";
+    vm.setRole("EDITOR");
+
+    await vm.handleSaveAndSubmit();
+
+    expect(createMock).toHaveBeenCalledOnce();
+    expect(submitMock).toHaveBeenCalledWith("created-2", "EDITOR");
+    expect(vm.getEditorError()).toBe("Soumission impossible");
+  });
+
+  it("saves then submits in edit mode from save and submit flow", async () => {
+    updateMock.mockResolvedValue({
+      id: "1",
+      title: "Concert",
+      image: "/uploads/test.png",
+      categoryId: "music",
+      eventStartAt: "2026-01-15T20:00:00.000Z",
+      eventEndAt: "2026-01-15T22:00:00.000Z",
+      venueName: "Salle",
+      city: "Descartes",
+      latitude: 46.97,
+      longitude: 0.7,
+      status: "DRAFT"
+    });
+    submitMock.mockResolvedValue({
+      id: "1",
+      title: "Concert",
+      image: "/uploads/test.png",
+      categoryId: "music",
+      eventStartAt: "2026-01-15T20:00:00.000Z",
+      eventEndAt: "2026-01-15T22:00:00.000Z",
+      venueName: "Salle",
+      city: "Descartes",
+      latitude: 46.97,
+      longitude: 0.7,
+      status: "PENDING"
+    });
+
+    const { wrapper, router } = await mountWithRouter();
+    await nextTick();
+
+    const vm = wrapper.vm as unknown as Exposed;
+    vm.setRole("EDITOR");
+    await nextTick();
+    await router.push("/backoffice/events/new");
+    await flushPromises();
+    await nextTick();
+    vm.startEdit({
+      id: "1",
+      title: "Concert",
+      image: "img",
+      categoryId: "music",
+      eventStartAt: "2026-01-15T20:00:00.000Z",
+      eventEndAt: "2026-01-15T22:00:00.000Z",
+      venueName: "Salle",
+      city: "Descartes",
+      latitude: 46.97,
+      longitude: 0.7,
+      status: "DRAFT"
+    });
+
+    await vm.handleSaveAndSubmit();
+
+    expect(createMock).not.toHaveBeenCalled();
+    expect(updateMock).toHaveBeenCalledWith(
+      "1",
+      expect.objectContaining({ title: "Concert" }),
+      "EDITOR"
+    );
+    expect(submitMock).toHaveBeenCalledWith("1", "EDITOR");
+  });
+
+  it("saves then submits when editing a published event", async () => {
+    updateMock.mockResolvedValue({
+      id: "1",
+      title: "Concert",
+      image: "/uploads/test.png",
+      categoryId: "music",
+      eventStartAt: "2026-01-15T20:00:00.000Z",
+      eventEndAt: "2026-01-15T22:00:00.000Z",
+      venueName: "Salle",
+      city: "Descartes",
+      latitude: 46.97,
+      longitude: 0.7,
+      status: "PUBLISHED",
+      pendingRevision: {
+        id: "revision-1",
+        eventId: "1",
+        title: "Concert",
+        image: "/uploads/test.png",
+        categoryId: "music",
+        eventStartAt: "2026-01-15T20:00:00.000Z",
+        eventEndAt: "2026-01-15T22:00:00.000Z",
+        venueName: "Salle",
+        city: "Descartes",
+        latitude: 46.97,
+        longitude: 0.7,
+        status: "DRAFT"
+      }
+    });
+    submitMock.mockResolvedValue({
+      id: "1",
+      title: "Concert",
+      image: "/uploads/test.png",
+      categoryId: "music",
+      eventStartAt: "2026-01-15T20:00:00.000Z",
+      eventEndAt: "2026-01-15T22:00:00.000Z",
+      venueName: "Salle",
+      city: "Descartes",
+      latitude: 46.97,
+      longitude: 0.7,
+      status: "PUBLISHED",
+      pendingRevision: {
+        id: "revision-1",
+        eventId: "1",
+        title: "Concert",
+        image: "/uploads/test.png",
+        categoryId: "music",
+        eventStartAt: "2026-01-15T20:00:00.000Z",
+        eventEndAt: "2026-01-15T22:00:00.000Z",
+        venueName: "Salle",
+        city: "Descartes",
+        latitude: 46.97,
+        longitude: 0.7,
+        status: "PENDING"
+      }
+    });
+
+    const { wrapper, router } = await mountWithRouter();
+    await nextTick();
+
+    const vm = wrapper.vm as unknown as Exposed;
+    vm.setRole("EDITOR");
+    await nextTick();
+    await router.push("/backoffice/events/new");
+    await flushPromises();
+    await nextTick();
+    vm.startEdit({
+      id: "1",
+      title: "Concert",
+      image: "img",
+      categoryId: "music",
+      eventStartAt: "2026-01-15T20:00:00.000Z",
+      eventEndAt: "2026-01-15T22:00:00.000Z",
+      venueName: "Salle",
+      city: "Descartes",
+      latitude: 46.97,
+      longitude: 0.7,
+      status: "PUBLISHED"
+    });
+
+    await vm.handleSaveAndSubmit();
+
+    expect(updateMock).toHaveBeenCalledWith(
+      "1",
+      expect.objectContaining({ title: "Concert" }),
+      "EDITOR"
+    );
+    expect(submitMock).toHaveBeenCalledWith("1", "EDITOR");
   });
 
   it("clears invalid date values on edit", async () => {

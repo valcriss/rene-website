@@ -14,6 +14,7 @@ const fallbackEvent: Event = {
   image: "img",
   createdByUserId: null,
   categoryId: "music",
+  audienceId: "all",
   eventStartAt: "2026-01-15T20:00:00.000Z",
   eventEndAt: "2026-01-15T22:00:00.000Z",
   allDay: false,
@@ -28,17 +29,23 @@ const fallbackEvent: Event = {
   publishedAt: null,
   publicationEndAt: "2026-01-15T22:00:00.000Z",
   rejectionReason: null,
+  pendingRevision: null,
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z"
 };
 
-const createRepo = (event: Event | null): EventRepository => ({
+const createRepo = (event: Event | null, overrides: Partial<EventRepository> = {}): EventRepository => ({
   list: async () => (event ? [event] : []),
   getById: async () => event,
   create: async () => event ?? fallbackEvent,
   update: async () => event,
+  upsertPendingRevision: async () => event,
+  submitPendingRevision: async () => event,
+  rejectPendingRevision: async () => event,
+  publishPendingRevision: async () => event,
   delete: async () => Boolean(event),
-  updateStatus: async () => event
+  updateStatus: async () => event,
+  ...overrides
 });
 
 describe("event services", () => {
@@ -66,6 +73,7 @@ describe("event services", () => {
     image: "img",
     createdByUserId: null,
     categoryId: "music",
+    audienceId: "all",
     eventStartAt: "2026-01-15T20:00:00.000Z",
     eventEndAt: "2026-01-15T22:00:00.000Z",
     allDay: false,
@@ -80,6 +88,7 @@ describe("event services", () => {
     publishedAt: null,
     publicationEndAt: "2026-01-15T22:00:00.000Z",
     rejectionReason: null,
+    pendingRevision: null,
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000Z"
   };
@@ -100,14 +109,10 @@ describe("event services", () => {
   });
 
   it("deletes previous image when updated", async () => {
-    const repo: EventRepository = {
+    const repo = createRepo(baseEvent, {
       list: async () => [],
-      getById: async () => baseEvent,
-      create: async () => baseEvent,
-      update: async () => ({ ...baseEvent, image: "/uploads/new.png" }),
-      delete: async () => true,
-      updateStatus: async () => baseEvent
-    };
+      update: async () => ({ ...baseEvent, image: "/uploads/new.png" })
+    });
 
     await updateEvent(repo, "id", baseEvent);
 
@@ -131,14 +136,10 @@ describe("event services", () => {
   });
 
   it("updateEvent returns not found when update returns null", async () => {
-    const repo: EventRepository = {
+    const repo = createRepo(baseEvent, {
       list: async () => [],
-      getById: async () => baseEvent,
-      create: async () => baseEvent,
-      update: async () => null,
-      delete: async () => true,
-      updateStatus: async () => baseEvent
-    };
+      update: async () => null
+    });
     const result = await updateEvent(repo, "id", baseEvent);
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -156,27 +157,19 @@ describe("event services", () => {
   });
 
   it("rejectEvent succeeds", async () => {
-    const repo: EventRepository = {
+    const repo = createRepo(baseEvent, {
       list: async () => [],
-      getById: async () => baseEvent,
-      create: async () => baseEvent,
-      update: async () => baseEvent,
-      delete: async () => true,
       updateStatus: async () => ({ ...baseEvent, status: "REJECTED", rejectionReason: "Motif" })
-    };
+    });
     const result = await rejectEvent(repo, "id", "Motif");
     expect(result.ok).toBe(true);
   });
 
   it("rejectEvent returns not found when updateStatus fails", async () => {
-    const repo: EventRepository = {
+    const repo = createRepo(baseEvent, {
       list: async () => [],
-      getById: async () => baseEvent,
-      create: async () => baseEvent,
-      update: async () => baseEvent,
-      delete: async () => true,
       updateStatus: async () => null
-    };
+    });
     const result = await rejectEvent(repo, "id", "Motif");
     expect(result.ok).toBe(false);
   });
@@ -188,27 +181,19 @@ describe("event services", () => {
   });
 
   it("submitEvent succeeds", async () => {
-    const repo: EventRepository = {
+    const repo = createRepo(baseEvent, {
       list: async () => [],
-      getById: async () => baseEvent,
-      create: async () => baseEvent,
-      update: async () => baseEvent,
-      delete: async () => true,
       updateStatus: async () => ({ ...baseEvent, status: "PENDING" })
-    };
+    });
     const result = await submitEvent(repo, "id");
     expect(result.ok).toBe(true);
   });
 
   it("submitEvent returns not found when updateStatus fails", async () => {
-    const repo: EventRepository = {
+    const repo = createRepo(baseEvent, {
       list: async () => [],
-      getById: async () => baseEvent,
-      create: async () => baseEvent,
-      update: async () => baseEvent,
-      delete: async () => true,
       updateStatus: async () => null
-    };
+    });
     const result = await submitEvent(repo, "id");
     expect(result.ok).toBe(false);
   });
@@ -220,27 +205,19 @@ describe("event services", () => {
   });
 
   it("publishEvent succeeds", async () => {
-    const repo: EventRepository = {
+    const repo = createRepo(baseEvent, {
       list: async () => [],
-      getById: async () => baseEvent,
-      create: async () => baseEvent,
-      update: async () => baseEvent,
-      delete: async () => true,
       updateStatus: async () => ({ ...baseEvent, status: "PUBLISHED", publishedAt: "2026-01-01T00:00:00.000Z" })
-    };
+    });
     const result = await publishEvent(repo, "id");
     expect(result.ok).toBe(true);
   });
 
   it("publishEvent returns not found when updateStatus fails", async () => {
-    const repo: EventRepository = {
+    const repo = createRepo(baseEvent, {
       list: async () => [],
-      getById: async () => baseEvent,
-      create: async () => baseEvent,
-      update: async () => baseEvent,
-      delete: async () => true,
       updateStatus: async () => null
-    };
+    });
     const result = await publishEvent(repo, "id");
     expect(result.ok).toBe(false);
   });
@@ -281,16 +258,12 @@ describe("event services", () => {
   });
 
   it("createEvent returns repo error", async () => {
-    const repo: EventRepository = {
+    const repo = createRepo(baseEvent, {
       list: async () => [],
-      getById: async () => baseEvent,
       create: async () => {
         throw new Error("boom");
-      },
-      update: async () => baseEvent,
-      delete: async () => true,
-      updateStatus: async () => baseEvent
-    };
+      }
+    });
     const result = await createEvent(repo, baseEvent);
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -299,16 +272,12 @@ describe("event services", () => {
   });
 
   it("createEvent returns unknown error when non-error thrown", async () => {
-    const repo: EventRepository = {
+    const repo = createRepo(baseEvent, {
       list: async () => [],
-      getById: async () => baseEvent,
       create: async () => {
         throw "boom";
-      },
-      update: async () => baseEvent,
-      delete: async () => true,
-      updateStatus: async () => baseEvent
-    };
+      }
+    });
     const result = await createEvent(repo, baseEvent);
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -317,16 +286,12 @@ describe("event services", () => {
   });
 
   it("updateEvent returns repo error", async () => {
-    const repo: EventRepository = {
+    const repo = createRepo(baseEvent, {
       list: async () => [],
-      getById: async () => baseEvent,
-      create: async () => baseEvent,
       update: async () => {
         throw new Error("boom");
-      },
-      delete: async () => true,
-      updateStatus: async () => baseEvent
-    };
+      }
+    });
     const result = await updateEvent(repo, "id", baseEvent);
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -335,16 +300,12 @@ describe("event services", () => {
   });
 
   it("updateEvent returns unknown error when non-error thrown", async () => {
-    const repo: EventRepository = {
+    const repo = createRepo(baseEvent, {
       list: async () => [],
-      getById: async () => baseEvent,
-      create: async () => baseEvent,
       update: async () => {
         throw "boom";
-      },
-      delete: async () => true,
-      updateStatus: async () => baseEvent
-    };
+      }
+    });
     const result = await updateEvent(repo, "id", baseEvent);
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -366,15 +327,65 @@ describe("event services", () => {
   });
 
   it("deleteEvent returns not found when delete fails", async () => {
-    const repo: EventRepository = {
+    const repo = createRepo(baseEvent, {
       list: async () => [],
-      getById: async () => baseEvent,
-      create: async () => baseEvent,
-      update: async () => baseEvent,
-      delete: async () => false,
-      updateStatus: async () => baseEvent
-    };
+      delete: async () => false
+    });
     const result = await deleteEvent(repo, "id");
     expect(result.ok).toBe(false);
+  });
+
+  it("creates a pending revision when a published event is edited", async () => {
+    const publishedEvent: Event = {
+      ...baseEvent,
+      status: "PUBLISHED",
+      publishedAt: "2026-01-01T00:00:00.000Z"
+    };
+    const repo = createRepo(publishedEvent, {
+      upsertPendingRevision: async (_id, _input, status) => ({
+        ...publishedEvent,
+        pendingRevision: {
+          ...baseEvent,
+          id: "revision-1",
+          eventId: publishedEvent.id,
+          createdByUserId: null,
+          status,
+          rejectionReason: null,
+          title: "Concert modifié"
+        }
+      })
+    });
+
+    const result = await updateEvent(repo, publishedEvent.id, { ...baseEvent, title: "Concert modifié" });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.status).toBe("PUBLISHED");
+      expect(result.value.pendingRevision?.status).toBe("DRAFT");
+      expect(result.value.pendingRevision?.title).toBe("Concert modifié");
+    }
+  });
+
+  it("does not publish a published event revision before submission", async () => {
+    const publishedEvent: Event = {
+      ...baseEvent,
+      status: "PUBLISHED",
+      publishedAt: "2026-01-01T00:00:00.000Z",
+      pendingRevision: {
+        ...baseEvent,
+        id: "revision-1",
+        eventId: "id",
+        createdByUserId: null,
+        status: "DRAFT",
+        rejectionReason: null
+      }
+    };
+
+    const result = await publishEvent(createRepo(publishedEvent), "id");
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContain("Révision non soumise.");
+    }
   });
 });

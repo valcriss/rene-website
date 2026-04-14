@@ -1,16 +1,21 @@
 import { reactive, ref } from "vue";
 import { defineStore } from "pinia";
 import {
+  AdminAudience,
   AdminCategory,
   AdminSettings,
   AdminUser,
+  createAdminAudience,
   createAdminCategory,
   createAdminUser,
+  deleteAdminAudience,
   deleteAdminCategory,
   deleteAdminUser,
+  fetchAdminAudiences,
   fetchAdminCategories,
   fetchAdminSettings,
   fetchAdminUsers,
+  updateAdminAudience,
   updateAdminCategory,
   updateAdminSettings,
   updateAdminUser
@@ -20,18 +25,23 @@ import { useAuthStore } from "./auth";
 export const useAdminStore = defineStore("admin", () => {
   const adminUsers = ref<AdminUser[]>([]);
   const adminCategories = ref<AdminCategory[]>([]);
+  const adminAudiences = ref<AdminAudience[]>([]);
   const adminSettings = ref<AdminSettings | null>(null);
   const adminError = ref<string | null>(null);
   const adminLoading = ref(false);
 
   const adminUserEditingId = ref<string | null>(null);
   const adminCategoryEditingId = ref<string | null>(null);
+  const adminAudienceEditingId = ref<string | null>(null);
   const adminUserForm = reactive({
     name: "",
     email: "",
     role: "EDITOR" as AdminUser["role"]
   });
   const adminCategoryForm = reactive({
+    name: ""
+  });
+  const adminAudienceForm = reactive({
     name: ""
   });
   const adminSettingsForm = reactive({
@@ -52,6 +62,11 @@ export const useAdminStore = defineStore("admin", () => {
     adminCategoryForm.name = "";
   };
 
+  const resetAdminAudienceForm = () => {
+    adminAudienceEditingId.value = null;
+    adminAudienceForm.name = "";
+  };
+
   const startAdminUserEdit = (user: AdminUser) => {
     adminUserEditingId.value = user.id;
     adminUserForm.name = user.name;
@@ -62,6 +77,11 @@ export const useAdminStore = defineStore("admin", () => {
   const startAdminCategoryEdit = (category: AdminCategory) => {
     adminCategoryEditingId.value = category.id;
     adminCategoryForm.name = category.name;
+  };
+
+  const startAdminAudienceEdit = (audience: AdminAudience) => {
+    adminAudienceEditingId.value = audience.id;
+    adminAudienceForm.name = audience.name;
   };
 
   const handleSaveAdminUser = async () => {
@@ -133,6 +153,40 @@ export const useAdminStore = defineStore("admin", () => {
     }
   };
 
+  const handleSaveAdminAudience = async () => {
+    adminError.value = null;
+    const authStore = useAuthStore();
+    if (!authStore.isAdmin) return;
+    try {
+      const payload = { name: adminAudienceForm.name };
+      const updated = adminAudienceEditingId.value
+        ? await updateAdminAudience(authStore.role, adminAudienceEditingId.value, payload)
+        : await createAdminAudience(authStore.role, payload);
+      adminAudiences.value = [
+        updated,
+        ...adminAudiences.value.filter((audience) => audience.id !== updated.id)
+      ];
+      resetAdminAudienceForm();
+    } catch (err) {
+      adminError.value = err instanceof Error ? err.message : "Erreur inconnue";
+    }
+  };
+
+  const handleDeleteAdminAudience = async (id: string) => {
+    adminError.value = null;
+    const authStore = useAuthStore();
+    if (!authStore.isAdmin) return;
+    try {
+      await deleteAdminAudience(authStore.role, id);
+      adminAudiences.value = adminAudiences.value.filter((audience) => audience.id !== id);
+      if (adminAudienceEditingId.value === id) {
+        resetAdminAudienceForm();
+      }
+    } catch (err) {
+      adminError.value = err instanceof Error ? err.message : "Erreur inconnue";
+    }
+  };
+
   const handleSaveAdminSettings = async () => {
     adminError.value = null;
     const authStore = useAuthStore();
@@ -150,13 +204,15 @@ export const useAdminStore = defineStore("admin", () => {
     adminLoading.value = true;
     const authStore = useAuthStore();
     try {
-      const [users, categories, settings] = await Promise.all([
+      const [users, categories, audiences, settings] = await Promise.all([
         fetchAdminUsers(authStore.role),
         fetchAdminCategories(authStore.role),
+        fetchAdminAudiences(authStore.role),
         fetchAdminSettings(authStore.role)
       ]);
       adminUsers.value = users;
       adminCategories.value = categories;
+      adminAudiences.value = audiences;
       adminSettings.value = settings;
       adminSettingsForm.contactEmail = settings.contactEmail;
       adminSettingsForm.contactPhone = settings.contactPhone;
@@ -173,22 +229,29 @@ export const useAdminStore = defineStore("admin", () => {
   return {
     adminUsers,
     adminCategories,
+    adminAudiences,
     adminSettings,
     adminError,
     adminLoading,
     adminUserEditingId,
     adminCategoryEditingId,
+    adminAudienceEditingId,
     adminUserForm,
     adminCategoryForm,
+    adminAudienceForm,
     adminSettingsForm,
     resetAdminUserForm,
     resetAdminCategoryForm,
+    resetAdminAudienceForm,
     startAdminUserEdit,
     startAdminCategoryEdit,
+    startAdminAudienceEdit,
     handleSaveAdminUser,
     handleDeleteAdminUser,
     handleSaveAdminCategory,
     handleDeleteAdminCategory,
+    handleSaveAdminAudience,
+    handleDeleteAdminAudience,
     handleSaveAdminSettings,
     loadAdminData,
     getAdminError

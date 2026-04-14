@@ -10,7 +10,7 @@ import { vi } from "vitest";
 const buildEvent = (): EventItem => ({
   id: "1",
   title: "Concert",
-  content: "Hello",
+  content: "Première phrase. Deuxième phrase. Troisième phrase inutile.",
   image: "img",
   categoryId: "music",
   eventStartAt: "2030-01-15T20:00:00.000Z",
@@ -68,5 +68,9 @@ describe("HomePage", () => {
 
     await wrapper.find("[data-testid='event-card-1']").trigger("click");
     expect(pushSpy).toHaveBeenCalledWith("/event/1");
+
+    expect(wrapper.get("[data-testid='event-grid']").classes()).toContain("xl:grid-cols-3");
+    expect(wrapper.text()).toContain("Première phrase. Deuxième phrase.");
+    expect(wrapper.text()).not.toContain("Troisième phrase inutile.");
   });
 });

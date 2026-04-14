@@ -14,6 +14,11 @@ export type AdminCategory = {
   name: string;
 };
 
+export type AdminAudience = {
+  id: string;
+  name: string;
+};
+
 export type AdminSettings = {
   contactEmail: string;
   contactPhone: string;
@@ -135,4 +140,53 @@ export const updateAdminSettings = async (role: string, payload: AdminSettings):
     throw new Error("Impossible de mettre à jour les réglages");
   }
   return response.json() as Promise<AdminSettings>;
+};
+
+export const fetchAdminAudiences = async (role: string): Promise<AdminAudience[]> => {
+  const response = await fetch("/api/admin/audiences", { headers: jsonHeaders(role) });
+  if (!response.ok) {
+    throw new Error("Impossible de charger les publics concernés");
+  }
+  return response.json() as Promise<AdminAudience[]>;
+};
+
+export const createAdminAudience = async (
+  role: string,
+  payload: Omit<AdminAudience, "id">
+): Promise<AdminAudience> => {
+  const response = await fetch("/api/admin/audiences", {
+    method: "POST",
+    headers: jsonHeaders(role),
+    body: JSON.stringify(payload)
+  });
+  if (!response.ok) {
+    throw new Error("Impossible de créer le public concerné");
+  }
+  return response.json() as Promise<AdminAudience>;
+};
+
+export const updateAdminAudience = async (
+  role: string,
+  id: string,
+  payload: Omit<AdminAudience, "id">
+): Promise<AdminAudience> => {
+  const response = await fetch(`/api/admin/audiences/${id}`, {
+    method: "PUT",
+    headers: jsonHeaders(role),
+    body: JSON.stringify(payload)
+  });
+  if (!response.ok) {
+    throw new Error("Impossible de mettre à jour le public concerné");
+  }
+  return response.json() as Promise<AdminAudience>;
+};
+
+export const deleteAdminAudience = async (role: string, id: string): Promise<void> => {
+  const response = await fetch(`/api/admin/audiences/${id}`, {
+    method: "DELETE",
+    headers: jsonHeaders(role)
+  });
+  if (!response.ok) {
+    throw new Error("Impossible de supprimer le public concerné");
+  }
 };

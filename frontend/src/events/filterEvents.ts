@@ -9,6 +9,7 @@ export type EventFilters = {
   search: string;
   cities: string[];
   types: string[];
+  audiences: string[];
   preset?: string;
   dateRange: DateRange;
 };
@@ -22,7 +23,7 @@ const parseDateInput = (value: string, endOfDay: boolean) => {
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
-const normalizeList = (values: string[]) => values.map(normalize);
+const normalizeList = (values?: string[]) => (values ?? []).map(normalize);
 
 const withinDateRange = (eventStart: Date, eventEnd: Date, range: DateRange) => {
   const start = parseDateInput(range.start, false);
@@ -54,6 +55,7 @@ export const filterEvents = (events: EventItem[], filters: EventFilters): EventI
   const search = normalize(filters.search);
   const cities = normalizeList(filters.cities);
   const types = normalizeList(filters.types);
+  const audiences = normalizeList(filters.audiences);
 
   return events.filter((event) => {
     const eventStart = new Date(event.eventStartAt);
@@ -74,6 +76,10 @@ export const filterEvents = (events: EventItem[], filters: EventFilters): EventI
     }
 
     if (types.length > 0 && !types.includes(normalize(event.categoryId))) {
+      return false;
+    }
+
+    if (audiences.length > 0 && !audiences.includes(normalize(event.audienceId))) {
       return false;
     }
 

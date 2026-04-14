@@ -1,5 +1,5 @@
 import { EventDraftInput } from "./types";
-import { sanitizeEventContent } from "./sanitize";
+import { sanitizeEventContent, sanitizeEventPricingInfo } from "./sanitize";
 
 type ValidationResult =
   | { ok: true; value: EventDraftInput }
@@ -27,6 +27,7 @@ export const validateCreateEvent = (input: unknown): ValidationResult => {
   if (!isNonEmptyString(data.content)) errors.push("Le contenu est requis.");
   if (!isNonEmptyString(data.image)) errors.push("L'image est requise.");
   if (!isNonEmptyString(data.categoryId)) errors.push("La catégorie est requise.");
+  if (!isNonEmptyString(data.audienceId)) errors.push("Le public concerné est requis.");
   if (!isNonEmptyString(data.eventStartAt)) errors.push("La date de début est requise.");
   if (!isNonEmptyString(data.eventEndAt)) errors.push("La date de fin est requise.");
   if (typeof data.allDay !== "boolean") errors.push("Le champ allDay doit être un booléen.");
@@ -41,6 +42,7 @@ export const validateCreateEvent = (input: unknown): ValidationResult => {
   if (!isOptionalString(data.contactEmail)) errors.push("L'email de contact doit être une chaîne.");
   if (!isOptionalString(data.contactPhone)) errors.push("Le téléphone de contact doit être une chaîne.");
   if (!isOptionalString(data.ticketUrl)) errors.push("Le lien de billetterie doit être une chaîne.");
+  if (!isOptionalString(data.pricingInfo)) errors.push("Les informations tarifaires doivent être une chaîne.");
   if (!isOptionalString(data.websiteUrl)) errors.push("Le site web doit être une chaîne.");
 
   const latitude = data.latitude === undefined ? undefined : asNumber(data.latitude);
@@ -84,6 +86,9 @@ export const validateCreateEvent = (input: unknown): ValidationResult => {
   }
 
   const sanitizedContent = typeof data.content === "string" ? sanitizeEventContent(data.content) : "";
+  const sanitizedPricingInfo = typeof data.pricingInfo === "string"
+    ? sanitizeEventPricingInfo(data.pricingInfo)
+    : undefined;
   if (typeof data.content === "string" && sanitizedContent.trim().length === 0) {
     errors.push("Le contenu est requis.");
   }
@@ -99,6 +104,7 @@ export const validateCreateEvent = (input: unknown): ValidationResult => {
       content: sanitizedContent,
       image: data.image as string,
       categoryId: data.categoryId as string,
+      audienceId: data.audienceId as string,
       eventStartAt: data.eventStartAt as string,
       eventEndAt: data.eventEndAt as string,
       allDay: data.allDay as boolean,
@@ -113,6 +119,7 @@ export const validateCreateEvent = (input: unknown): ValidationResult => {
       contactEmail: data.contactEmail as string | undefined,
       contactPhone: data.contactPhone as string | undefined,
       ticketUrl: data.ticketUrl as string | undefined,
+      pricingInfo: sanitizedPricingInfo,
       websiteUrl: data.websiteUrl as string | undefined
     }
   };

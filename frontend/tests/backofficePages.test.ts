@@ -38,6 +38,7 @@ const buildEvent = (overrides: Partial<EventItem> = {}): EventItem => ({
   publishedAt: null,
   publicationEndAt: "2030-01-15T22:00:00.000Z",
   rejectionReason: null,
+  createdByUserId: "current-user",
   createdAt: "2030-01-01T00:00:00.000Z",
   updatedAt: "2030-01-01T00:00:00.000Z",
   ...overrides
@@ -49,6 +50,7 @@ const setup = async (path: string, role: "VISITOR" | "EDITOR" | "MODERATOR" | "A
   const pinia = createPinia();
   const authStore = useAuthStore(pinia);
   authStore.setRole(role);
+  authStore.userId = role === "VISITOR" ? null : "current-user";
   return { router, pinia, authStore };
 };
 
@@ -71,7 +73,7 @@ describe("BackofficeLayout", () => {
     await fireEvent.click(screen.getByText("Retour au site"));
     expect(pushSpy).toHaveBeenCalledWith("/");
 
-    await fireEvent.click(screen.getByText("Se connecter"));
+    await fireEvent.click(screen.getByText("Me connecter"));
     expect(pushSpy).toHaveBeenCalledWith("/login");
   });
 });
@@ -100,6 +102,161 @@ describe("BackofficeEventsPage", () => {
     expect(screen.getByText("Erreur suppression")).toBeInTheDocument();
     await fireEvent.click(screen.getByText("Ajouter un événement"));
     expect(pushSpy).toHaveBeenCalledWith("/backoffice/events/new");
+  });
+
+  it("shows editorial sections for editors only on owned articles", async () => {
+    const { router, pinia } = await setup("/backoffice/events", "EDITOR");
+    const eventsStore = useEventsStore(pinia);
+    eventsStore.events = [
+      buildEvent({ id: "1", status: "DRAFT", title: "Mon brouillon" }),
+      buildEvent({
+        id: "2",
+        status: "REJECTED",
+        title: "Ma reprise",
+        rejectionReason: "Corriger la mise en page"
+      }),
+      buildEvent({ id: "3", status: "PUBLISHED", title: "Mon article publié" }),
+      buildEvent({
+        id: "4",
+        status: "DRAFT",
+        title: "Brouillon externe",
+        createdByUserId: "other-user"
+      })
+    ];
+
+    render(BackofficeEventsPage, {
+      global: {
+        plugins: [pinia, router]
+      }
+    });
+
+    expect(screen.getAllByText("Mes brouillons").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Reprises éditoriales").length).toBeGreaterThan(0);
+    expect(screen.getByText("Événements publiés")).toBeInTheDocument();
+    expect(screen.queryByText("Les autres articles")).not.toBeInTheDocument();
+    expect(screen.getByText("Mon brouillon")).toBeInTheDocument();
+    expect(screen.getByText("Ma reprise")).toBeInTheDocument();
+    expect(screen.getByText("Mon article publié")).toBeInTheDocument();
+    expect(screen.queryByText("Brouillon externe")).not.toBeInTheDocument();
+  });
+
+  it("shows published revision notices and keeps published edit action", async () => {
+    const { router, pinia } = await setup("/backoffice/events", "EDITOR");
+    const eventsStore = useEventsStore(pinia);
+    eventsStore.events = [
+      buildEvent({
+        id: "3",
+        status: "PUBLISHED",
+        title: "Mon article publié",
+        pendingRevision: {
+          id: "revision-1",
+          eventId: "3",
+          title: "Mon article publié v2",
+          content: "Hello",
+          image: "img-2",
+          createdByUserId: "current-user",
+          categoryId: "music",
+          eventStartAt: "2030-01-15T20:00:00.000Z",
+          eventEndAt: "2030-01-15T22:00:00.000Z",
+          allDay: false,
+          venueName: "Salle",
+          address: "",
+          postalCode: "",
+          city: "Descartes",
+          latitude: 46.97,
+          longitude: 0.7,
+          organizerName: "Org",
+          status: "PENDING",
+          rejectionReason: null,
+          createdAt: "2030-01-02T00:00:00.000Z",
+          updatedAt: "2030-01-02T00:00:00.000Z"
+        }
+      })
+    ];
+
+    render(BackofficeEventsPage, {
+      global: {
+        plugins: [pinia, router]
+      }
+    });
+
+    expect(screen.getByText("Mon article publié")).toBeInTheDocument();
+    expect(screen.getByText(/Une nouvelle version est actuellement en attente de validation/i)).toBeInTheDocument();
+    expect(screen.getAllByText("Modifier").length).toBeGreaterThan(0);
+  });
+
+  it("shows published draft revision notices", async () => {
+    const { router, pinia } = await setup("/backoffice/events", "EDITOR");
+    const eventsStore = useEventsStore(pinia);
+    eventsStore.events = [
+      buildEvent({
+        id: "3",
+        status: "PUBLISHED",
+        title: "Mon article publié",
+        pendingRevision: {
+          id: "revision-1",
+          eventId: "3",
+          title: "Mon article publié v2",
+          content: "Hello",
+          image: "img-2",
+          createdByUserId: "current-user",
+          categoryId: "music",
+          eventStartAt: "2030-01-15T20:00:00.000Z",
+          eventEndAt: "2030-01-15T22:00:00.000Z",
+          allDay: false,
+          venueName: "Salle",
+          address: "",
+          postalCode: "",
+          city: "Descartes",
+          latitude: 46.97,
+          longitude: 0.7,
+          organizerName: "Org",
+          status: "DRAFT",
+          rejectionReason: null,
+          createdAt: "2030-01-02T00:00:00.000Z",
+          updatedAt: "2030-01-02T00:00:00.000Z"
+        }
+      })
+    ];
+
+    render(BackofficeEventsPage, {
+      global: {
+        plugins: [pinia, router]
+      }
+    });
+
+    expect(screen.getByText(/Une nouvelle version est enregistrée en brouillon/i)).toBeInTheDocument();
+  });
+
+  it("shows other articles for moderators and excludes owned items from that block", async () => {
+    const { router, pinia } = await setup("/backoffice/events", "MODERATOR");
+    const eventsStore = useEventsStore(pinia);
+    eventsStore.events = [
+      buildEvent({ id: "1", status: "DRAFT", title: "Mon brouillon" }),
+      buildEvent({
+        id: "2",
+        status: "PENDING",
+        title: "Validation externe",
+        createdByUserId: "other-user"
+      }),
+      buildEvent({
+        id: "3",
+        status: "PUBLISHED",
+        title: "Publication externe",
+        createdByUserId: "other-user"
+      })
+    ];
+
+    render(BackofficeEventsPage, {
+      global: {
+        plugins: [pinia, router]
+      }
+    });
+
+    expect(screen.getAllByText("Les autres articles").length).toBeGreaterThan(0);
+    expect(screen.getByText("Validation externe")).toBeInTheDocument();
+    expect(screen.getByText("Publication externe")).toBeInTheDocument();
+    expect(screen.getAllByText("Mon brouillon")).toHaveLength(1);
   });
 
   it("starts edit flow for draft events", async () => {
@@ -141,6 +298,50 @@ describe("BackofficeEventsPage", () => {
     await fireEvent.click(screen.getByText("Soumettre"));
     await fireEvent.click(screen.getByText("Supprimer"));
 
+    expect(submitSpy).toHaveBeenCalledWith("1");
+    expect(deleteSpy).toHaveBeenCalledWith("2");
+  });
+
+  it("keeps edit, submit and delete actions in the other articles section", async () => {
+    const { router, pinia } = await setup("/backoffice/events", "ADMIN");
+    const pushSpy = vi.spyOn(router, "push");
+    const eventsStore = useEventsStore(pinia);
+    const editorStore = useEditorStore(pinia);
+    const startEditSpy = vi.spyOn(editorStore, "startEdit");
+    const submitSpy = vi.spyOn(editorStore, "handleSubmitDraft").mockResolvedValue(true);
+    const deleteSpy = vi.spyOn(eventsStore, "handleDelete").mockResolvedValue();
+    eventsStore.events = [
+      buildEvent({
+        id: "1",
+        status: "REJECTED",
+        title: "Reprise externe",
+        createdByUserId: "other-user",
+        rejectionReason: "Compléter le texte"
+      }),
+      buildEvent({
+        id: "2",
+        status: "PUBLISHED",
+        title: "Publié externe",
+        createdByUserId: "other-user"
+      })
+    ];
+
+    render(BackofficeEventsPage, {
+      global: {
+        plugins: [pinia, router]
+      }
+    });
+
+    const editButtons = screen.getAllByText("Modifier");
+    const submitButtons = screen.getAllByText("Soumettre");
+    const deleteButtons = screen.getAllByText("Supprimer");
+
+    await fireEvent.click(editButtons[0]);
+    await fireEvent.click(submitButtons[0]);
+    await fireEvent.click(deleteButtons[0]);
+
+    expect(startEditSpy).toHaveBeenCalled();
+    expect(pushSpy).toHaveBeenCalledWith("/backoffice/events/new");
     expect(submitSpy).toHaveBeenCalledWith("1");
     expect(deleteSpy).toHaveBeenCalledWith("2");
   });
@@ -212,7 +413,7 @@ describe("BackofficeEventCreatePage", () => {
     const categoriesStore = useCategoriesStore(pinia);
     categoriesStore.hasLoaded = true;
     editorStore.editorMode = "edit";
-    vi.spyOn(editorStore, "handleSubmitDraft").mockResolvedValue(true);
+    vi.spyOn(editorStore, "handleSaveAndSubmit").mockResolvedValue(true);
 
     render(BackofficeEventCreatePage, {
       global: {
@@ -246,6 +447,20 @@ describe("BackofficeModerationPage", () => {
 
     await fireEvent.click(screen.getByText("Voir la publication"));
     expect(pushSpy).toHaveBeenCalledWith("/backoffice/moderation/view/1");
+  });
+
+  it("uses a multiline rejection reason field", async () => {
+    const { router, pinia } = await setup("/backoffice/moderation", "MODERATOR");
+    const eventsStore = useEventsStore(pinia);
+    eventsStore.events = [buildEvent({ status: "PENDING" })];
+
+    render(BackofficeModerationPage, { global: { plugins: [pinia, router] } });
+
+    const field = screen.getByPlaceholderText("Motif de refus");
+    expect(field.tagName).toBe("TEXTAREA");
+
+    await fireEvent.update(field, "Première ligne\nDeuxième ligne");
+    expect(eventsStore.rejectionReasons["1"]).toBe("Première ligne\nDeuxième ligne");
   });
 });
 

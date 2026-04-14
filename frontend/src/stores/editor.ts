@@ -1,5 +1,6 @@
 import { reactive, ref } from "vue";
 import { defineStore } from "pinia";
+import type { EventRevisionStatus } from "../api/events";
 import { CreateEventPayload, EventItem, createEvent, submitEvent, updateEvent } from "../api/events";
 import { geocodeEventLocation } from "../api/geocoding";
 import { uploadImage } from "../api/uploads";
@@ -11,6 +12,7 @@ const defaultEditorForm = (): CreateEventPayload => ({
   content: "",
   image: "",
   categoryId: "",
+  audienceId: "",
   eventStartAt: "",
   eventEndAt: "",
   allDay: false,
@@ -23,12 +25,41 @@ const defaultEditorForm = (): CreateEventPayload => ({
   contactEmail: "",
   contactPhone: "",
   ticketUrl: "",
+  pricingInfo: "",
   websiteUrl: ""
 });
+
+const PREVIEW_STORAGE_PREFIX = "rene-website-preview";
+
+export type EditorPreviewSnapshot = {
+  token: string;
+  event: EventItem;
+};
+
+const buildPreviewStorageKey = (token: string) => `${PREVIEW_STORAGE_PREFIX}:${token}`;
+
+export const readEditorPreviewSnapshot = (token: string): EditorPreviewSnapshot | null => {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const rawValue = window.localStorage.getItem(buildPreviewStorageKey(token));
+  if (!rawValue) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(rawValue) as EditorPreviewSnapshot;
+  } catch {
+    return null;
+  }
+};
 
 export const useEditorStore = defineStore("editor", () => {
   const editorMode = ref<"create" | "edit">("create");
   const editingEventId = ref<string | null>(null);
+  const editingPublishedEvent = ref(false);
+  const editingPublishedRevisionStatus = ref<EventRevisionStatus | null>(null);
   const editorError = ref<string | null>(null);
   const editorForm = reactive<CreateEventPayload>(defaultEditorForm());
   const imageFile = ref<File | null>(null);
@@ -36,31 +67,38 @@ export const useEditorStore = defineStore("editor", () => {
   const resetEditorForm = () => {
     editorMode.value = "create";
     editingEventId.value = null;
+    editingPublishedEvent.value = false;
+    editingPublishedRevisionStatus.value = null;
     imageFile.value = null;
     Object.assign(editorForm, defaultEditorForm());
   };
 
   const startEdit = (eventItem: EventItem) => {
+    const source = eventItem.pendingRevision ? { ...eventItem, ...eventItem.pendingRevision } : eventItem;
     editorMode.value = "edit";
     editingEventId.value = eventItem.id;
+    editingPublishedEvent.value = eventItem.status === "PUBLISHED";
+    editingPublishedRevisionStatus.value = eventItem.pendingRevision?.status ?? null;
     imageFile.value = null;
-    editorForm.title = eventItem.title;
-    editorForm.content = eventItem.content ?? "";
-    editorForm.image = eventItem.image;
-    editorForm.categoryId = eventItem.categoryId;
-    editorForm.eventStartAt = formatDateTimeInput(eventItem.eventStartAt);
-    editorForm.eventEndAt = formatDateTimeInput(eventItem.eventEndAt);
-    editorForm.allDay = eventItem.allDay ?? false;
-    editorForm.venueName = eventItem.venueName;
-    editorForm.address = eventItem.address ?? "";
-    editorForm.postalCode = eventItem.postalCode ?? "";
-    editorForm.city = eventItem.city;
-    editorForm.organizerName = eventItem.organizerName ?? "";
-    editorForm.organizerUrl = eventItem.organizerUrl ?? "";
-    editorForm.contactEmail = eventItem.contactEmail ?? "";
-    editorForm.contactPhone = eventItem.contactPhone ?? "";
-    editorForm.ticketUrl = eventItem.ticketUrl ?? "";
-    editorForm.websiteUrl = eventItem.websiteUrl ?? "";
+    editorForm.title = source.title;
+    editorForm.content = source.content ?? "";
+    editorForm.image = source.image;
+    editorForm.categoryId = source.categoryId;
+    editorForm.audienceId = source.audienceId;
+    editorForm.eventStartAt = formatDateTimeInput(source.eventStartAt);
+    editorForm.eventEndAt = formatDateTimeInput(source.eventEndAt);
+    editorForm.allDay = source.allDay ?? false;
+    editorForm.venueName = source.venueName;
+    editorForm.address = source.address ?? "";
+    editorForm.postalCode = source.postalCode ?? "";
+    editorForm.city = source.city;
+    editorForm.organizerName = source.organizerName ?? "";
+    editorForm.organizerUrl = source.organizerUrl ?? "";
+    editorForm.contactEmail = source.contactEmail ?? "";
+    editorForm.contactPhone = source.contactPhone ?? "";
+    editorForm.ticketUrl = source.ticketUrl ?? "";
+    editorForm.pricingInfo = source.pricingInfo ?? "";
+    editorForm.websiteUrl = source.websiteUrl ?? "";
   };
 
   const setImageFile = (file: File | null) => {
@@ -73,19 +111,65 @@ export const useEditorStore = defineStore("editor", () => {
     contactEmail: editorForm.contactEmail || undefined,
     contactPhone: editorForm.contactPhone || undefined,
     ticketUrl: editorForm.ticketUrl || undefined,
+    pricingInfo: editorForm.pricingInfo || undefined,
     websiteUrl: editorForm.websiteUrl || undefined
   });
 
-  const handleSaveDraft = async (): Promise<boolean> => {
+  const buildPreviewEvent = (): EventItem => ({
+    id: editingEventId.value ?? "preview-event",
+    title: editorForm.title || "Prévisualisation",
+    content: editorForm.content,
+    image: imageFile.value ? URL.createObjectURL(imageFile.value) : editorForm.image,
+    categoryId: editorForm.categoryId,
+    audienceId: editorForm.audienceId,
+    eventStartAt: editorForm.eventStartAt || new Date().toISOString(),
+    eventEndAt: editorForm.eventEndAt || editorForm.eventStartAt || new Date().toISOString(),
+    allDay: editorForm.allDay,
+    venueName: editorForm.venueName || "Lieu à confirmer",
+    address: editorForm.address,
+    postalCode: editorForm.postalCode,
+    city: editorForm.city || "Descartes",
+    latitude: 46.97,
+    longitude: 0.7,
+    organizerName: editorForm.organizerName,
+    organizerUrl: editorForm.organizerUrl,
+    contactEmail: editorForm.contactEmail,
+    contactPhone: editorForm.contactPhone,
+    ticketUrl: editorForm.ticketUrl,
+    pricingInfo: editorForm.pricingInfo,
+    websiteUrl: editorForm.websiteUrl,
+    status: "DRAFT",
+    publishedAt: null,
+    publicationEndAt: editorForm.eventEndAt || editorForm.eventStartAt || new Date().toISOString(),
+    rejectionReason: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  });
+
+  const savePreviewSnapshot = () => {
+    const token = `${Date.now()}`;
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(
+        buildPreviewStorageKey(token),
+        JSON.stringify({
+          token,
+          event: buildPreviewEvent()
+        } satisfies EditorPreviewSnapshot)
+      );
+    }
+    return token;
+  };
+
+  const saveDraft = async (): Promise<EventItem | null> => {
     editorError.value = null;
     const authStore = useAuthStore();
-    if (!authStore.canEdit) return false;
+    if (!authStore.canEdit) return null;
     const payload = buildEditorPayload();
     const eventsStore = useEventsStore();
     try {
       if (!payload.image && !imageFile.value) {
         editorError.value = "L'image est requise.";
-        return false;
+        return null;
       }
 
       if (imageFile.value) {
@@ -109,12 +193,14 @@ export const useEditorStore = defineStore("editor", () => {
       } else {
         editorForm.image = updated.image;
       }
-      return true;
+      return updated;
     } catch (err) {
       editorError.value = err instanceof Error ? err.message : "Erreur inconnue";
-      return false;
+      return null;
     }
   };
+
+  const handleSaveDraft = async (): Promise<boolean> => Boolean(await saveDraft());
 
   const handleSubmitDraft = async (id?: string): Promise<boolean> => {
     editorError.value = null;
@@ -134,6 +220,17 @@ export const useEditorStore = defineStore("editor", () => {
     }
   };
 
+  const handleSaveAndSubmit = async (): Promise<boolean> => {
+    editorError.value = null;
+
+    const savedEvent = await saveDraft();
+    if (!savedEvent) {
+      return false;
+    }
+
+    return handleSubmitDraft(savedEvent.id);
+  };
+
   const formatDateTimeInput = (value: string) => {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) {
@@ -151,12 +248,16 @@ export const useEditorStore = defineStore("editor", () => {
   return {
     editorMode,
     editingEventId,
+    editingPublishedEvent,
+    editingPublishedRevisionStatus,
     editorForm,
     editorError,
     resetEditorForm,
     startEdit,
     setImageFile,
+    savePreviewSnapshot,
     handleSaveDraft,
+    handleSaveAndSubmit,
     handleSubmitDraft,
     getEditorError,
     getEditorFormValues

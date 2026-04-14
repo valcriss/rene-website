@@ -15,6 +15,7 @@ vi.mock("../src/components/EventMap.vue", () => ({
 
 const fetchAdminUsersMock = vi.fn();
 const fetchAdminCategoriesMock = vi.fn();
+const fetchAdminAudiencesMock = vi.fn();
 const fetchAdminSettingsMock = vi.fn();
 const createAdminUserMock = vi.fn();
 const updateAdminUserMock = vi.fn();
@@ -22,11 +23,15 @@ const deleteAdminUserMock = vi.fn();
 const createAdminCategoryMock = vi.fn();
 const updateAdminCategoryMock = vi.fn();
 const deleteAdminCategoryMock = vi.fn();
+const createAdminAudienceMock = vi.fn();
+const updateAdminAudienceMock = vi.fn();
+const deleteAdminAudienceMock = vi.fn();
 const updateAdminSettingsMock = vi.fn();
 
 vi.mock("../src/api/admin", () => ({
   fetchAdminUsers: (...args: unknown[]) => fetchAdminUsersMock(...args),
   fetchAdminCategories: (...args: unknown[]) => fetchAdminCategoriesMock(...args),
+  fetchAdminAudiences: (...args: unknown[]) => fetchAdminAudiencesMock(...args),
   fetchAdminSettings: (...args: unknown[]) => fetchAdminSettingsMock(...args),
   createAdminUser: (...args: unknown[]) => createAdminUserMock(...args),
   updateAdminUser: (...args: unknown[]) => updateAdminUserMock(...args),
@@ -34,6 +39,9 @@ vi.mock("../src/api/admin", () => ({
   createAdminCategory: (...args: unknown[]) => createAdminCategoryMock(...args),
   updateAdminCategory: (...args: unknown[]) => updateAdminCategoryMock(...args),
   deleteAdminCategory: (...args: unknown[]) => deleteAdminCategoryMock(...args),
+  createAdminAudience: (...args: unknown[]) => createAdminAudienceMock(...args),
+  updateAdminAudience: (...args: unknown[]) => updateAdminAudienceMock(...args),
+  deleteAdminAudience: (...args: unknown[]) => deleteAdminAudienceMock(...args),
   updateAdminSettings: (...args: unknown[]) => updateAdminSettingsMock(...args)
 }));
 
@@ -85,6 +93,7 @@ describe("admin handlers", () => {
     window.localStorage.clear();
     fetchAdminUsersMock.mockResolvedValue([{ id: "u1", name: "Admin", email: "admin@test", role: "ADMIN" }]);
     fetchAdminCategoriesMock.mockResolvedValue([{ id: "c1", name: "Musique" }]);
+    fetchAdminAudiencesMock.mockResolvedValue([{ id: "all", name: "Tous publics" }]);
     fetchAdminSettingsMock.mockResolvedValue({ contactEmail: "c", contactPhone: "p", homepageIntro: "i" });
     createAdminUserMock.mockReset();
     updateAdminUserMock.mockReset();
@@ -92,6 +101,9 @@ describe("admin handlers", () => {
     createAdminCategoryMock.mockReset();
     updateAdminCategoryMock.mockReset();
     deleteAdminCategoryMock.mockReset();
+    createAdminAudienceMock.mockReset();
+    updateAdminAudienceMock.mockReset();
+    deleteAdminAudienceMock.mockReset();
     updateAdminSettingsMock.mockReset();
     vi.stubGlobal("fetch", vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) })));
   });

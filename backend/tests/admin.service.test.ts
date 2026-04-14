@@ -20,6 +20,11 @@ const baseRepo: AdminRepository = {
   createCategory: async () => ({ id: "cat", name: "Cat", createdAt: "", updatedAt: "" }),
   updateCategory: async () => null,
   deleteCategory: async () => false,
+  listAudiences: async () => [],
+  getAudienceById: async () => null,
+  createAudience: async () => ({ id: "aud", name: "Tous publics", createdAt: "", updatedAt: "" }),
+  updateAudience: async () => null,
+  deleteAudience: async () => false,
   getSettings: async () => ({ contactEmail: "", contactPhone: "", homepageIntro: "" }),
   updateSettings: async (input) => ({ ...input })
 };

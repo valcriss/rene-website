@@ -14,11 +14,10 @@
           <div class="space-y-6">
             <HomeTitle />
             <p class="max-w-2xl text-sm font-semibold uppercase tracking-[0.28em] text-sky-700/65">
-              Sortir, découvrir, partager
+              {{ t("home.eyebrow") }}
             </p>
             <p class="max-w-2xl text-base leading-7 text-slate-700 sm:text-lg">
-              Une sélection visuelle des rendez-vous culturels à ne pas manquer autour de Descartes, pensée
-              pour donner envie avant même de filtrer.
+              {{ t("home.intro") }}
             </p>
           </div>
 
@@ -42,13 +41,11 @@
             :alt="featuredEvent.title"
             @error="markImageError(featuredEvent.id)"
           />
-          <div class="absolute inset-0 bg-[linear-gradient(135deg,rgba(15,23,42,0.92)_0%,rgba(30,41,59,0.58)_45%,rgba(96,165,250,0.24)_100%)]"></div>
-          <div class="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent"></div>
-
+          <div class="pointer-events-none absolute inset-x-0 bottom-0 h-[44%] bg-gradient-to-t from-slate-950/74 via-slate-950/34 to-transparent"></div>
           <div class="relative flex min-h-[420px] flex-col justify-between p-6 sm:p-8 xl:min-h-[520px]">
             <div class="flex flex-wrap items-center gap-3">
               <span class="rounded-full bg-white/92 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-slate-900">
-                À la une
+                {{ t("home.featured") }}
               </span>
               <span class="rounded-full bg-slate-950/40 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-white ring-1 ring-white/20 backdrop-blur">
                 {{ formatDateRange(featuredEvent.eventStartAt, featuredEvent.eventEndAt) }}
@@ -62,22 +59,22 @@
               </span>
             </div>
 
-            <div class="max-w-2xl space-y-4">
-              <p class="text-sm font-medium uppercase tracking-[0.28em] text-white/75">
+            <div class="max-w-2xl space-y-4 rounded-[1.5rem] border border-white/10 bg-slate-950/28 p-5 backdrop-blur-md sm:p-6">
+              <p class="text-sm font-medium uppercase tracking-[0.28em] text-white/88 [text-shadow:0_1px_10px_rgba(15,23,42,0.8)]">
                 {{ featuredEvent.venueName }} · {{ featuredEvent.city }}
               </p>
-              <h2 class="font-display max-w-2xl text-4xl font-semibold leading-tight tracking-tight text-white sm:text-5xl">
+              <h2 class="font-display max-w-2xl text-4xl font-semibold leading-tight tracking-tight text-white [text-shadow:0_4px_18px_rgba(15,23,42,0.82)] sm:text-5xl">
                 {{ featuredEvent.title }}
               </h2>
-              <p class="max-w-xl text-base leading-7 text-white/85 sm:text-lg">
-                {{ getEventExcerpt(featuredEvent) || "Un rendez-vous culturel à découvrir dans la sélection du moment." }}
+              <p class="max-w-xl text-base leading-7 text-white/92 [text-shadow:0_2px_12px_rgba(15,23,42,0.78)] sm:text-lg">
+                {{ getEventShortExcerpt(featuredEvent) || t("home.featuredFallback") }}
               </p>
               <div class="flex flex-wrap items-center gap-4 pt-3">
                 <span class="rounded-full bg-gradient-to-r from-sky-500 to-indigo-400 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-slate-900/20">
-                  Voir l'événement
+                  {{ t("home.viewEvent") }}
                 </span>
-                <span class="text-sm font-medium uppercase tracking-[0.24em] text-white/65">
-                  Programmation recommandée
+                <span class="text-sm font-medium uppercase tracking-[0.24em] text-white/82 [text-shadow:0_2px_10px_rgba(15,23,42,0.8)]">
+                  {{ t("home.recommended") }}
                 </span>
               </div>
             </div>
@@ -88,24 +85,23 @@
           v-else
           class="rounded-[2.25rem] border border-dashed border-sky-100 bg-white/80 p-8 text-slate-500 shadow-sm backdrop-blur xl:min-h-[520px]"
         >
-          Aucun événement mis en avant pour le moment.
+          {{ t("home.noFeatured") }}
         </div>
       </div>
 
       <div class="mt-8 rounded-[2rem] border border-white/90 bg-white/90 p-4 shadow-[0_24px_80px_-48px_rgba(30,41,59,0.2)] backdrop-blur sm:p-6 xl:p-8">
         <div class="flex flex-wrap items-start justify-between gap-4">
           <div class="space-y-2">
-            <p class="text-xs font-semibold uppercase tracking-[0.26em] text-sky-700/75">Sélection du moment</p>
+            <p class="text-xs font-semibold uppercase tracking-[0.26em] text-sky-700/75">{{ t("home.sectionEyebrow") }}</p>
             <h3 class="font-display text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
-              Une programmation pensée comme une vitrine
+              {{ t("home.sectionTitle") }}
             </h3>
             <p class="max-w-3xl text-sm leading-6 text-slate-600 sm:text-base">
-              Explore les événements à venir, affine si besoin, puis découvre les lieux sur la carte en
-              complément de la sélection visuelle.
+              {{ t("home.sectionLead") }}
             </p>
           </div>
           <span class="rounded-full bg-gradient-to-r from-slate-900 to-sky-700 px-4 py-2 text-sm font-medium text-white shadow-sm shadow-slate-900/15">
-            {{ filteredEvents.length }} résultats
+            {{ t("home.results", filteredEvents.length) }}
           </span>
         </div>
 
@@ -114,10 +110,12 @@
             v-model="filters"
             :available-cities="availableCities"
             :available-categories="categories"
+            :available-audiences="audiences"
             @date-range-change="handleDateRangeChange"
             @apply-preset="applyPreset"
             @toggle-city="toggleCity"
             @toggle-type="toggleType"
+            @toggle-audience="toggleAudience"
           />
         </div>
 
@@ -126,7 +124,7 @@
             v-if="isLoading"
             class="rounded-[1.75rem] border border-dashed border-sky-100 bg-sky-50/50 p-6 text-slate-500"
           >
-            Chargement des événements…
+            {{ t("home.loading") }}
           </div>
           <div v-else-if="error" class="rounded-[1.75rem] bg-rose-50 p-4 text-rose-700">
             {{ error }}
@@ -135,16 +133,16 @@
             v-else-if="publishedEvents.length === 0"
             class="rounded-[1.75rem] border border-dashed border-sky-100 bg-sky-50/50 p-6 text-slate-500"
           >
-            Aucun événement n'est encore publié.
+            {{ t("home.noPublished") }}
           </div>
           <div
             v-else-if="filteredEvents.length === 0"
             class="rounded-[1.75rem] border border-dashed border-sky-100 bg-sky-50/50 p-6 text-slate-500"
           >
-            Aucun événement ne correspond aux filtres.
+            {{ t("home.noFiltered") }}
           </div>
           <div v-else class="space-y-10">
-            <ul class="grid gap-6 xl:grid-cols-2" data-testid="event-grid">
+            <ul class="grid gap-6 xl:grid-cols-3" data-testid="event-grid">
               <li
                 v-for="eventItem in spotlightEvents"
                 :key="eventItem.id"
@@ -162,7 +160,6 @@
                     :alt="eventItem.title"
                     @error="markImageError(eventItem.id)"
                   />
-                  <div class="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-slate-950/15 to-transparent"></div>
                   <div class="absolute left-5 top-5 flex flex-wrap gap-2">
                     <span class="rounded-full bg-white/95 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-800 shadow-sm">
                       {{ formatDateRange(eventItem.eventStartAt, eventItem.eventEndAt) }}
@@ -186,13 +183,13 @@
                       {{ eventItem.title }}
                     </h4>
                     <p class="text-base leading-7 text-slate-600 [display:-webkit-box] [-webkit-line-clamp:3] [-webkit-box-orient:vertical] overflow-hidden">
-                      {{ getEventExcerpt(eventItem) }}
+                      {{ getEventShortExcerpt(eventItem) }}
                     </p>
                   </div>
 
                   <div class="flex items-center justify-between gap-4 border-t border-sky-100 pt-4">
-                    <span class="text-sm font-semibold text-slate-900">Découvrir l'événement</span>
-                    <span class="text-xs font-medium uppercase tracking-[0.22em] text-sky-700/70">Programme local</span>
+                    <span class="text-sm font-semibold text-slate-900">{{ t("home.viewEvent") }}</span>
+                    <span class="text-xs font-medium uppercase tracking-[0.22em] text-sky-700/70">{{ t("home.localProgram") }}</span>
                   </div>
                 </div>
               </li>
@@ -201,10 +198,10 @@
             <div class="rounded-[2rem] border border-sky-100 bg-gradient-to-br from-white to-sky-50/70 p-5 shadow-[0_24px_72px_-52px_rgba(30,41,59,0.18)] sm:p-6">
               <div class="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p class="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700/75">Explorer la zone</p>
-                  <h4 class="font-display mt-2 text-xl font-semibold tracking-tight text-slate-950">Carte des événements</h4>
+                  <p class="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700/75">{{ t("home.mapEyebrow") }}</p>
+                  <h4 class="font-display mt-2 text-xl font-semibold tracking-tight text-slate-950">{{ t("home.mapTitle") }}</h4>
                 </div>
-                <p class="text-sm text-slate-500">Repère géographique complémentaire</p>
+                <p class="text-sm text-slate-500">{{ t("home.mapLead") }}</p>
               </div>
               <div class="mt-5">
                 <EventMap :events="filteredEvents" @select="openEventDetail" />
@@ -220,12 +217,14 @@
 <script setup lang="ts">
 import { computed, onMounted } from "vue";
 import { storeToRefs } from "pinia";
+import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import EventMap from "../components/EventMap.vue";
 import HomeFilters from "../components/home/Filters.vue";
 import HomeSearch from "../components/home/Search.vue";
 import HomeTitle from "../components/home/Title.vue";
 import NavigationHeader from "../components/navigation/Header.vue";
+import { useAudiencesStore } from "../stores/audiences";
 import { useCategoriesStore } from "../stores/categories";
 import { useEventsStore } from "../stores/events";
 
@@ -236,8 +235,10 @@ type CategoryTheme = {
 };
 
 const router = useRouter();
+const { t } = useI18n();
 const eventsStore = useEventsStore();
 const categoriesStore = useCategoriesStore();
+const audiencesStore = useAudiencesStore();
 const {
   filters,
   filteredEvents,
@@ -247,6 +248,7 @@ const {
   error
 } = storeToRefs(eventsStore);
 const { categories } = storeToRefs(categoriesStore);
+const { audiences } = storeToRefs(audiencesStore);
 
 const categoryNames = computed(() =>
   new Map(categories.value.map((category) => [category.id, category.name]))
@@ -261,10 +263,11 @@ const {
   applyPreset,
   toggleCity,
   toggleType,
+  toggleAudience,
   getEventImage,
   markImageError,
   formatDateRange,
-  getEventExcerpt
+  getEventShortExcerpt
 } = eventsStore;
 
 const categoryThemeMap: Record<string, CategoryTheme> = {
@@ -281,6 +284,7 @@ const categoryThemeMap: Record<string, CategoryTheme> = {
 
 onMounted(() => {
   categoriesStore.loadCategories();
+  audiencesStore.loadAudiences();
 });
 
 const getCategoryName = (categoryId: string) => categoryNames.value.get(categoryId) ?? "";

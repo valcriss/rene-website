@@ -14,6 +14,12 @@ enum EventStatus {
   REJECTED
 }
 
+enum EventRevisionStatus {
+  DRAFT
+  PENDING
+  REJECTED
+}
+
 enum UserRole {
   EDITOR
   MODERATOR
@@ -27,6 +33,7 @@ model Event {
   image            String
   createdByUserId  String?     @db.Uuid
   categoryId       String
+  audienceId       String
   eventStartAt     DateTime
   eventEndAt       DateTime
   allDay           Boolean
@@ -41,6 +48,7 @@ model Event {
   contactEmail     String?
   contactPhone     String?
   ticketUrl        String?
+  pricingInfo      String?
   websiteUrl       String?
   status           EventStatus @default(DRAFT)
   publishedAt      DateTime?
@@ -50,11 +58,55 @@ model Event {
   updatedAt        DateTime    @updatedAt
 
   category         Category    @relation(fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  audience         Audience    @relation(fields: [audienceId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   createdByUser    User?       @relation("UserCreatedEvents", fields: [createdByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  pendingRevision  EventRevision?
 
   @@index([eventStartAt])
   @@index([status])
   @@index([categoryId])
+  @@index([audienceId])
+  @@index([createdByUserId])
+}
+
+model EventRevision {
+  id              String              @id @default(uuid()) @db.Uuid
+  eventId         String              @unique @db.Uuid
+  title           String
+  content         String
+  image           String
+  createdByUserId String?             @db.Uuid
+  categoryId      String
+  audienceId      String
+  eventStartAt    DateTime
+  eventEndAt      DateTime
+  allDay          Boolean
+  venueName       String
+  address         String?
+  postalCode      String
+  city            String
+  latitude        Float
+  longitude       Float
+  organizerName   String
+  organizerUrl    String?
+  contactEmail    String?
+  contactPhone    String?
+  ticketUrl       String?
+  pricingInfo     String?
+  websiteUrl      String?
+  status          EventRevisionStatus @default(PENDING)
+  rejectionReason String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  event           Event               @relation(fields: [eventId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  category        Category            @relation(fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  audience        Audience            @relation(fields: [audienceId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  createdByUser   User?               @relation("UserCreatedRevisions", fields: [createdByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([status])
+  @@index([categoryId])
+  @@index([audienceId])
   @@index([createdByUserId])
 }
 
@@ -65,6 +117,17 @@ model Category {
   updatedAt DateTime @updatedAt
 
   events    Event[]
+  revisions EventRevision[]
+}
+
+model Audience {
+  id        String   @id
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  events    Event[]
+  revisions EventRevision[]
 }
 
 model User {
@@ -76,5 +139,6 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  createdEvents Event[] @relation("UserCreatedEvents")
+  createdEvents    Event[]         @relation("UserCreatedEvents")
+  createdRevisions EventRevision[] @relation("UserCreatedRevisions")
 }

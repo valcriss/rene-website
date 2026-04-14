@@ -34,6 +34,7 @@ const baseEvent: Event = {
   publishedAt: null,
   publicationEndAt: "2026-01-15T22:00:00.000Z",
   rejectionReason: null,
+  pendingRevision: null,
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z"
 };
@@ -49,6 +50,10 @@ const buildRepo = (event: Event): EventRepository => ({
   getById: async () => event,
   create: async () => event,
   update: async () => event,
+  upsertPendingRevision: async () => event,
+  submitPendingRevision: async () => event,
+  rejectPendingRevision: async () => event,
+  publishPendingRevision: async () => event,
   delete: async () => true,
   updateStatus: async (_id, status, data) => ({
     ...event,
@@ -60,6 +65,27 @@ const buildRepo = (event: Event): EventRepository => ({
 });
 
 describe("events routes notification warnings", () => {
+  it("does not log warning when saving a published revision draft", async () => {
+    const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => undefined);
+    const publishedEvent = {
+      ...baseEvent,
+      status: "PUBLISHED" as const,
+      publishedAt: "2026-01-15T20:00:00.000Z"
+    };
+    const app = express();
+    app.use(express.json());
+    app.use("/api", createEventRouter(buildRepo(publishedEvent), authRepo));
+
+    const response = await request(app)
+      .put("/api/events/1")
+      .set("x-user-role", "EDITOR")
+      .send(baseEvent);
+
+    expect(response.status).toBe(200);
+    expect(warnSpy).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
   it("logs warning when submit notification fails", async () => {
     const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => undefined);
     const app = express();

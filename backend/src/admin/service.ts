@@ -1,8 +1,10 @@
 import { AdminRepository } from "./repository";
 import {
+  AdminAudience,
   AdminCategory,
   AdminSettings,
   AdminUser,
+  CreateAdminAudienceInput,
   CreateAdminCategoryInput,
   CreateAdminUserInput,
   UpdateAdminSettingsInput
@@ -166,4 +168,61 @@ export const updateAdminSettings = async (
   if (!validation.ok) return validation;
   const updated = await repo.updateSettings(validation.value);
   return { ok: true, value: updated };
+};
+
+const validateAudienceInput = (input: unknown): ServiceResult<CreateAdminAudienceInput> => {
+  const data = input as Partial<CreateAdminAudienceInput>;
+  if (!isNonEmptyString(data.name)) {
+    return { ok: false, errors: ["name is required"] };
+  }
+  return { ok: true, value: { name: data.name.trim() } };
+};
+
+export const listAdminAudiences = (repo: AdminRepository): Promise<AdminAudience[]> =>
+  repo.listAudiences();
+
+export const createAdminAudience = async (
+  repo: AdminRepository,
+  input: unknown
+): Promise<ServiceResult<AdminAudience>> => {
+  const validation = validateAudienceInput(input);
+  if (!validation.ok) return validation;
+  try {
+    const created = await repo.createAudience(validation.value);
+    return { ok: true, value: created };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Erreur inconnue";
+    return { ok: false, errors: [message] };
+  }
+};
+
+export const updateAdminAudience = async (
+  repo: AdminRepository,
+  id: string,
+  input: unknown
+): Promise<ServiceResult<AdminAudience>> => {
+  const validation = validateAudienceInput(input);
+  if (!validation.ok) return validation;
+  try {
+    const updated = await repo.updateAudience(id, validation.value);
+    if (!updated) return { ok: false, errors: ["Audience not found"] };
+    return { ok: true, value: updated };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Erreur inconnue";
+    return { ok: false, errors: [message] };
+  }
+};
+
+export const deleteAdminAudience = async (
+  repo: AdminRepository,
+  id: string
+): Promise<ServiceResult<null>> => {
+  try {
+    const deleted = await repo.deleteAudience(id);
+    if (!deleted) return { ok: false, errors: ["Audience not found"] };
+    return { ok: true, value: null };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Erreur inconnue";
+    return { ok: false, errors: [message] };
+  }
 };

@@ -369,7 +369,7 @@ describe("App", () => {
     vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
     await renderWithRouter("/event/1");
 
-    expect(await screen.findByText("Chargement de l'événement…")).toBeInTheDocument();
+    expect(await screen.findByText("Chargement de l'événement...")).toBeInTheDocument();
   });
 
   it("shows not found when event does not exist", async () => {
@@ -383,10 +383,10 @@ describe("App", () => {
     vi.stubGlobal("fetch", vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) })));
     await renderWithRouter();
 
-    await fireEvent.update(screen.getByLabelText("Préselection"), "weekend");
+    await fireEvent.update(screen.getByLabelText("Présélection"), "weekend");
     await fireEvent.update(screen.getByLabelText("Du"), "2026-01-10");
 
-    const presetSelect = screen.getByLabelText("Préselection") as HTMLSelectElement;
+    const presetSelect = screen.getByLabelText("Présélection") as HTMLSelectElement;
     expect(presetSelect.value).toBe("");
   });
 
@@ -397,13 +397,13 @@ describe("App", () => {
     vi.stubGlobal("fetch", vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) })));
     await renderWithRouter();
 
-    await fireEvent.update(screen.getByLabelText("Préselection"), "week");
+    await fireEvent.update(screen.getByLabelText("Présélection"), "week");
     const startInput = screen.getByLabelText("Du") as HTMLInputElement;
     const endInput = screen.getByLabelText("Au") as HTMLInputElement;
     expect(startInput.value).toBe("2026-01-15");
     expect(endInput.value).toBe("2026-01-21");
 
-    await fireEvent.update(screen.getByLabelText("Préselection"), "month");
+    await fireEvent.update(screen.getByLabelText("Présélection"), "month");
     expect(startInput.value).toBe("2026-01-01");
     expect(endInput.value).toBe("2026-01-31");
 
@@ -417,7 +417,7 @@ describe("App", () => {
     vi.stubGlobal("fetch", vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) })));
     await renderWithRouter();
 
-    await fireEvent.update(screen.getByLabelText("Préselection"), "weekend");
+    await fireEvent.update(screen.getByLabelText("Présélection"), "weekend");
 
     const startInput = screen.getByLabelText("Du") as HTMLInputElement;
     const endInput = screen.getByLabelText("Au") as HTMLInputElement;
@@ -436,7 +436,7 @@ describe("App", () => {
     await fireEvent.update(startInput, "2026-01-10");
     await fireEvent.update(endInput, "2026-01-12");
 
-    await fireEvent.update(screen.getByLabelText("Préselection"), "");
+    await fireEvent.update(screen.getByLabelText("Présélection"), "");
 
     expect(startInput.value).toBe("2026-01-10");
     expect(endInput.value).toBe("2026-01-12");
@@ -532,7 +532,7 @@ describe("App", () => {
     );
     await renderWithRouter();
 
-    await fireEvent.update(screen.getByLabelText("Préselection"), "weekend");
+    await fireEvent.update(screen.getByLabelText("Présélection"), "weekend");
 
     expect(await screen.findByText("Concert")).toBeInTheDocument();
     expect(screen.queryByText("Expo")).not.toBeInTheDocument();
@@ -1004,6 +1004,7 @@ describe("App", () => {
               content: "Desc",
               image: "/uploads/test.png",
               categoryId: "atelier",
+              audienceId: "all",
               eventStartAt: "2026-01-15T20:00:00.000Z",
               eventEndAt: "2026-01-15T22:00:00.000Z",
               allDay: false,
@@ -1013,7 +1014,8 @@ describe("App", () => {
               latitude: 46.97,
               longitude: 0.7,
               organizerName: "Asso",
-              status: "DRAFT"
+              status: "DRAFT",
+              createdByUserId: "user-1"
             })
         });
       }
@@ -1022,6 +1024,9 @@ describe("App", () => {
       }
       if (url === "/api/categories") {
         return Promise.resolve({ ok: true, json: () => Promise.resolve([{ id: "atelier", name: "Atelier" }]) });
+      }
+      if (url === "/api/audiences") {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([{ id: "all", name: "Tous publics" }]) });
       }
       if (url.startsWith("/api/uploads")) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ url: "/uploads/test.png" }) });
@@ -1040,7 +1045,11 @@ describe("App", () => {
     const editorForm = within(await screen.findByTestId("editor-form"));
     await fireEvent.update(editorForm.getByLabelText("Titre"), "Atelier");
     await fireEvent.update(editorForm.getByLabelText("Catégorie"), "atelier");
-    const imageInput = editorForm.getByLabelText("Image") as HTMLInputElement;
+    await fireEvent.update(editorForm.getByLabelText("Public concerné"), "all");
+    const imageInput = document.querySelector("[data-testid='editor-form'] section label input[type='file']") as HTMLInputElement | null;
+    if (!imageInput) {
+      throw new Error("Main image input not found");
+    }
     const imageFile = new File(["image"], "photo.png", { type: "image/png" });
     Object.defineProperty(imageInput, "files", { value: [imageFile], configurable: true });
     await fireEvent.update(imageInput, "photo.png");
@@ -1078,6 +1087,7 @@ describe("App", () => {
               content: "Desc",
               image: "https://example.com",
               categoryId: "atelier",
+              audienceId: "all",
               eventStartAt: "2026-01-15T20:00:00.000Z",
               eventEndAt: "2026-01-15T22:00:00.000Z",
               allDay: false,
@@ -1087,7 +1097,8 @@ describe("App", () => {
               latitude: 46.97,
               longitude: 0.7,
               organizerName: "Asso",
-              status: "DRAFT"
+              status: "DRAFT",
+              createdByUserId: "user-1"
             }
           ])
       })
@@ -1100,6 +1111,7 @@ describe("App", () => {
             content: "Desc",
             image: "https://example.com",
             categoryId: "atelier",
+            audienceId: "all",
             eventStartAt: "2026-01-15T20:00:00.000Z",
             eventEndAt: "2026-01-15T22:00:00.000Z",
             allDay: false,
@@ -1109,7 +1121,8 @@ describe("App", () => {
             latitude: 46.97,
             longitude: 0.7,
             organizerName: "Asso",
-            status: "PENDING"
+            status: "PENDING",
+            createdByUserId: "user-1"
           })
       });
 
@@ -1132,6 +1145,7 @@ describe("App", () => {
               content: "Desc",
               image: "https://example.com",
               categoryId: "atelier",
+              audienceId: "all",
               eventStartAt: "2026-01-15T20:00:00.000Z",
               eventEndAt: "2026-01-15T22:00:00.000Z",
               allDay: false,
@@ -1141,7 +1155,8 @@ describe("App", () => {
               latitude: 46.97,
               longitude: 0.7,
               organizerName: "Asso",
-              status: "DRAFT"
+              status: "DRAFT",
+              createdByUserId: "user-1"
             }
           ])
       })
@@ -1171,6 +1186,7 @@ describe("App", () => {
                 content: "Desc",
                 image: "https://example.com",
                 categoryId: "atelier",
+                audienceId: "all",
                 eventStartAt: "2026-01-15T20:00:00.000Z",
                 eventEndAt: "2026-01-15T22:00:00.000Z",
                 allDay: false,
@@ -1180,7 +1196,8 @@ describe("App", () => {
                 latitude: 46.97,
                 longitude: 0.7,
                 organizerName: "Asso",
-                status: "DRAFT"
+                status: "DRAFT",
+                createdByUserId: "user-1"
               }
             ])
         });
@@ -1201,6 +1218,7 @@ describe("App", () => {
               content: "Desc",
               image: "https://example.com",
               categoryId: "atelier",
+              audienceId: "all",
               eventStartAt: "2026-01-15T20:00:00.000Z",
               eventEndAt: "2026-01-15T22:00:00.000Z",
               allDay: false,
@@ -1210,7 +1228,8 @@ describe("App", () => {
               latitude: 46.97,
               longitude: 0.7,
               organizerName: "Asso",
-              status: "DRAFT"
+              status: "DRAFT",
+              createdByUserId: "user-1"
             })
         });
       }
@@ -1244,6 +1263,7 @@ describe("App", () => {
                 content: "Desc",
                 image: "https://example.com",
                 categoryId: "atelier",
+                audienceId: "all",
                 eventStartAt: "2026-01-15T20:00:00.000Z",
                 eventEndAt: "2026-01-15T22:00:00.000Z",
                 allDay: false,
@@ -1254,6 +1274,7 @@ describe("App", () => {
                 longitude: 0.7,
                 organizerName: "Asso",
                 status: "REJECTED",
+                createdByUserId: "user-1",
                 rejectionReason: "Manque une info"
               }
             ])
@@ -1296,7 +1317,10 @@ describe("App", () => {
     const editorForm = within(await screen.findByTestId("editor-form"));
     await fireEvent.update(editorForm.getByLabelText("Titre"), "Atelier");
     await fireEvent.update(editorForm.getByLabelText("Catégorie"), "atelier");
-    const imageInput = editorForm.getByLabelText("Image") as HTMLInputElement;
+    const imageInput = document.querySelector("[data-testid='editor-form'] section label input[type='file']") as HTMLInputElement | null;
+    if (!imageInput) {
+      throw new Error("Main image input not found");
+    }
     const imageFile = new File(["image"], "photo.png", { type: "image/png" });
     Object.defineProperty(imageInput, "files", { value: [imageFile], configurable: true });
     await fireEvent.update(imageInput, "photo.png");

@@ -84,6 +84,22 @@ export const updateEvent = async (
   }
 
   try {
+    if (current.status === "PUBLISHED") {
+      const updated = await repo.upsertPendingRevision(id, {
+        ...validation.value,
+        latitude: coordinates.value.latitude,
+        longitude: coordinates.value.longitude,
+        createdByUserId: current.createdByUserId
+      }, "DRAFT");
+      if (!updated) {
+        return { ok: false, errors: ["Événement introuvable."] };
+      }
+      if (current.pendingRevision && current.pendingRevision.image !== updated.pendingRevision?.image) {
+        await deleteUploadIfLocal(current.pendingRevision.image);
+      }
+      return { ok: true, value: updated };
+    }
+
     const updated = await repo.update(id, {
       ...validation.value,
       latitude: coordinates.value.latitude,
@@ -110,6 +126,20 @@ export const submitEvent = async (
   if (!current) {
     return { ok: false, errors: ["Événement introuvable."] };
   }
+  if (current.status === "PUBLISHED") {
+    if (!current.pendingRevision) {
+      return { ok: false, errors: ["Révision introuvable."] };
+    }
+    if (current.pendingRevision.status === "PENDING") {
+      return { ok: true, value: current };
+    }
+    const updatedRevision = await repo.submitPendingRevision(id);
+    if (!updatedRevision) {
+      return { ok: false, errors: ["Révision introuvable."] };
+    }
+    return { ok: true, value: updatedRevision };
+  }
+
   const updated = await repo.updateStatus(id, "PENDING", {
     publishedAt: null,
     rejectionReason: null,
@@ -130,6 +160,23 @@ export const publishEvent = async (
     return { ok: false, errors: ["Événement introuvable."] };
   }
   const now = new Date().toISOString();
+  if (current.status === "PUBLISHED") {
+    if (!current.pendingRevision) {
+      return { ok: false, errors: ["Révision introuvable."] };
+    }
+    if (current.pendingRevision.status !== "PENDING") {
+      return { ok: false, errors: ["Révision non soumise."] };
+    }
+    const updatedRevision = await repo.publishPendingRevision(id, now);
+    if (!updatedRevision) {
+      return { ok: false, errors: ["Révision introuvable."] };
+    }
+    if (current.image !== updatedRevision.image) {
+      await deleteUploadIfLocal(current.image);
+    }
+    return { ok: true, value: updatedRevision };
+  }
+
   const updated = await repo.updateStatus(id, "PUBLISHED", {
     publishedAt: now,
     rejectionReason: null,
@@ -153,6 +200,20 @@ export const rejectEvent = async (
   if (!current) {
     return { ok: false, errors: ["Événement introuvable."] };
   }
+  if (current.status === "PUBLISHED") {
+    if (!current.pendingRevision) {
+      return { ok: false, errors: ["Révision introuvable."] };
+    }
+    if (current.pendingRevision.status !== "PENDING") {
+      return { ok: false, errors: ["Révision non soumise."] };
+    }
+    const updatedRevision = await repo.rejectPendingRevision(id, reason);
+    if (!updatedRevision) {
+      return { ok: false, errors: ["Révision introuvable."] };
+    }
+    return { ok: true, value: updatedRevision };
+  }
+
   const updated = await repo.updateStatus(id, "REJECTED", {
     publishedAt: null,
     rejectionReason: reason,

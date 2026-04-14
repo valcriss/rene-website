@@ -2,20 +2,26 @@ import { mount } from "@vue/test-utils";
 import { ref } from "vue";
 import { vi } from "vitest";
 import RichTextEditor from "../src/components/form/RichTextEditor.vue";
+import { uploadImage } from "../src/api/uploads";
 
 const chain = {
   focus: vi.fn().mockReturnThis(),
+  setParagraph: vi.fn().mockReturnThis(),
+  toggleHeading: vi.fn().mockReturnThis(),
   toggleBold: vi.fn().mockReturnThis(),
   toggleItalic: vi.fn().mockReturnThis(),
   toggleUnderline: vi.fn().mockReturnThis(),
+  toggleBulletList: vi.fn().mockReturnThis(),
+  toggleOrderedList: vi.fn().mockReturnThis(),
   extendMarkRange: vi.fn().mockReturnThis(),
   setLink: vi.fn().mockReturnThis(),
   unsetLink: vi.fn().mockReturnThis(),
+  setImage: vi.fn().mockReturnThis(),
   run: vi.fn()
 };
 
 type EditorLike = {
-  isActive: (name: string) => boolean;
+  isActive: (name: string, attributes?: Record<string, unknown>) => boolean;
   chain: () => typeof chain;
   commands: { setContent: (value: string, emit: boolean) => void };
   getHTML: () => string;
@@ -33,6 +39,10 @@ const editorInstance: EditorLike = {
 let onUpdateHandler: ((payload: { editor: EditorLike }) => void) | null = null;
 let editorRef = ref<EditorLike | null>(editorInstance);
 
+vi.mock("../src/api/uploads", () => ({
+  uploadImage: vi.fn()
+}));
+
 vi.mock("@tiptap/vue-3", () => ({
   EditorContent: { template: "<div></div>" },
   useEditor: (options?: { onUpdate?: (payload: { editor: EditorLike }) => void }) => {
@@ -48,16 +58,26 @@ describe("RichTextEditor", () => {
     vi.clearAllMocks();
   });
 
-  it("toggles formatting and links", async () => {
+  it("toggles formatting, structure, and links", async () => {
     const wrapper = mount(RichTextEditor, { props: { modelValue: "<p>hello</p>" } });
 
+    await wrapper.find("button[aria-label='Paragraphe']").trigger("click");
+    await wrapper.find("button[aria-label='Titre de section']").trigger("click");
+    await wrapper.find("button[aria-label='Sous-titre']").trigger("click");
     await wrapper.find("button[aria-label='Gras']").trigger("click");
     await wrapper.find("button[aria-label='Italique']").trigger("click");
     await wrapper.find("button[aria-label='Souligné']").trigger("click");
+    await wrapper.find("button[aria-label='Liste à puces']").trigger("click");
+    await wrapper.find("button[aria-label='Liste numérotée']").trigger("click");
 
+    expect(chain.setParagraph).toHaveBeenCalled();
+    expect(chain.toggleHeading).toHaveBeenCalledWith({ level: 2 });
+    expect(chain.toggleHeading).toHaveBeenCalledWith({ level: 3 });
     expect(chain.toggleBold).toHaveBeenCalled();
     expect(chain.toggleItalic).toHaveBeenCalled();
     expect(chain.toggleUnderline).toHaveBeenCalled();
+    expect(chain.toggleBulletList).toHaveBeenCalled();
+    expect(chain.toggleOrderedList).toHaveBeenCalled();
 
     const promptSpy = vi.spyOn(window, "prompt").mockReturnValue("example.com");
     await wrapper.find("button[aria-label='Lien']").trigger("click");
@@ -66,6 +86,61 @@ describe("RichTextEditor", () => {
 
     await wrapper.find("button[aria-label='Retirer le lien']").trigger("click");
     expect(chain.unsetLink).toHaveBeenCalled();
+  });
+
+  it("uploads and inserts an image", async () => {
+    vi.mocked(uploadImage).mockResolvedValue("/uploads/inline.png");
+    const wrapper = mount(RichTextEditor, { props: { modelValue: "<p>hello</p>" } });
+    const input = wrapper.get("input[type='file']");
+    const file = new File(["image"], "inline.png", { type: "image/png" });
+
+    Object.defineProperty(input.element, "files", { value: [file], configurable: true });
+    await input.trigger("change");
+
+    expect(uploadImage).toHaveBeenCalledWith(file);
+    expect(chain.setImage).toHaveBeenCalledWith({ src: "/uploads/inline.png", alt: "inline.png" });
+  });
+
+  it("shows image upload errors", async () => {
+    vi.mocked(uploadImage).mockRejectedValue(new Error("Upload impossible"));
+    const wrapper = mount(RichTextEditor, { props: { modelValue: "<p>hello</p>" } });
+    const input = wrapper.get("input[type='file']");
+    const file = new File(["image"], "inline.png", { type: "image/png" });
+
+    Object.defineProperty(input.element, "files", { value: [file], configurable: true });
+    await input.trigger("change");
+
+    expect(wrapper.text()).toContain("Upload impossible");
+  });
+
+  it("ignores empty image selections", async () => {
+    const wrapper = mount(RichTextEditor, { props: { modelValue: "<p>hello</p>" } });
+    const input = wrapper.get("input[type='file']");
+
+    Object.defineProperty(input.element, "files", { value: [], configurable: true });
+    await input.trigger("change");
+
+    expect(uploadImage).not.toHaveBeenCalled();
+    expect(chain.setImage).not.toHaveBeenCalled();
+  });
+
+  it("opens the image picker from the toolbar", async () => {
+    const wrapper = mount(RichTextEditor, { props: { modelValue: "<p>hello</p>" } });
+    const input = wrapper.get("input[type='file']");
+    const clickSpy = vi.spyOn(input.element as HTMLInputElement, "click");
+
+    await wrapper.find("button[aria-label='Image']").trigger("click");
+    expect(clickSpy).toHaveBeenCalled();
+  });
+
+  it("can disable image controls for compact rich text usage", () => {
+    const wrapper = mount(RichTextEditor, {
+      props: { modelValue: "<p>hello</p>", allowImages: false, compact: true, ariaLabel: "Information sur le tarif" }
+    });
+
+    expect(wrapper.find("button[aria-label='Image']").exists()).toBe(false);
+    expect(wrapper.find("input[type='file']").exists()).toBe(false);
+    expect(wrapper.html()).toContain("min-h-[180px]");
   });
 
   it("skips link when prompt is empty", async () => {

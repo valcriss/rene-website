@@ -28,6 +28,10 @@ describe("events routes delete errors", () => {
         throw new Error("boom");
       },
       update: async () => null,
+      upsertPendingRevision: async () => null,
+      submitPendingRevision: async () => null,
+      rejectPendingRevision: async () => null,
+      publishPendingRevision: async () => null,
       delete: async () => false,
       updateStatus: async () => null
     };
