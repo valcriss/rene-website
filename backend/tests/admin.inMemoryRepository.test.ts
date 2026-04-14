@@ -55,6 +55,36 @@ describe("admin in-memory repository", () => {
     expect(created.id).not.toBe("");
   });
 
+  it("manages audiences", async () => {
+    const repo = createInMemoryAdminRepository();
+    const audiences = await repo.listAudiences();
+    expect(audiences.length).toBeGreaterThan(0);
+
+    const created = await repo.createAudience({ name: "Adolescents" });
+    const fetched = await repo.getAudienceById(created.id);
+    expect(fetched?.name).toBe("Adolescents");
+
+    const missingAudience = await repo.getAudienceById("missing");
+    expect(missingAudience).toBeNull();
+
+    const updated = await repo.updateAudience(created.id, { name: "Jeunes" });
+    expect(updated?.name).toBe("Jeunes");
+
+    const missingUpdate = await repo.updateAudience("missing", { name: "X" });
+    expect(missingUpdate).toBeNull();
+
+    const deleted = await repo.deleteAudience(created.id);
+    expect(deleted).toBe(true);
+    const missingDelete = await repo.deleteAudience("missing");
+    expect(missingDelete).toBe(false);
+  });
+
+  it("creates audience with generated id when slug is empty", async () => {
+    const repo = createInMemoryAdminRepository();
+    const created = await repo.createAudience({ name: "!!!" });
+    expect(created.id).not.toBe("");
+  });
+
   it("manages settings", async () => {
     const repo = createInMemoryAdminRepository();
     const settings = await repo.getSettings();

@@ -25,20 +25,18 @@ const withErrorHandling = (handler: AsyncHandler) => async (req: Request, res: R
 };
 
 const toRevisionSnapshot = (event: Event): Event => {
-  if (!event.pendingRevision) {
-    return event;
-  }
+  const revision = event.pendingRevision!;
 
   return {
     ...event,
-    ...event.pendingRevision,
+    ...revision,
     id: event.id,
     createdByUserId: event.createdByUserId,
-    status: event.pendingRevision.status,
+    status: revision.status,
     publishedAt: event.publishedAt,
-    publicationEndAt: event.pendingRevision.eventEndAt,
-    rejectionReason: event.pendingRevision.rejectionReason,
-    pendingRevision: event.pendingRevision,
+    publicationEndAt: revision.eventEndAt,
+    rejectionReason: revision.rejectionReason,
+    pendingRevision: revision,
     createdAt: event.createdAt,
     updatedAt: event.updatedAt
   };

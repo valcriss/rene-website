@@ -20,6 +20,7 @@ const baseEvent: Event = {
   image: "img",
   createdByUserId: "user-1",
   categoryId: "music",
+  audienceId: "all",
   eventStartAt: "2026-01-15T20:00:00.000Z",
   eventEndAt: "2026-01-15T22:00:00.000Z",
   allDay: false,
@@ -34,6 +35,7 @@ const baseEvent: Event = {
   publishedAt: null,
   publicationEndAt: "2026-01-15T22:00:00.000Z",
   rejectionReason: null,
+  pendingRevision: null,
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z"
 };

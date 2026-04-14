@@ -20,6 +20,7 @@ const baseEvent: Event = {
   image: "https://example.com/img.png",
   createdByUserId: null,
   categoryId: "music",
+  audienceId: "all",
   eventStartAt: "2026-01-15T20:00:00.000Z",
   eventEndAt: "2026-01-15T22:00:00.000Z",
   allDay: false,
@@ -45,6 +46,14 @@ const authRepo: AuthRepository = {
   listUsersByRole: async () => []
 };
 
+const notificationMocks = jest.requireMock("../src/notifications/service") as {
+  notifyEventSubmitted: jest.Mock;
+  notifyEventResubmitted: jest.Mock;
+  notifyEventPublished: jest.Mock;
+  notifyEventRejected: jest.Mock;
+  notifyEventDeleted: jest.Mock;
+};
+
 const buildRepo = (event: Event): EventRepository => ({
   list: async () => [event],
   getById: async () => event,
@@ -65,6 +74,14 @@ const buildRepo = (event: Event): EventRepository => ({
 });
 
 describe("events routes notification warnings", () => {
+  beforeEach(() => {
+    notificationMocks.notifyEventSubmitted.mockClear();
+    notificationMocks.notifyEventResubmitted.mockClear();
+    notificationMocks.notifyEventPublished.mockClear();
+    notificationMocks.notifyEventRejected.mockClear();
+    notificationMocks.notifyEventDeleted.mockClear();
+  });
+
   it("does not log warning when saving a published revision draft", async () => {
     const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => undefined);
     const publishedEvent = {
@@ -159,6 +176,45 @@ describe("events routes notification warnings", () => {
 
     expect(response.status).toBe(200);
     expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
+  it("builds reject notification snapshot from published revision while preserving owner id", async () => {
+    const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => undefined);
+    const publishedEvent = {
+      ...baseEvent,
+      createdByUserId: "owner-1",
+      status: "PUBLISHED" as const,
+      publishedAt: "2026-01-15T20:00:00.000Z",
+      pendingRevision: {
+        ...baseEvent,
+        id: "rev-1",
+        eventId: "1",
+        createdByUserId: "editor-2",
+        title: "Concert révisé",
+        status: "PENDING" as const,
+        rejectionReason: null
+      }
+    };
+    const app = express();
+    app.use(express.json());
+    app.use("/api", createEventRouter(buildRepo(publishedEvent), authRepo));
+
+    const response = await request(app)
+      .post("/api/events/1/reject")
+      .set("x-user-role", "MODERATOR")
+      .send({ rejectionReason: "Motif" });
+
+    expect(response.status).toBe(200);
+    expect(notificationMocks.notifyEventRejected).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "1",
+        title: "Concert révisé",
+        createdByUserId: "owner-1",
+        status: "PENDING"
+      }),
+      authRepo
+    );
     warnSpy.mockRestore();
   });
 });

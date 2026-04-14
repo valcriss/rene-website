@@ -34,6 +34,19 @@ describe("admin routes", () => {
     expect(categoriesResponse.body.length).toBeGreaterThan(0);
   });
 
+  it("lists admin and public audiences", async () => {
+    const app = createApp();
+    const adminResponse = await request(app)
+      .get("/api/admin/audiences")
+      .set("x-user-role", "ADMIN");
+    const publicResponse = await request(app).get("/api/audiences");
+
+    expect(adminResponse.status).toBe(200);
+    expect(adminResponse.body.length).toBeGreaterThan(0);
+    expect(publicResponse.status).toBe(200);
+    expect(publicResponse.body.length).toBeGreaterThan(0);
+  });
+
   it("lists public categories", async () => {
     const app = createApp();
     const response = await request(app).get("/api/categories");
@@ -186,6 +199,85 @@ describe("admin routes", () => {
 
     expect(response.status).toBe(409);
     expect(response.body).toEqual({ errors: ["Category in use"] });
+  });
+
+  it("creates updates and deletes an audience", async () => {
+    const app = createApp();
+    const createResponse = await request(app)
+      .post("/api/admin/audiences")
+      .set("x-user-role", "ADMIN")
+      .send({ name: "Adolescents" });
+
+    expect(createResponse.status).toBe(201);
+    const audienceId = createResponse.body.id;
+
+    const updateResponse = await request(app)
+      .put(`/api/admin/audiences/${audienceId}`)
+      .set("x-user-role", "ADMIN")
+      .send({ name: "Jeunes" });
+
+    expect(updateResponse.status).toBe(200);
+    expect(updateResponse.body.name).toBe("Jeunes");
+
+    const deleteResponse = await request(app)
+      .delete(`/api/admin/audiences/${audienceId}`)
+      .set("x-user-role", "ADMIN");
+
+    expect(deleteResponse.status).toBe(204);
+  });
+
+  it("returns 404 for missing audience", async () => {
+    const app = createApp();
+    const updateResponse = await request(app)
+      .put("/api/admin/audiences/missing")
+      .set("x-user-role", "ADMIN")
+      .send({ name: "Jeunes" });
+    const deleteResponse = await request(app)
+      .delete("/api/admin/audiences/missing")
+      .set("x-user-role", "ADMIN");
+
+    expect(updateResponse.status).toBe(404);
+    expect(deleteResponse.status).toBe(404);
+  });
+
+  it("returns 400 for invalid audience payload", async () => {
+    const app = createApp();
+    const createResponse = await request(app)
+      .post("/api/admin/audiences")
+      .set("x-user-role", "ADMIN")
+      .send({});
+
+    expect(createResponse.status).toBe(400);
+
+    const validCreateResponse = await request(app)
+      .post("/api/admin/audiences")
+      .set("x-user-role", "ADMIN")
+      .send({ name: "Adolescents" });
+
+    const updateResponse = await request(app)
+      .put(`/api/admin/audiences/${validCreateResponse.body.id}`)
+      .set("x-user-role", "ADMIN")
+      .send({});
+
+    expect(updateResponse.status).toBe(400);
+  });
+
+  it("returns 409 when audience is in use", async () => {
+    const repo = {
+      deleteAudience: jest.fn(async () => {
+        throw new Error("Audience in use");
+      })
+    } as unknown as AdminRepository;
+    const app = express();
+    app.use(express.json());
+    app.use("/api/admin", createAdminRouter(repo));
+
+    const response = await request(app)
+      .delete("/api/admin/audiences/active")
+      .set("x-user-role", "ADMIN");
+
+    expect(response.status).toBe(409);
+    expect(response.body).toEqual({ errors: ["Audience in use"] });
   });
 
   it("gets and updates settings", async () => {

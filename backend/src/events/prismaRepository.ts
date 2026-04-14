@@ -1,6 +1,6 @@
 import { prisma } from "../prisma/client";
 import { EventRepository } from "./repository";
-import { CreateEventInput, Event, EventRevision, EventRevisionStatus, EventStatus } from "./types";
+import { CreateEventInput, Event, EventRevision, EventStatus } from "./types";
 
 type PrismaEventsClient = {
   category: {

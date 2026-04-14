@@ -1,4 +1,4 @@
-import { createEvent, deleteEvent, publishEvent, rejectEvent, submitEvent, updateEvent } from "../src/events/service";
+import { createEvent, deleteEvent, getEvent, listEvents, publishEvent, rejectEvent, submitEvent, updateEvent } from "../src/events/service";
 import { EventRepository } from "../src/events/repository";
 import { Event } from "../src/events/types";
 import { deleteUploadIfLocal } from "../src/uploads/storage";
@@ -92,6 +92,13 @@ describe("event services", () => {
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000Z"
   };
+
+  it("lists and gets events", async () => {
+    const repo = createRepo(baseEvent);
+
+    await expect(listEvents(repo)).resolves.toEqual([baseEvent]);
+    await expect(getEvent(repo, "id")).resolves.toEqual(baseEvent);
+  });
 
   it("updateEvent returns not found", async () => {
     const repo = createRepo(null);
@@ -363,6 +370,339 @@ describe("event services", () => {
       expect(result.value.status).toBe("PUBLISHED");
       expect(result.value.pendingRevision?.status).toBe("DRAFT");
       expect(result.value.pendingRevision?.title).toBe("Concert modifié");
+    }
+  });
+
+  it("returns not found when published revision cannot be saved", async () => {
+    const publishedEvent: Event = {
+      ...baseEvent,
+      status: "PUBLISHED",
+      publishedAt: "2026-01-01T00:00:00.000Z"
+    };
+    const repo = createRepo(publishedEvent, {
+      upsertPendingRevision: async () => null
+    });
+
+    const result = await updateEvent(repo, publishedEvent.id, baseEvent);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContain("Événement introuvable.");
+    }
+  });
+
+  it("deletes replaced pending revision image on published update", async () => {
+    const publishedEvent: Event = {
+      ...baseEvent,
+      status: "PUBLISHED",
+      publishedAt: "2026-01-01T00:00:00.000Z",
+      pendingRevision: {
+        ...baseEvent,
+        id: "rev-1",
+        eventId: "id",
+        image: "/uploads/old-revision.png",
+        createdByUserId: null,
+        status: "DRAFT",
+        rejectionReason: null
+      }
+    };
+    const repo = createRepo(publishedEvent, {
+      upsertPendingRevision: async (_id, _input, status) => ({
+        ...publishedEvent,
+        pendingRevision: {
+          ...publishedEvent.pendingRevision!,
+          image: "/uploads/new-revision.png",
+          status
+        }
+      })
+    });
+
+    await updateEvent(repo, "id", baseEvent);
+
+    expect(deleteUploadIfLocal).toHaveBeenCalledWith("/uploads/old-revision.png");
+  });
+
+  it("submits a published draft revision", async () => {
+    const publishedEvent: Event = {
+      ...baseEvent,
+      status: "PUBLISHED",
+      publishedAt: "2026-01-01T00:00:00.000Z",
+      pendingRevision: {
+        ...baseEvent,
+        id: "rev-1",
+        eventId: "id",
+        createdByUserId: null,
+        status: "DRAFT",
+        rejectionReason: null
+      }
+    };
+    const repo = createRepo(publishedEvent, {
+      submitPendingRevision: async () => ({
+        ...publishedEvent,
+        pendingRevision: {
+          ...publishedEvent.pendingRevision!,
+          status: "PENDING"
+        }
+      })
+    });
+
+    const result = await submitEvent(repo, "id");
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.pendingRevision?.status).toBe("PENDING");
+    }
+  });
+
+  it("returns current event when published revision is already pending", async () => {
+    const publishedEvent: Event = {
+      ...baseEvent,
+      status: "PUBLISHED",
+      publishedAt: "2026-01-01T00:00:00.000Z",
+      pendingRevision: {
+        ...baseEvent,
+        id: "rev-1",
+        eventId: "id",
+        createdByUserId: null,
+        status: "PENDING",
+        rejectionReason: null
+      }
+    };
+
+    const result = await submitEvent(createRepo(publishedEvent), "id");
+
+    expect(result).toEqual({ ok: true, value: publishedEvent });
+  });
+
+  it("returns errors when published submit revision is missing", async () => {
+    const publishedWithoutRevision: Event = {
+      ...baseEvent,
+      status: "PUBLISHED",
+      publishedAt: "2026-01-01T00:00:00.000Z"
+    };
+
+    const result = await submitEvent(createRepo(publishedWithoutRevision), "id");
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContain("Révision introuvable.");
+    }
+  });
+
+  it("returns errors when published submit cannot update revision", async () => {
+    const publishedEvent: Event = {
+      ...baseEvent,
+      status: "PUBLISHED",
+      publishedAt: "2026-01-01T00:00:00.000Z",
+      pendingRevision: {
+        ...baseEvent,
+        id: "rev-1",
+        eventId: "id",
+        createdByUserId: null,
+        status: "DRAFT",
+        rejectionReason: null
+      }
+    };
+    const repo = createRepo(publishedEvent, {
+      submitPendingRevision: async () => null
+    });
+
+    const result = await submitEvent(repo, "id");
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContain("Révision introuvable.");
+    }
+  });
+
+  it("publishes a submitted revision and deletes old image", async () => {
+    const publishedEvent: Event = {
+      ...baseEvent,
+      image: "/uploads/original.png",
+      status: "PUBLISHED",
+      publishedAt: "2026-01-01T00:00:00.000Z",
+      pendingRevision: {
+        ...baseEvent,
+        id: "rev-1",
+        eventId: "id",
+        image: "/uploads/revision.png",
+        createdByUserId: null,
+        status: "PENDING",
+        rejectionReason: null
+      }
+    };
+    const repo = createRepo(publishedEvent, {
+      publishPendingRevision: async () => ({
+        ...publishedEvent,
+        image: "/uploads/revision.png",
+        pendingRevision: null
+      })
+    });
+
+    const result = await publishEvent(repo, "id");
+
+    expect(result.ok).toBe(true);
+    expect(deleteUploadIfLocal).toHaveBeenCalledWith("/uploads/original.png");
+  });
+
+  it("returns errors when published publish revision is missing", async () => {
+    const publishedEvent: Event = {
+      ...baseEvent,
+      status: "PUBLISHED",
+      publishedAt: "2026-01-01T00:00:00.000Z"
+    };
+
+    const result = await publishEvent(createRepo(publishedEvent), "id");
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContain("Révision introuvable.");
+    }
+  });
+
+  it("returns errors when published publish revision is not submitted", async () => {
+    const publishedEvent: Event = {
+      ...baseEvent,
+      status: "PUBLISHED",
+      publishedAt: "2026-01-01T00:00:00.000Z",
+      pendingRevision: {
+        ...baseEvent,
+        id: "rev-1",
+        eventId: "id",
+        createdByUserId: null,
+        status: "DRAFT",
+        rejectionReason: null
+      }
+    };
+
+    const result = await publishEvent(createRepo(publishedEvent), "id");
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContain("Révision non soumise.");
+    }
+  });
+
+  it("returns errors when published publish cannot update revision", async () => {
+    const publishedEvent: Event = {
+      ...baseEvent,
+      status: "PUBLISHED",
+      publishedAt: "2026-01-01T00:00:00.000Z",
+      pendingRevision: {
+        ...baseEvent,
+        id: "rev-1",
+        eventId: "id",
+        createdByUserId: null,
+        status: "PENDING",
+        rejectionReason: null
+      }
+    };
+    const repo = createRepo(publishedEvent, {
+      publishPendingRevision: async () => null
+    });
+
+    const result = await publishEvent(repo, "id");
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContain("Révision introuvable.");
+    }
+  });
+
+  it("rejects a submitted revision", async () => {
+    const publishedEvent: Event = {
+      ...baseEvent,
+      status: "PUBLISHED",
+      publishedAt: "2026-01-01T00:00:00.000Z",
+      pendingRevision: {
+        ...baseEvent,
+        id: "rev-1",
+        eventId: "id",
+        createdByUserId: null,
+        status: "PENDING",
+        rejectionReason: null
+      }
+    };
+    const repo = createRepo(publishedEvent, {
+      rejectPendingRevision: async () => ({
+        ...publishedEvent,
+        pendingRevision: {
+          ...publishedEvent.pendingRevision!,
+          status: "REJECTED",
+          rejectionReason: "Motif"
+        }
+      })
+    });
+
+    const result = await rejectEvent(repo, "id", "Motif");
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.pendingRevision?.status).toBe("REJECTED");
+    }
+  });
+
+  it("returns errors when published reject revision is missing", async () => {
+    const publishedEvent: Event = {
+      ...baseEvent,
+      status: "PUBLISHED",
+      publishedAt: "2026-01-01T00:00:00.000Z"
+    };
+
+    const result = await rejectEvent(createRepo(publishedEvent), "id", "Motif");
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContain("Révision introuvable.");
+    }
+  });
+
+  it("returns errors when published reject revision is not submitted", async () => {
+    const publishedEvent: Event = {
+      ...baseEvent,
+      status: "PUBLISHED",
+      publishedAt: "2026-01-01T00:00:00.000Z",
+      pendingRevision: {
+        ...baseEvent,
+        id: "rev-1",
+        eventId: "id",
+        createdByUserId: null,
+        status: "DRAFT",
+        rejectionReason: null
+      }
+    };
+
+    const result = await rejectEvent(createRepo(publishedEvent), "id", "Motif");
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContain("Révision non soumise.");
+    }
+  });
+
+  it("returns errors when published reject cannot update revision", async () => {
+    const publishedEvent: Event = {
+      ...baseEvent,
+      status: "PUBLISHED",
+      publishedAt: "2026-01-01T00:00:00.000Z",
+      pendingRevision: {
+        ...baseEvent,
+        id: "rev-1",
+        eventId: "id",
+        createdByUserId: null,
+        status: "PENDING",
+        rejectionReason: null
+      }
+    };
+    const repo = createRepo(publishedEvent, {
+      rejectPendingRevision: async () => null
+    });
+
+    const result = await rejectEvent(repo, "id", "Motif");
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContain("Révision introuvable.");
     }
   });
 

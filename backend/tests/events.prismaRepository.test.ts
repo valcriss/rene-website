@@ -5,27 +5,39 @@ jest.mock("@prisma/client", () => {
   const update = jest.fn();
   const remove = jest.fn();
   const findCategory = jest.fn();
+  const findAudience = jest.fn();
+  const transaction = jest.fn();
+
+  const client = {
+    event: {
+      findMany,
+      findUnique,
+      create,
+      update,
+      delete: remove
+    },
+    category: {
+      findUnique: findCategory
+    },
+    audience: {
+      findUnique: findAudience
+    },
+    $transaction: transaction
+  };
+
+  transaction.mockImplementation(async (handler: (value: typeof client) => Promise<unknown>) => handler(client));
 
   return {
-    PrismaClient: jest.fn(() => ({
-      event: {
-        findMany,
-        findUnique,
-        create,
-        update,
-        delete: remove
-      },
-      category: {
-        findUnique: findCategory
-      }
-    })),
+    PrismaClient: jest.fn(() => client),
     __mocks: {
       findMany,
       findUnique,
       create,
       update,
       remove,
-      findCategory
+      findCategory,
+      findAudience,
+      transaction
     }
   };
 });
@@ -39,6 +51,8 @@ const prismaMocks = jest.requireMock("@prisma/client").__mocks as {
   update: jest.Mock;
   remove: jest.Mock;
   findCategory: jest.Mock;
+  findAudience: jest.Mock;
+  transaction: jest.Mock;
 };
 
 describe("createPrismaEventRepository", () => {
@@ -49,6 +63,74 @@ describe("createPrismaEventRepository", () => {
     prismaMocks.update.mockReset();
     prismaMocks.remove.mockReset();
     prismaMocks.findCategory.mockReset();
+    prismaMocks.findAudience.mockReset();
+    prismaMocks.transaction.mockClear();
+  });
+
+  const buildRevision = (overrides: Record<string, unknown> = {}) => ({
+    id: "rev-1",
+    eventId: "1",
+    title: "Concert revise",
+    content: "Soirée",
+    image: "revision.png",
+    createdByUserId: null,
+    categoryId: "music",
+    audienceId: "all",
+    eventStartAt: new Date("2026-01-15T20:00:00.000Z"),
+    eventEndAt: new Date("2026-01-15T22:00:00.000Z"),
+    allDay: false,
+    venueName: "Salle",
+    address: null,
+    postalCode: "37160",
+    city: "Descartes",
+    latitude: 46.97,
+    longitude: 0.7,
+    organizerName: "Association",
+    organizerUrl: null,
+    contactEmail: null,
+    contactPhone: null,
+    ticketUrl: null,
+    pricingInfo: null,
+    websiteUrl: null,
+    status: "DRAFT",
+    rejectionReason: null,
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-01-02T00:00:00.000Z"),
+    ...overrides
+  });
+
+  const buildEvent = (overrides: Record<string, unknown> = {}) => ({
+    id: "1",
+    title: "Concert",
+    content: "Soirée",
+    image: "img",
+    createdByUserId: null,
+    categoryId: "music",
+    audienceId: "all",
+    eventStartAt: new Date("2026-01-15T20:00:00.000Z"),
+    eventEndAt: new Date("2026-01-15T22:00:00.000Z"),
+    allDay: false,
+    venueName: "Salle",
+    address: null,
+    postalCode: "37160",
+    city: "Descartes",
+    latitude: 46.97,
+    longitude: 0.7,
+    organizerName: "Association",
+    organizerUrl: null,
+    contactEmail: null,
+    contactPhone: null,
+    ticketUrl: null,
+    pricingInfo: null,
+    websiteUrl: null,
+    status: "DRAFT",
+    publishedAt: null,
+    publicationEndAt: new Date("2026-01-15T22:00:00.000Z"),
+    rejectionReason: null,
+    pendingRevision: null,
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-01-02T00:00:00.000Z"),
+    ...overrides
   });
 
   it("maps list events", async () => {
@@ -60,6 +142,7 @@ describe("createPrismaEventRepository", () => {
       image: "img",
       createdByUserId: null,
       categoryId: "music",
+      audienceId: "all",
       eventStartAt: new Date("2026-01-15T20:00:00.000Z"),
       eventEndAt: new Date("2026-01-15T22:00:00.000Z"),
       allDay: false,
@@ -100,6 +183,7 @@ describe("createPrismaEventRepository", () => {
       image: "img",
       createdByUserId: null,
       categoryId: "art",
+      audienceId: "all",
       eventStartAt: new Date("2026-02-01T10:00:00.000Z"),
       eventEndAt: new Date("2026-02-01T12:00:00.000Z"),
       allDay: false,
@@ -141,6 +225,7 @@ describe("createPrismaEventRepository", () => {
       image: "img",
       createdByUserId: null,
       categoryId: "book",
+      audienceId: "all",
       eventStartAt: new Date("2026-03-01T10:00:00.000Z"),
       eventEndAt: new Date("2026-03-01T12:00:00.000Z"),
       allDay: true,
@@ -166,6 +251,7 @@ describe("createPrismaEventRepository", () => {
     };
     prismaMocks.create.mockResolvedValue(item);
     prismaMocks.findCategory.mockResolvedValue({ id: "book", name: "Lecture", createdAt: new Date(), updatedAt: new Date() });
+    prismaMocks.findAudience.mockResolvedValue({ id: "all", name: "Tous publics", createdAt: new Date(), updatedAt: new Date() });
 
     const result = await repo.create({
       title: "Lecture",
@@ -173,6 +259,7 @@ describe("createPrismaEventRepository", () => {
       image: "img",
       createdByUserId: null,
       categoryId: "book",
+      audienceId: "all",
       eventStartAt: "2026-03-01T10:00:00.000Z",
       eventEndAt: "2026-03-01T12:00:00.000Z",
       allDay: true,
@@ -192,6 +279,7 @@ describe("createPrismaEventRepository", () => {
   it("throws when category is missing", async () => {
     const repo = createPrismaEventRepository();
     prismaMocks.findCategory.mockResolvedValue(null);
+    prismaMocks.findAudience.mockResolvedValue({ id: "all", name: "Tous publics", createdAt: new Date(), updatedAt: new Date() });
 
     await expect(
       repo.create({
@@ -199,6 +287,7 @@ describe("createPrismaEventRepository", () => {
         content: "Livre",
         image: "img",
         categoryId: "book",
+        audienceId: "all",
         eventStartAt: "2026-03-01T10:00:00.000Z",
         eventEndAt: "2026-03-01T12:00:00.000Z",
         allDay: true,
@@ -222,6 +311,7 @@ describe("createPrismaEventRepository", () => {
       image: "img",
       createdByUserId: null,
       categoryId: "art",
+      audienceId: "all",
       eventStartAt: new Date("2026-02-01T10:00:00.000Z"),
       eventEndAt: new Date("2026-02-01T12:00:00.000Z"),
       allDay: false,
@@ -247,6 +337,7 @@ describe("createPrismaEventRepository", () => {
     };
     prismaMocks.update.mockResolvedValue(item);
     prismaMocks.findCategory.mockResolvedValue({ id: "art", name: "Art", createdAt: new Date(), updatedAt: new Date() });
+    prismaMocks.findAudience.mockResolvedValue({ id: "all", name: "Tous publics", createdAt: new Date(), updatedAt: new Date() });
 
     const result = await repo.update("4", {
       title: "Expo",
@@ -254,6 +345,7 @@ describe("createPrismaEventRepository", () => {
       image: "img",
       createdByUserId: null,
       categoryId: "art",
+      audienceId: "all",
       eventStartAt: "2026-02-01T10:00:00.000Z",
       eventEndAt: "2026-02-01T12:00:00.000Z",
       allDay: false,
@@ -273,12 +365,14 @@ describe("createPrismaEventRepository", () => {
     const repo = createPrismaEventRepository();
     prismaMocks.update.mockRejectedValue(new Error("not found"));
     prismaMocks.findCategory.mockResolvedValue({ id: "art", name: "Art", createdAt: new Date(), updatedAt: new Date() });
+    prismaMocks.findAudience.mockResolvedValue({ id: "all", name: "Tous publics", createdAt: new Date(), updatedAt: new Date() });
 
     const result = await repo.update("missing", {
       title: "Expo",
       content: "Art",
       image: "img",
       categoryId: "art",
+      audienceId: "all",
       eventStartAt: "2026-02-01T10:00:00.000Z",
       eventEndAt: "2026-02-01T12:00:00.000Z",
       allDay: false,
@@ -321,6 +415,7 @@ describe("createPrismaEventRepository", () => {
       content: "Art",
       image: "img",
       categoryId: "art",
+      audienceId: "all",
       eventStartAt: new Date("2026-02-01T10:00:00.000Z"),
       eventEndAt: new Date("2026-02-01T12:00:00.000Z"),
       allDay: false,
@@ -373,6 +468,255 @@ describe("createPrismaEventRepository", () => {
     prismaMocks.findUnique.mockResolvedValue(null);
 
     const result = await repo.getById("missing");
+
+    expect(result).toBeNull();
+  });
+
+  it("throws when audience is missing", async () => {
+    const repo = createPrismaEventRepository();
+    prismaMocks.findCategory.mockResolvedValue({ id: "book", name: "Lecture", createdAt: new Date(), updatedAt: new Date() });
+    prismaMocks.findAudience.mockResolvedValue(null);
+
+    await expect(
+      repo.create({
+        title: "Lecture",
+        content: "Livre",
+        image: "img",
+        categoryId: "book",
+        audienceId: "all",
+        eventStartAt: "2026-03-01T10:00:00.000Z",
+        eventEndAt: "2026-03-01T12:00:00.000Z",
+        allDay: true,
+        venueName: "Bibliothèque",
+        address: "1 rue du centre",
+        postalCode: "37000",
+        city: "Tours",
+        latitude: 47,
+        longitude: 0.69,
+        organizerName: "Mairie"
+      })
+    ).rejects.toThrow("Audience not found");
+  });
+
+  it("returns null when update category is missing", async () => {
+    const repo = createPrismaEventRepository();
+    prismaMocks.findCategory.mockResolvedValue(null);
+
+    await expect(
+      repo.update("missing", {
+        title: "Expo",
+        content: "Art",
+        image: "img",
+        categoryId: "art",
+        audienceId: "all",
+        eventStartAt: "2026-02-01T10:00:00.000Z",
+        eventEndAt: "2026-02-01T12:00:00.000Z",
+        allDay: false,
+        venueName: "Galerie",
+        address: "1 rue du centre",
+        postalCode: "37000",
+        city: "Tours",
+        latitude: 47,
+        longitude: 0.69,
+        organizerName: "Musee"
+      })
+    ).rejects.toThrow("Category not found");
+  });
+
+  it("returns null when update audience is missing", async () => {
+    const repo = createPrismaEventRepository();
+    prismaMocks.findCategory.mockResolvedValue({ id: "art", name: "Art", createdAt: new Date(), updatedAt: new Date() });
+    prismaMocks.findAudience.mockResolvedValue(null);
+
+    await expect(
+      repo.update("missing", {
+        title: "Expo",
+        content: "Art",
+        image: "img",
+        categoryId: "art",
+        audienceId: "all",
+        eventStartAt: "2026-02-01T10:00:00.000Z",
+        eventEndAt: "2026-02-01T12:00:00.000Z",
+        allDay: false,
+        venueName: "Galerie",
+        address: "1 rue du centre",
+        postalCode: "37000",
+        city: "Tours",
+        latitude: 47,
+        longitude: 0.69,
+        organizerName: "Musee"
+      })
+    ).rejects.toThrow("Audience not found");
+  });
+
+  it("upserts a pending revision", async () => {
+    const repo = createPrismaEventRepository();
+    prismaMocks.findCategory.mockResolvedValue({ id: "music", name: "Musique", createdAt: new Date(), updatedAt: new Date() });
+    prismaMocks.findAudience.mockResolvedValue({ id: "all", name: "Tous publics", createdAt: new Date(), updatedAt: new Date() });
+    prismaMocks.update.mockResolvedValue(buildEvent({ pendingRevision: buildRevision() }));
+
+    const result = await repo.upsertPendingRevision("1", {
+      title: "Concert revise",
+      content: "Soirée",
+      image: "revision.png",
+      createdByUserId: null,
+      categoryId: "music",
+      audienceId: "all",
+      eventStartAt: "2026-01-15T20:00:00.000Z",
+      eventEndAt: "2026-01-15T22:00:00.000Z",
+      allDay: false,
+      venueName: "Salle",
+      address: "1 rue du centre",
+      postalCode: "37160",
+      city: "Descartes",
+      latitude: 46.97,
+      longitude: 0.7,
+      organizerName: "Association"
+    }, "DRAFT");
+
+    expect(result?.pendingRevision?.status).toBe("DRAFT");
+  });
+
+  it("returns null when upsert pending revision fails", async () => {
+    const repo = createPrismaEventRepository();
+    prismaMocks.findCategory.mockResolvedValue({ id: "music", name: "Musique", createdAt: new Date(), updatedAt: new Date() });
+    prismaMocks.findAudience.mockResolvedValue({ id: "all", name: "Tous publics", createdAt: new Date(), updatedAt: new Date() });
+    prismaMocks.update.mockRejectedValue(new Error("boom"));
+
+    const result = await repo.upsertPendingRevision("1", {
+      title: "Concert revise",
+      content: "Soirée",
+      image: "revision.png",
+      createdByUserId: null,
+      categoryId: "music",
+      audienceId: "all",
+      eventStartAt: "2026-01-15T20:00:00.000Z",
+      eventEndAt: "2026-01-15T22:00:00.000Z",
+      allDay: false,
+      venueName: "Salle",
+      address: "1 rue du centre",
+      postalCode: "37160",
+      city: "Descartes",
+      latitude: 46.97,
+      longitude: 0.7,
+      organizerName: "Association"
+    }, "DRAFT");
+
+    expect(result).toBeNull();
+  });
+
+  it("submits a pending revision", async () => {
+    const repo = createPrismaEventRepository();
+    prismaMocks.findUnique
+      .mockResolvedValueOnce(buildEvent({ pendingRevision: buildRevision() }))
+      .mockResolvedValueOnce(buildEvent({ pendingRevision: buildRevision({ status: "PENDING" }) }));
+    prismaMocks.update.mockResolvedValue(buildEvent({ pendingRevision: buildRevision({ status: "PENDING" }) }));
+
+    const result = await repo.submitPendingRevision("1");
+
+    expect(result?.pendingRevision?.status).toBe("PENDING");
+  });
+
+  it("returns null when pending revision is missing during submit", async () => {
+    const repo = createPrismaEventRepository();
+    prismaMocks.findUnique.mockResolvedValue(buildEvent());
+
+    const result = await repo.submitPendingRevision("1");
+
+    expect(result).toBeNull();
+  });
+
+  it("returns null when submit pending revision fails", async () => {
+    const repo = createPrismaEventRepository();
+    prismaMocks.findUnique.mockResolvedValue(buildEvent({ pendingRevision: buildRevision() }));
+    prismaMocks.update.mockRejectedValue(new Error("boom"));
+
+    const result = await repo.submitPendingRevision("1");
+
+    expect(result).toBeNull();
+  });
+
+  it("rejects a pending revision", async () => {
+    const repo = createPrismaEventRepository();
+    prismaMocks.findUnique
+      .mockResolvedValueOnce(buildEvent({ pendingRevision: buildRevision({ status: "PENDING" }) }))
+      .mockResolvedValueOnce(buildEvent({ pendingRevision: buildRevision({ status: "REJECTED", rejectionReason: "Motif" }) }));
+    prismaMocks.update.mockResolvedValue(buildEvent({ pendingRevision: buildRevision({ status: "REJECTED", rejectionReason: "Motif" }) }));
+
+    const result = await repo.rejectPendingRevision("1", "Motif");
+
+    expect(result?.pendingRevision?.status).toBe("REJECTED");
+    expect(result?.pendingRevision?.rejectionReason).toBe("Motif");
+  });
+
+  it("returns null when pending revision is missing during reject", async () => {
+    const repo = createPrismaEventRepository();
+    prismaMocks.findUnique.mockResolvedValue(buildEvent());
+
+    const result = await repo.rejectPendingRevision("1", "Motif");
+
+    expect(result).toBeNull();
+  });
+
+  it("returns null when reject pending revision fails", async () => {
+    const repo = createPrismaEventRepository();
+    prismaMocks.findUnique.mockResolvedValue(buildEvent({ pendingRevision: buildRevision({ status: "PENDING" }) }));
+    prismaMocks.update.mockRejectedValue(new Error("boom"));
+
+    const result = await repo.rejectPendingRevision("1", "Motif");
+
+    expect(result).toBeNull();
+  });
+
+  it("publishes a pending revision", async () => {
+    const repo = createPrismaEventRepository();
+    prismaMocks.findUnique
+      .mockResolvedValueOnce(buildEvent({ pendingRevision: buildRevision({ status: "PENDING" }) }))
+      .mockResolvedValueOnce(buildEvent({
+        title: "Concert revise",
+        image: "revision.png",
+        status: "PUBLISHED",
+        publishedAt: new Date("2026-01-20T00:00:00.000Z"),
+        pendingRevision: null
+      }));
+    prismaMocks.update.mockResolvedValue(buildEvent({
+      title: "Concert revise",
+      image: "revision.png",
+      status: "PUBLISHED",
+      publishedAt: new Date("2026-01-20T00:00:00.000Z"),
+      pendingRevision: null
+    }));
+
+    const result = await repo.publishPendingRevision("1", "2026-01-20T00:00:00.000Z");
+
+    expect(prismaMocks.transaction).toHaveBeenCalled();
+    expect(result?.status).toBe("PUBLISHED");
+    expect(result?.pendingRevision).toBeNull();
+  });
+
+  it("returns null when pending revision is missing during publish", async () => {
+    const repo = createPrismaEventRepository();
+    prismaMocks.findUnique.mockResolvedValue(buildEvent());
+
+    const result = await repo.publishPendingRevision("1", "2026-01-20T00:00:00.000Z");
+
+    expect(result).toBeNull();
+  });
+
+  it("returns null when pending revision is not submitted during publish", async () => {
+    const repo = createPrismaEventRepository();
+    prismaMocks.findUnique.mockResolvedValue(buildEvent({ pendingRevision: buildRevision({ status: "DRAFT" }) }));
+
+    const result = await repo.publishPendingRevision("1", "2026-01-20T00:00:00.000Z");
+
+    expect(result).toBeNull();
+  });
+
+  it("returns null when publish pending revision transaction fails", async () => {
+    const repo = createPrismaEventRepository();
+    prismaMocks.transaction.mockRejectedValueOnce(new Error("boom"));
+
+    const result = await repo.publishPendingRevision("1", "2026-01-20T00:00:00.000Z");
 
     expect(result).toBeNull();
   });

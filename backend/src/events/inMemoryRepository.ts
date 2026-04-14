@@ -25,10 +25,7 @@ export const createInMemoryEventRepository = (): EventRepository => {
   };
 
   const mergePublishedRevision = (event: Event, publishedAt: string): Event => {
-    const revision = event.pendingRevision;
-    if (!revision) {
-      return event;
-    }
+    const revision = event.pendingRevision!;
 
     return {
       ...event,

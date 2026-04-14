@@ -15,6 +15,13 @@ jest.mock("@prisma/client", () => {
         update,
         delete: remove
       },
+      audience: {
+        findMany,
+        findUnique,
+        create,
+        update,
+        delete: remove
+      },
       event: {
         count
       }
@@ -188,5 +195,103 @@ describe("createPrismaAdminRepository", () => {
     });
     expect(settings.contactEmail).toBeDefined();
     expect(updated.homepageIntro).toBe("Intro");
+  });
+
+  it("lists audiences", async () => {
+    prismaMocks.findMany.mockResolvedValue([
+      { id: "all", name: "Tous publics", createdAt: new Date(), updatedAt: new Date() }
+    ]);
+    const repo = createPrismaAdminRepository();
+    const audiences = await repo.listAudiences();
+    expect(audiences[0].id).toBe("all");
+  });
+
+  it("gets audience by id", async () => {
+    prismaMocks.findUnique.mockResolvedValue({
+      id: "all",
+      name: "Tous publics",
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+    const repo = createPrismaAdminRepository();
+    const audience = await repo.getAudienceById("all");
+    expect(audience?.name).toBe("Tous publics");
+  });
+
+  it("returns null when audience not found", async () => {
+    prismaMocks.findUnique.mockResolvedValue(null);
+    const repo = createPrismaAdminRepository();
+    const audience = await repo.getAudienceById("missing");
+    expect(audience).toBeNull();
+  });
+
+  it("creates audience", async () => {
+    prismaMocks.findUnique.mockResolvedValue(null);
+    prismaMocks.create.mockResolvedValue({
+      id: "jeunes",
+      name: "Jeunes",
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+    const repo = createPrismaAdminRepository();
+    const created = await repo.createAudience({ name: "Jeunes" });
+    expect(created.id).toBe("jeunes");
+  });
+
+  it("throws when audience name is invalid", async () => {
+    const repo = createPrismaAdminRepository();
+    await expect(repo.createAudience({ name: "" })).rejects.toThrow("Audience name is invalid");
+  });
+
+  it("throws when audience already exists", async () => {
+    prismaMocks.findUnique.mockResolvedValue({
+      id: "jeunes",
+      name: "Jeunes",
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+    const repo = createPrismaAdminRepository();
+    await expect(repo.createAudience({ name: "Jeunes" })).rejects.toThrow("Audience already exists");
+  });
+
+  it("updates audience", async () => {
+    prismaMocks.update.mockResolvedValue({
+      id: "jeunes",
+      name: "Jeunes",
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+    const repo = createPrismaAdminRepository();
+    const updated = await repo.updateAudience("jeunes", { name: "Jeunes" });
+    expect(updated?.id).toBe("jeunes");
+  });
+
+  it("returns null when audience update fails", async () => {
+    prismaMocks.update.mockRejectedValue(new Error("not found"));
+    const repo = createPrismaAdminRepository();
+    const updated = await repo.updateAudience("missing", { name: "Jeunes" });
+    expect(updated).toBeNull();
+  });
+
+  it("deletes audience", async () => {
+    prismaMocks.count.mockResolvedValue(0);
+    prismaMocks.remove.mockResolvedValue({ id: "jeunes" });
+    const repo = createPrismaAdminRepository();
+    const result = await repo.deleteAudience("jeunes");
+    expect(result).toBe(true);
+  });
+
+  it("returns false when audience delete fails", async () => {
+    prismaMocks.count.mockResolvedValue(0);
+    prismaMocks.remove.mockRejectedValue(new Error("not found"));
+    const repo = createPrismaAdminRepository();
+    const result = await repo.deleteAudience("missing");
+    expect(result).toBe(false);
+  });
+
+  it("throws when audience is in use", async () => {
+    prismaMocks.count.mockResolvedValue(2);
+    const repo = createPrismaAdminRepository();
+    await expect(repo.deleteAudience("jeunes")).rejects.toThrow("Audience in use");
   });
 });

@@ -5,6 +5,7 @@ const payload = {
   content: "Soirée",
   image: "img",
   categoryId: "music",
+  audienceId: "all",
   eventStartAt: "2026-01-15T20:00:00.000Z",
   eventEndAt: "2026-01-15T22:00:00.000Z",
   allDay: false,
@@ -18,6 +19,14 @@ const payload = {
 };
 
 describe("inMemoryEventRepository", () => {
+  it("lists and gets created events", async () => {
+    const repo = createInMemoryEventRepository();
+    const created = await repo.create({ ...payload, createdByUserId: "user-1" });
+
+    await expect(repo.list()).resolves.toEqual([created]);
+    await expect(repo.getById(created.id)).resolves.toEqual(created);
+  });
+
   it("updates and updates status", async () => {
     const repo = createInMemoryEventRepository();
     const created = await repo.create(payload);
@@ -56,5 +65,56 @@ describe("inMemoryEventRepository", () => {
 
     expect(deleted).toBe(true);
     expect(await repo.getById(created.id)).toBeNull();
+  });
+
+  it("manages pending revisions lifecycle", async () => {
+    const repo = createInMemoryEventRepository();
+    const created = await repo.create(payload);
+
+    const drafted = await repo.upsertPendingRevision(created.id, { ...payload, title: "Révision" }, "DRAFT");
+    expect(drafted?.pendingRevision?.status).toBe("DRAFT");
+
+    const submitted = await repo.submitPendingRevision(created.id);
+    expect(submitted?.pendingRevision?.status).toBe("PENDING");
+
+    const rejected = await repo.rejectPendingRevision(created.id, "Motif");
+    expect(rejected?.pendingRevision?.status).toBe("REJECTED");
+    expect(rejected?.pendingRevision?.rejectionReason).toBe("Motif");
+
+    await repo.upsertPendingRevision(created.id, { ...payload, title: "Révision finale" }, "DRAFT");
+    await repo.submitPendingRevision(created.id);
+    const published = await repo.publishPendingRevision(created.id, "2026-01-20T00:00:00.000Z");
+
+    expect(published?.status).toBe("PUBLISHED");
+    expect(published?.title).toBe("Révision finale");
+    expect(published?.pendingRevision).toBeNull();
+  });
+
+  it("preserves original creator when publishing a pending revision", async () => {
+    const repo = createInMemoryEventRepository();
+    const created = await repo.create({ ...payload, createdByUserId: "owner-1" });
+
+    await repo.upsertPendingRevision(
+      created.id,
+      { ...payload, createdByUserId: "editor-2", title: "Révision externe" },
+      "PENDING"
+    );
+
+    const published = await repo.publishPendingRevision(created.id, "2026-01-20T00:00:00.000Z");
+
+    expect(published?.createdByUserId).toBe("owner-1");
+  });
+
+  it("returns null for missing or invalid pending revision transitions", async () => {
+    const repo = createInMemoryEventRepository();
+    const created = await repo.create(payload);
+
+    await expect(repo.upsertPendingRevision("missing", payload, "DRAFT")).resolves.toBeNull();
+    await expect(repo.submitPendingRevision(created.id)).resolves.toBeNull();
+    await expect(repo.rejectPendingRevision(created.id, "Motif")).resolves.toBeNull();
+    await expect(repo.publishPendingRevision(created.id, "2026-01-20T00:00:00.000Z")).resolves.toBeNull();
+
+    await repo.upsertPendingRevision(created.id, payload, "PENDING");
+    await expect(repo.submitPendingRevision(created.id)).resolves.toBeNull();
   });
 });

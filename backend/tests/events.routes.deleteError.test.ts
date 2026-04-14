@@ -7,6 +7,7 @@ jest.mock("../src/events/service", () => {
   const actual = jest.requireActual("../src/events/service");
   return {
     ...actual,
+    submitEvent: jest.fn(async () => ({ ok: false, errors: ["Autre erreur"] })),
     deleteEvent: jest.fn(async () => ({ ok: false, errors: ["Autre erreur"] }))
   };
 });
@@ -41,6 +42,33 @@ describe("events routes delete errors", () => {
 
     const response = await request(app)
       .delete("/api/events/whatever")
+      .set("x-user-role", "EDITOR");
+
+    expect(response.status).toBe(400);
+    expect(response.body.errors).toContain("Autre erreur");
+  });
+
+  it("returns 400 for submit errors", async () => {
+    const repo: EventRepository = {
+      list: async () => [],
+      getById: async () => null,
+      create: async () => {
+        throw new Error("boom");
+      },
+      update: async () => null,
+      upsertPendingRevision: async () => null,
+      submitPendingRevision: async () => null,
+      rejectPendingRevision: async () => null,
+      publishPendingRevision: async () => null,
+      delete: async () => false,
+      updateStatus: async () => null
+    };
+    const app = express();
+    app.use(express.json());
+    app.use("/api", createEventRouter(repo, authRepo));
+
+    const response = await request(app)
+      .post("/api/events/whatever/submit")
       .set("x-user-role", "EDITOR");
 
     expect(response.status).toBe(400);
