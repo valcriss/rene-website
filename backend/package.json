@@ -8,6 +8,7 @@
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
+    "admin:init": "node -e \"require('./dist/admin/initAdmin').runInitAdminCli().catch((error) => { console.error(error instanceof Error ? error.message : error); process.exit(1); })\"",
     "lint": "eslint . --ext .ts",
     "test": "jest --coverage",
     "prisma:generate": "prisma generate",
