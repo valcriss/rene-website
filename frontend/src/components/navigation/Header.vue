@@ -1,5 +1,5 @@
 <template>
-  <header class="border-b border-sky-100 bg-white/80 backdrop-blur">
+  <header class="relative z-40 border-b border-sky-100 bg-white/80 backdrop-blur">
     <div class="mx-auto flex max-w-[1600px] items-center justify-between px-6 py-4 xl:px-10">
       <div>
         <p class="text-xs uppercase tracking-[0.2em] text-sky-700/60">{{ resolvedTagline }}</p>
@@ -49,7 +49,7 @@
 
             <div
               v-if="menuOpen"
-              class="absolute right-0 top-[calc(100%+0.75rem)] z-20 w-64 rounded-[1.5rem] border border-slate-200 bg-white p-3 shadow-[0_24px_60px_-32px_rgba(15,23,42,0.28)]"
+              class="absolute right-0 top-[calc(100%+0.75rem)] z-50 w-64 rounded-[1.5rem] border border-slate-200 bg-white p-3 shadow-[0_24px_60px_-32px_rgba(15,23,42,0.28)]"
             >
               <div class="rounded-[1.1rem] border border-sky-100 bg-sky-50/80 px-4 py-3">
                 <p class="text-[11px] uppercase tracking-[0.22em] text-slate-500">{{ t('common.account') }}</p>

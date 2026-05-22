@@ -108,4 +108,24 @@ describe("home components", () => {
 
     expect(button.exists()).toBe(true);
   });
+
+  it("Header keeps account dropdown above page content", async () => {
+    const wrapper = mount(Header, {
+      props: {
+        showAuth: true,
+        isAuthenticated: true,
+        accountLabel: "Utilisateur",
+        roleLabel: "Rédacteur"
+      }
+    });
+
+    expect(wrapper.find("header").classes()).toEqual(expect.arrayContaining(["relative", "z-40"]));
+
+    const accountButton = wrapper.find('button[aria-label="Compte"]');
+    await accountButton.trigger("click");
+
+    const menu = wrapper.find(".absolute.right-0");
+    expect(menu.exists()).toBe(true);
+    expect(menu.classes()).toEqual(expect.arrayContaining(["z-50"]));
+  });
 });
