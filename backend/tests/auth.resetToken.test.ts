@@ -17,13 +17,13 @@ describe("auth resetToken", () => {
   });
 
   it("builds a reset url from PUBLIC_APP_URL", () => {
-    expect(buildPasswordResetUrl("token", { PUBLIC_APP_URL: "https://rene.example.com/app" } as NodeJS.ProcessEnv)).toBe(
+    expect(buildPasswordResetUrl("token", { PUBLIC_APP_URL: "https://rene.example.com/app" })).toBe(
       "https://rene.example.com/reset-password?token=token"
     );
   });
 
   it("falls back to localhost when PUBLIC_APP_URL is missing", () => {
-    expect(buildPasswordResetUrl("token", {} as NodeJS.ProcessEnv)).toBe(
+    expect(buildPasswordResetUrl("token", {})).toBe(
       "http://localhost:3000/reset-password?token=token"
     );
     expect(passwordResetTokenTtlMinutes).toBe(30);

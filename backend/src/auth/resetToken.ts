@@ -1,5 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 
+type AppEnv = Record<string, string | undefined>;
+
 const passwordResetTokenBytes = 32;
 
 export const passwordResetTokenTtlMinutes = 30;
@@ -8,7 +10,7 @@ export const generatePasswordResetToken = () => randomBytes(passwordResetTokenBy
 
 export const hashPasswordResetToken = (token: string) => createHash("sha256").update(token).digest("hex");
 
-export const buildPasswordResetUrl = (token: string, env: NodeJS.ProcessEnv = process.env) => {
+export const buildPasswordResetUrl = (token: string, env: AppEnv = process.env) => {
   const appUrl = env.PUBLIC_APP_URL?.trim() || "http://localhost:3000";
   const url = new URL("/reset-password", appUrl);
   url.searchParams.set("token", token);

@@ -6,8 +6,7 @@ import {
   AdminSettings,
   AdminUser,
   CreateAdminAudienceInput,
-  CreateAdminCategoryInput,
-  CreateAdminUserInput
+  CreateAdminCategoryInput
 } from "./types";
 import { slugifyCategoryId } from "./slug";
 
