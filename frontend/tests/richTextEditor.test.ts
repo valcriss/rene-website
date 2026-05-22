@@ -7,6 +7,7 @@ import { uploadImage } from "../src/api/uploads";
 const chain = {
   focus: vi.fn().mockReturnThis(),
   setParagraph: vi.fn().mockReturnThis(),
+  setHardBreak: vi.fn().mockReturnThis(),
   toggleHeading: vi.fn().mockReturnThis(),
   toggleBold: vi.fn().mockReturnThis(),
   toggleItalic: vi.fn().mockReturnThis(),
@@ -44,7 +45,7 @@ vi.mock("../src/api/uploads", () => ({
 }));
 
 vi.mock("@tiptap/vue-3", () => ({
-  EditorContent: { template: "<div></div>" },
+  EditorContent: { name: "EditorContent", template: "<div data-testid='editor-content'></div>" },
   useEditor: (options?: { onUpdate?: (payload: { editor: EditorLike }) => void }) => {
     onUpdateHandler = options?.onUpdate ?? null;
     return editorRef;
@@ -229,5 +230,21 @@ describe("RichTextEditor", () => {
     const wrapper = mount(RichTextEditor, { props: { modelValue: "<p>hello</p>" } });
     wrapper.unmount();
     expect(editorInstance.destroy).toHaveBeenCalled();
+  });
+
+  it("inserts a simple line break on ctrl enter", async () => {
+    const wrapper = mount(RichTextEditor, { props: { modelValue: "<p>hello</p>" } });
+
+    await wrapper.get("[data-testid='editor-content']").trigger("keydown", { key: "Enter", ctrlKey: true });
+
+    expect(chain.setHardBreak).toHaveBeenCalled();
+  });
+
+  it("does not replace normal enter behavior", async () => {
+    const wrapper = mount(RichTextEditor, { props: { modelValue: "<p>hello</p>" } });
+
+    await wrapper.get("[data-testid='editor-content']").trigger("keydown", { key: "Enter" });
+
+    expect(chain.setHardBreak).not.toHaveBeenCalled();
   });
 });

@@ -143,6 +143,7 @@
       :class="compact ? 'min-h-[180px] text-sm leading-6' : 'min-h-[360px]'"
       :editor="editor"
       :aria-label="ariaLabel || t('common.description')"
+      @keydown="handleEditorKeydown"
     />
   </div>
 </template>
@@ -155,6 +156,7 @@ import { useI18n } from "vue-i18n";
 import BulletList from "@tiptap/extension-bullet-list";
 import Bold from "@tiptap/extension-bold";
 import Document from "@tiptap/extension-document";
+import HardBreak from "@tiptap/extension-hard-break";
 import Heading from "@tiptap/extension-heading";
 import Image from "@tiptap/extension-image";
 import Italic from "@tiptap/extension-italic";
@@ -189,6 +191,7 @@ const editor = useEditor({
     BulletList,
     Bold,
     Document,
+    HardBreak,
     Heading.configure({ levels: [2, 3] }),
     Image,
     Italic,
@@ -233,6 +236,15 @@ const toggleItalic = () => editor.value?.chain().focus().toggleItalic().run();
 const toggleOrderedList = () => editor.value?.chain().focus().toggleOrderedList().run();
 const toggleUnderline = () => editor.value?.chain().focus().toggleUnderline().run();
 const setParagraph = () => editor.value?.chain().focus().setParagraph().run();
+
+const handleEditorKeydown = (event: KeyboardEvent) => {
+  if (event.key !== "Enter" || !event.ctrlKey) {
+    return;
+  }
+
+  event.preventDefault();
+  editor.value?.chain().focus().setHardBreak().run();
+};
 
 const normalizeUrl = (value: string) => {
   if (!value) return "";
