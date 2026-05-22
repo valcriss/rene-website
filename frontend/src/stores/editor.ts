@@ -2,7 +2,6 @@ import { computed, reactive, ref } from "vue";
 import { defineStore } from "pinia";
 import type { EventRevisionStatus } from "../api/events";
 import { CreateEventPayload, EventItem, createEvent, submitEvent, updateEvent } from "../api/events";
-import { geocodeEventLocation } from "../api/geocoding";
 import { uploadImage } from "../api/uploads";
 import { useAuthStore } from "./auth";
 import { useEventsStore } from "./events";
@@ -163,7 +162,7 @@ export const useEditorStore = defineStore("editor", () => {
     return token;
   };
 
-  const saveDraft = async (): Promise<EventItem | null> => {
+  const persistDraft = async (): Promise<EventItem | null> => {
     editorError.value = null;
     const authStore = useAuthStore();
     if (!authStore.canEdit) return null;
@@ -179,12 +178,6 @@ export const useEditorStore = defineStore("editor", () => {
         payload.image = await uploadImage(imageFile.value);
       }
 
-      await geocodeEventLocation({
-        address: payload.address,
-        postalCode: payload.postalCode,
-        city: payload.city,
-        venueName: payload.venueName
-      });
       const updated =
         editorMode.value === "edit" && editingEventId.value
           ? await updateEvent(editingEventId.value, payload, authStore.role)
@@ -225,7 +218,17 @@ export const useEditorStore = defineStore("editor", () => {
     if (isPersisting.value) return false;
     isSavingDraft.value = true;
     try {
-      return Boolean(await saveDraft());
+      return Boolean(await persistDraft());
+    } finally {
+      isSavingDraft.value = false;
+    }
+  };
+
+  const saveDraftAndReturn = async (): Promise<EventItem | null> => {
+    if (isPersisting.value) return null;
+    isSavingDraft.value = true;
+    try {
+      return await persistDraft();
     } finally {
       isSavingDraft.value = false;
     }
@@ -247,7 +250,7 @@ export const useEditorStore = defineStore("editor", () => {
     try {
       editorError.value = null;
 
-      const savedEvent = await saveDraft();
+      const savedEvent = await persistDraft();
       if (!savedEvent) {
         return false;
       }
@@ -286,6 +289,7 @@ export const useEditorStore = defineStore("editor", () => {
     startEdit,
     setImageFile,
     savePreviewSnapshot,
+    saveDraftAndReturn,
     handleSaveDraft,
     handleSaveAndSubmit,
     handleSubmitDraft,

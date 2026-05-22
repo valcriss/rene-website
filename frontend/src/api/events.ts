@@ -4,6 +4,8 @@ export type EventStatus = "DRAFT" | "PENDING" | "PUBLISHED" | "REJECTED";
 
 export type EventRevisionStatus = "DRAFT" | "PENDING" | "REJECTED";
 
+export type GeolocationPrecision = "EXACT" | "APPROXIMATE" | "UNRESOLVED";
+
 export type EventPendingRevision = {
   id: string;
   eventId: string;
@@ -20,8 +22,9 @@ export type EventPendingRevision = {
   address?: string;
   postalCode?: string;
   city: string;
-  latitude: number;
-  longitude: number;
+  latitude: number | null;
+  longitude: number | null;
+  geolocationPrecision?: GeolocationPrecision;
   organizerName?: string;
   organizerUrl?: string;
   contactEmail?: string;
@@ -50,8 +53,9 @@ export type EventItem = {
   address?: string;
   postalCode?: string;
   city: string;
-  latitude: number;
-  longitude: number;
+  latitude: number | null;
+  longitude: number | null;
+  geolocationPrecision?: GeolocationPrecision;
   organizerName?: string;
   organizerUrl?: string;
   contactEmail?: string;
@@ -147,7 +151,7 @@ export const submitEvent = async (id: string, role: string): Promise<EventItem> 
     headers: buildAuthHeaders(role)
   });
   if (!response.ok) {
-    throw new Error("Impossible de soumettre l'événement");
+    throw new Error(await parseApiError(response, "Impossible de soumettre l'événement"));
   }
   return response.json() as Promise<EventItem>;
 };

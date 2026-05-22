@@ -21,11 +21,17 @@ const markersById = new Map<string, L.Marker>();
 const defaultCenter = { lat: 46.972, lng: 0.705 };
 const defaultZoom = 12;
 
+const hasCoordinates = (event: EventItem) =>
+  typeof event.latitude === "number" &&
+  Number.isFinite(event.latitude) &&
+  typeof event.longitude === "number" &&
+  Number.isFinite(event.longitude);
+
 const updateMarkers = (items: EventItem[]) => {
   markersLayer.value.clearLayers();
   markersById.clear();
 
-  items.forEach((event) => {
+  items.filter(hasCoordinates).forEach((event) => {
     const marker = L.marker([event.latitude, event.longitude]);
     marker.bindPopup(`<strong>${event.title}</strong><br/>${event.venueName}`);
     marker.bindTooltip(`<strong>${event.title}</strong><br/>${formatDateRange(event.eventStartAt, event.eventEndAt)}`);
@@ -37,15 +43,19 @@ const updateMarkers = (items: EventItem[]) => {
 
 const fitToMarkers = (items: EventItem[]) => {
   const map = mapInstance.value as L.Map;
-  if (items.length === 0) {
+  const geocodedItems = items.filter(hasCoordinates);
+
+  if (geocodedItems.length === 0) {
     map.setView([defaultCenter.lat, defaultCenter.lng], defaultZoom);
     return;
   }
-  if (items.length === 1) {
-    map.setView([items[0].latitude, items[0].longitude], 13);
+  if (geocodedItems.length === 1) {
+    map.setView([geocodedItems[0].latitude, geocodedItems[0].longitude], 13);
     return;
   }
-  const bounds = L.latLngBounds(items.map((event) => [event.latitude, event.longitude] as L.LatLngExpression));
+  const bounds = L.latLngBounds(
+    geocodedItems.map((event) => [event.latitude, event.longitude] as L.LatLngExpression)
+  );
   map.fitBounds(bounds, { padding: [24, 24] });
 };
 

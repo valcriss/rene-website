@@ -1,6 +1,6 @@
 import { computed, reactive, ref } from "vue";
 import { defineStore } from "pinia";
-import { EventItem, deleteEvent, fetchEvents } from "../api/events";
+import { EventItem, GeolocationPrecision, deleteEvent, fetchEvents } from "../api/events";
 import { filterEvents, type EventFilters } from "../events/filterEvents";
 import placeholderEvent from "../assets/event-placeholder.svg";
 import { publishEvent, rejectEvent, type ModeratorRole } from "../api/moderation";
@@ -37,6 +37,24 @@ export const useEventsStore = defineStore("events", () => {
   const deleteError = ref<string | null>(null);
   const imageErrorById = reactive<Record<string, boolean>>({});
   const rejectionReasons = reactive<Record<string, string>>({});
+
+  const hasResolvedCoordinates = (event: Pick<EventItem, "latitude" | "longitude">) =>
+    typeof event.latitude === "number" &&
+    Number.isFinite(event.latitude) &&
+    typeof event.longitude === "number" &&
+    Number.isFinite(event.longitude);
+
+  const getGeolocationPrecision = (
+    event: Pick<EventItem, "latitude" | "longitude" | "geolocationPrecision">
+  ): GeolocationPrecision => event.geolocationPrecision ?? (hasResolvedCoordinates(event) ? "EXACT" : "UNRESOLVED");
+
+  const hasApproximateGeolocation = (
+    event: Pick<EventItem, "latitude" | "longitude" | "geolocationPrecision">
+  ) => hasResolvedCoordinates(event) && getGeolocationPrecision(event) === "APPROXIMATE";
+
+  const canSubmitForModeration = (
+    event: Pick<EventItem, "latitude" | "longitude" | "geolocationPrecision">
+  ) => hasResolvedCoordinates(event) && getGeolocationPrecision(event) !== "UNRESOLVED";
 
   const filters = ref<EventFilters>(defaultFilters());
 
@@ -149,7 +167,7 @@ export const useEventsStore = defineStore("events", () => {
 
   const getRelatedPublishedEvents = (id: string, limit = 3) => {
     const current = getEventById(id);
-    if (!current) {
+    if (!current || !hasResolvedCoordinates(current)) {
       return [];
     }
 
@@ -165,7 +183,7 @@ export const useEventsStore = defineStore("events", () => {
     };
 
     return publishedEvents.value
-      .filter((eventItem) => eventItem.id !== id)
+      .filter((eventItem) => eventItem.id !== id && hasResolvedCoordinates(eventItem))
       .sort((left, right) => {
         const leftSameCity = left.city === current.city ? 0 : 1;
         const rightSameCity = right.city === current.city ? 0 : 1;
@@ -412,6 +430,10 @@ export const useEventsStore = defineStore("events", () => {
     getModerationEventById,
     getEditionSnapshot,
     getRelatedPublishedEvents,
+    getGeolocationPrecision,
+    hasResolvedCoordinates,
+    hasApproximateGeolocation,
+    canSubmitForModeration,
     updateEventState,
     fetchEvents: fetchEventsData,
     markImageError,

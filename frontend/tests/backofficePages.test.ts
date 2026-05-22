@@ -33,6 +33,7 @@ const buildEvent = (overrides: Partial<EventItem> = {}): EventItem => ({
   city: "Descartes",
   latitude: 46.97,
   longitude: 0.7,
+  geolocationPrecision: "EXACT",
   organizerName: "Org",
   status: "PUBLISHED",
   publishedAt: null,
@@ -302,6 +303,75 @@ describe("BackofficeEventsPage", () => {
     expect(deleteSpy).toHaveBeenCalledWith("2");
   });
 
+  it("shows an unresolved-location banner and disables draft submission when coordinates are missing", async () => {
+    const { router, pinia } = await setup("/backoffice/events?location=unresolved&saved=draft", "EDITOR");
+    const eventsStore = useEventsStore(pinia);
+    const editorStore = useEditorStore(pinia);
+    const submitSpy = vi.spyOn(editorStore, "handleSubmitDraft").mockResolvedValue(true);
+    eventsStore.events = [
+      buildEvent({ id: "1", status: "DRAFT", latitude: null, longitude: null })
+    ];
+
+    render(BackofficeEventsPage, {
+      global: {
+        plugins: [pinia, router]
+      }
+    });
+
+    expect(
+      screen.getByText(/Le brouillon a été enregistré, mais l'adresse n'a pas pu être localisée/i)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Cette fiche ne peut pas être soumise tant que l'adresse n'a pas été correctement localisée/i)
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Soumettre" })).toBeDisabled();
+    expect(submitSpy).not.toHaveBeenCalled();
+  });
+
+  it("shows approximate-location messaging and keeps submission enabled", async () => {
+    const { router, pinia } = await setup("/backoffice/events?location=approximate&saved=draft", "EDITOR");
+    const eventsStore = useEventsStore(pinia);
+    const editorStore = useEditorStore(pinia);
+    const submitSpy = vi.spyOn(editorStore, "handleSubmitDraft").mockResolvedValue(true);
+    eventsStore.events = [
+      buildEvent({ id: "1", status: "DRAFT", geolocationPrecision: "APPROXIMATE" })
+    ];
+
+    render(BackofficeEventsPage, {
+      global: {
+        plugins: [pinia, router]
+      }
+    });
+
+    expect(
+      screen.getByText(/Le brouillon a été enregistré avec une localisation approximative/i)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/L'adresse exacte n'a pas été géolocalisée/i)
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Soumettre" })).not.toBeDisabled();
+
+    await fireEvent.click(screen.getByRole("button", { name: "Soumettre" }));
+
+    expect(submitSpy).toHaveBeenCalledWith("1");
+  });
+
+  it("displays editor submission errors", async () => {
+    const { router, pinia } = await setup("/backoffice/events", "EDITOR");
+    const eventsStore = useEventsStore(pinia);
+    const editorStore = useEditorStore(pinia);
+    eventsStore.events = [buildEvent({ id: "1", status: "DRAFT" })];
+    editorStore.editorError = "L'adresse doit être corrigée avant la soumission à modération.";
+
+    render(BackofficeEventsPage, {
+      global: {
+        plugins: [pinia, router]
+      }
+    });
+
+    expect(screen.getByText(/L'adresse doit être corrigée avant la soumission à modération/i)).toBeInTheDocument();
+  });
+
   it("keeps edit, submit and delete actions in the other articles section", async () => {
     const { router, pinia } = await setup("/backoffice/events", "ADMIN");
     const pushSpy = vi.spyOn(router, "push");
@@ -391,7 +461,7 @@ describe("BackofficeEventCreatePage", () => {
     const categoriesStore = useCategoriesStore(pinia);
     categoriesStore.hasLoaded = true;
     editorStore.editorMode = "edit";
-    vi.spyOn(editorStore, "handleSaveDraft").mockResolvedValue(true);
+    vi.spyOn(editorStore, "saveDraftAndReturn").mockResolvedValue(buildEvent({ status: "DRAFT" }));
 
     render(BackofficeEventCreatePage, {
       global: {
@@ -403,7 +473,7 @@ describe("BackofficeEventCreatePage", () => {
     });
 
     await fireEvent.click(screen.getByText("Mettre à jour"));
-    expect(pushSpy).toHaveBeenCalledWith("/backoffice/events");
+    expect(pushSpy).toHaveBeenCalledWith({ path: "/backoffice/events", query: {} });
   });
 
   it("redirects after submit in edit mode", async () => {

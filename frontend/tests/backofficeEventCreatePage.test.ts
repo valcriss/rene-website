@@ -119,7 +119,25 @@ describe("BackofficeEventCreatePage", () => {
     const setup = await setupPage();
     setup.categoriesStore.hasLoaded = true;
     setup.editorStore.editorMode = "edit";
-    const saveSpy = vi.spyOn(setup.editorStore, "handleSaveDraft").mockResolvedValue(true);
+    const saveSpy = vi.spyOn(setup.editorStore, "saveDraftAndReturn").mockResolvedValue({
+      id: "draft-1",
+      title: "Concert",
+      image: "/uploads/test.png",
+      categoryId: "music",
+      audienceId: "all",
+      eventStartAt: "2026-01-15T20:00:00.000Z",
+      eventEndAt: "2026-01-15T22:00:00.000Z",
+      allDay: false,
+      venueName: "Salle",
+      address: "1 rue du centre",
+      postalCode: "37160",
+      city: "Descartes",
+      latitude: 46.97,
+      longitude: 0.7,
+      geolocationPrecision: "EXACT",
+      organizerName: "Association",
+      status: "DRAFT"
+    });
     const submitSpy = vi.spyOn(setup.editorStore, "handleSaveAndSubmit").mockResolvedValue(true);
     const previewSpy = vi.spyOn(setup.editorStore, "savePreviewSnapshot").mockReturnValue("preview-1");
     const pushSpy = vi.spyOn(setup.router, "push");
@@ -167,7 +185,25 @@ describe("BackofficeEventCreatePage", () => {
 
     const setup = await setupPage();
     setup.categoriesStore.hasLoaded = true;
-    const saveSpy = vi.spyOn(setup.editorStore, "handleSaveDraft").mockResolvedValue(true);
+    const saveSpy = vi.spyOn(setup.editorStore, "saveDraftAndReturn").mockResolvedValue({
+      id: "draft-1",
+      title: "Concert",
+      image: "/uploads/test.png",
+      categoryId: "music",
+      audienceId: "all",
+      eventStartAt: "2026-01-15T20:00:00.000Z",
+      eventEndAt: "2026-01-15T22:00:00.000Z",
+      allDay: false,
+      venueName: "Salle",
+      address: "1 rue du centre",
+      postalCode: "37160",
+      city: "Descartes",
+      latitude: 46.97,
+      longitude: 0.7,
+      geolocationPrecision: "EXACT",
+      organizerName: "Association",
+      status: "DRAFT"
+    });
     const pushSpy = vi.spyOn(setup.router, "push");
 
     const wrapper = mount(BackofficeEventCreatePage, {
@@ -190,7 +226,115 @@ describe("BackofficeEventCreatePage", () => {
     await setupState.handleSaveAndRedirect();
 
     expect(saveSpy).toHaveBeenCalledOnce();
-    expect(pushSpy).toHaveBeenCalledWith("/backoffice/events");
+    expect(pushSpy).toHaveBeenCalledWith({ path: "/backoffice/events", query: {} });
+  });
+
+  it("redirects with an unresolved location warning after draft save", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) }))
+    );
+
+    const setup = await setupPage();
+    setup.categoriesStore.hasLoaded = true;
+    vi.spyOn(setup.editorStore, "saveDraftAndReturn").mockResolvedValue({
+      id: "draft-1",
+      title: "Concert",
+      image: "/uploads/test.png",
+      categoryId: "music",
+      audienceId: "all",
+      eventStartAt: "2026-01-15T20:00:00.000Z",
+      eventEndAt: "2026-01-15T22:00:00.000Z",
+      allDay: false,
+      venueName: "Salle",
+      address: "1 rue du centre",
+      postalCode: "37160",
+      city: "Descartes",
+      latitude: null,
+      longitude: null,
+      geolocationPrecision: "UNRESOLVED",
+      organizerName: "Association",
+      status: "DRAFT"
+    });
+    const pushSpy = vi.spyOn(setup.router, "push");
+
+    const wrapper = mount(BackofficeEventCreatePage, {
+      global: {
+        plugins: [setup.pinia, setup.router],
+        stubs: {
+          RichTextEditor: { template: "<div></div>" }
+        }
+      }
+    });
+
+    const setupState = (wrapper.vm as unknown as {
+      $: {
+        setupState: {
+          handleSaveAndRedirect: () => Promise<void>;
+        };
+      };
+    }).$.setupState;
+
+    await setupState.handleSaveAndRedirect();
+
+    expect(pushSpy).toHaveBeenCalledWith({
+      path: "/backoffice/events",
+      query: { location: "unresolved", saved: "draft" }
+    });
+  });
+
+  it("redirects with an approximate location warning after draft save", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) }))
+    );
+
+    const setup = await setupPage();
+    setup.categoriesStore.hasLoaded = true;
+    vi.spyOn(setup.editorStore, "saveDraftAndReturn").mockResolvedValue({
+      id: "draft-1",
+      title: "Concert",
+      image: "/uploads/test.png",
+      categoryId: "music",
+      audienceId: "all",
+      eventStartAt: "2026-01-15T20:00:00.000Z",
+      eventEndAt: "2026-01-15T22:00:00.000Z",
+      allDay: false,
+      venueName: "Salle",
+      address: "1 rue du centre",
+      postalCode: "37160",
+      city: "Descartes",
+      latitude: 46.97,
+      longitude: 0.7,
+      geolocationPrecision: "APPROXIMATE",
+      organizerName: "Association",
+      status: "DRAFT"
+    });
+    const pushSpy = vi.spyOn(setup.router, "push");
+
+    const wrapper = mount(BackofficeEventCreatePage, {
+      global: {
+        plugins: [setup.pinia, setup.router],
+        stubs: {
+          RichTextEditor: { template: "<div></div>" }
+        }
+      }
+    });
+
+    const setupState = (wrapper.vm as unknown as {
+      $: {
+        setupState: {
+          handleSaveAndRedirect: () => Promise<void>;
+        };
+      };
+    }).$.setupState;
+
+    await setupState.handleSaveAndRedirect();
+
+    expect(pushSpy).toHaveBeenCalledWith({
+      path: "/backoffice/events",
+      query: { location: "approximate", saved: "draft" }
+    });
   });
 
   it("disables save and submit buttons while a persistence action is running", async () => {

@@ -210,6 +210,14 @@ export const messages = {
       draftsLead: "Les \u00e9v\u00e9nements \u00e0 finaliser ou \u00e0 corriger avant publication.",
       noDrafts: "Aucun brouillon ou retour \u00e0 traiter.",
       submit: "Soumettre",
+      locationSavedAsDraft:
+        "Le brouillon a \u00e9t\u00e9 enregistr\u00e9, mais l'adresse n'a pas pu \u00eatre localis\u00e9e. Corrigez-la avant la soumission \u00e0 mod\u00e9ration.",
+      locationSavedAsApproximate:
+        "Le brouillon a \u00e9t\u00e9 enregistr\u00e9 avec une localisation approximative. L'adresse exacte n'a pas \u00e9t\u00e9 retrouv\u00e9e, mais vous pouvez quand m\u00eame le soumettre \u00e0 mod\u00e9ration.",
+      locationNeedsReview:
+        "Cette fiche ne peut pas \u00eatre soumise tant que l'adresse n'a pas \u00e9t\u00e9 correctement localis\u00e9e.",
+      locationApproximateNotice:
+        "L'adresse exacte n'a pas \u00e9t\u00e9 g\u00e9olocalis\u00e9e. Cette fiche utilise une localisation approximative et peut \u00eatre soumise telle quelle.",
       rejectionReasonLabel: "Motif : {reason}",
       draftRevisionNotice: "Une nouvelle version est enregistr\u00e9e en brouillon. Elle reste priv\u00e9e tant que vous ne la soumettez pas \u00e0 la mod\u00e9ration.",
       pendingRevisionNotice: "Une nouvelle version est actuellement en attente de validation. La version publi\u00e9e reste visible sur le site public jusqu'\u00e0 d\u00e9cision.",
@@ -611,6 +619,14 @@ export const messages = {
       draftsLead: "Events to finalize or fix before publication.",
       noDrafts: "No drafts or feedback to process.",
       submit: "Submit",
+      locationSavedAsDraft:
+        "The draft has been saved, but the address could not be located. Correct it before submitting for moderation.",
+      locationSavedAsApproximate:
+        "The draft has been saved with an approximate location. The exact address could not be found, but you can still submit it for moderation.",
+      locationNeedsReview:
+        "This entry cannot be submitted until the address has been located correctly.",
+      locationApproximateNotice:
+        "The exact address could not be geolocated. This entry is using an approximate location and can still be submitted as-is.",
       rejectionReasonLabel: "Reason: {reason}",
       draftRevisionNotice: "A new version is saved as a draft. It stays private until you submit it for moderation.",
       pendingRevisionNotice: "A new version is currently waiting for validation. The published version stays visible on the public site until a decision is made.",

@@ -1,6 +1,6 @@
 import { prisma } from "../prisma/client";
 import { EventRepository } from "./repository";
-import { CreateEventInput, Event, EventRevision, EventStatus } from "./types";
+import { CreateEventInput, Event, EventRevision, EventStatus, GeolocationPrecision } from "./types";
 
 type PrismaEventsClient = {
   category: {
@@ -34,8 +34,9 @@ type PrismaEvent = {
   address: string | null;
   postalCode: string;
   city: string;
-  latitude: number;
-  longitude: number;
+  latitude: number | null;
+  longitude: number | null;
+  geolocationPrecision: GeolocationPrecision;
   organizerName: string;
   organizerUrl: string | null;
   contactEmail: string | null;
@@ -68,8 +69,9 @@ type PrismaEventRevision = {
   address: string | null;
   postalCode: string;
   city: string;
-  latitude: number;
-  longitude: number;
+  latitude: number | null;
+  longitude: number | null;
+  geolocationPrecision: GeolocationPrecision;
   organizerName: string;
   organizerUrl: string | null;
   contactEmail: string | null;
@@ -101,6 +103,7 @@ const toRevision = (data: PrismaEventRevision): EventRevision => ({
   city: data.city,
   latitude: data.latitude,
   longitude: data.longitude,
+  geolocationPrecision: data.geolocationPrecision,
   organizerName: data.organizerName,
   organizerUrl: data.organizerUrl ?? undefined,
   contactEmail: data.contactEmail ?? undefined,
@@ -131,6 +134,7 @@ const toEvent = (data: PrismaEvent): Event => ({
   city: data.city,
   latitude: data.latitude,
   longitude: data.longitude,
+  geolocationPrecision: data.geolocationPrecision,
   organizerName: data.organizerName,
   organizerUrl: data.organizerUrl ?? undefined,
   contactEmail: data.contactEmail ?? undefined,
@@ -148,6 +152,15 @@ const toEvent = (data: PrismaEvent): Event => ({
 });
 
 const prismaClient = prisma as unknown as PrismaEventsClient;
+
+const resolveGeolocationPrecision = (input: Pick<CreateEventInput, "latitude" | "longitude" | "geolocationPrecision">) =>
+  input.geolocationPrecision ??
+  (typeof input.latitude === "number" &&
+  Number.isFinite(input.latitude) &&
+  typeof input.longitude === "number" &&
+  Number.isFinite(input.longitude)
+    ? "EXACT"
+    : "UNRESOLVED");
 
 const ensureCategoryExists = async (categoryId: string) => {
   const category = await prismaClient.category.findUnique({ where: { id: categoryId } });
@@ -187,6 +200,7 @@ export const createPrismaEventRepository = (): EventRepository => ({
       city: input.city,
       latitude: input.latitude,
       longitude: input.longitude,
+      geolocationPrecision: resolveGeolocationPrecision(input),
       organizerName: input.organizerName,
       organizerUrl: input.organizerUrl ?? null,
       contactEmail: input.contactEmail ?? null,
@@ -224,6 +238,7 @@ export const createPrismaEventRepository = (): EventRepository => ({
           city: input.city,
           latitude: input.latitude,
           longitude: input.longitude,
+          geolocationPrecision: resolveGeolocationPrecision(input),
           organizerName: input.organizerName,
           organizerUrl: input.organizerUrl ?? null,
           contactEmail: input.contactEmail ?? null,
@@ -265,6 +280,7 @@ export const createPrismaEventRepository = (): EventRepository => ({
                 city: input.city,
                 latitude: input.latitude,
                 longitude: input.longitude,
+                geolocationPrecision: resolveGeolocationPrecision(input),
                 organizerName: input.organizerName,
                 organizerUrl: input.organizerUrl ?? null,
                 contactEmail: input.contactEmail ?? null,
@@ -291,6 +307,7 @@ export const createPrismaEventRepository = (): EventRepository => ({
                 city: input.city,
                 latitude: input.latitude,
                 longitude: input.longitude,
+                geolocationPrecision: resolveGeolocationPrecision(input),
                 organizerName: input.organizerName,
                 organizerUrl: input.organizerUrl ?? null,
                 contactEmail: input.contactEmail ?? null,
@@ -382,6 +399,7 @@ export const createPrismaEventRepository = (): EventRepository => ({
             city: revision.city,
             latitude: revision.latitude,
             longitude: revision.longitude,
+            geolocationPrecision: revision.geolocationPrecision,
             organizerName: revision.organizerName,
             organizerUrl: revision.organizerUrl,
             contactEmail: revision.contactEmail,

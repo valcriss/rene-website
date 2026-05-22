@@ -12,6 +12,9 @@ services:
       # SMTP settings for transactional emails such as password reset.
       # Required: SMTP_HOST and SENDER_EMAIL.
       # Optional: SMTP_PORT defaults to 587, SMTP_SECURE defaults to false.
+      # Port 587 uses STARTTLS, so SMTP_SECURE must be "false".
+      # Port 465 uses implicit TLS, so SMTP_SECURE must be "true".
+      # Amazon SES example: SMTP_HOST=email-smtp.eu-west-1.amazonaws.com, SMTP_PORT=587, SMTP_SECURE="false".
       # Optional auth: set SMTP_USER and SMTP_PASSWORD together if your SMTP server requires authentication.
       SMTP_HOST: smtp.example.com
       SMTP_PORT: 587

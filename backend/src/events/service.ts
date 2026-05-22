@@ -1,6 +1,6 @@
 import { EventRepository } from "./repository";
 import { validateCreateEvent } from "./validation";
-import { Event, EventDraftInput } from "./types";
+import { Event, EventDraftInput, GeolocationPrecision } from "./types";
 import { geocodeEventLocation } from "../geocoding/photon";
 import { deleteUploadIfLocal } from "../uploads/storage";
 
@@ -8,9 +8,25 @@ type ServiceResult<T> =
   | { ok: true; value: T }
   | { ok: false; errors: string[] };
 
+const missingCoordinatesError = "L'adresse doit être corrigée avant la soumission à modération.";
+
+const hasResolvedCoordinates = (event: Pick<Event, "latitude" | "longitude">) =>
+  typeof event.latitude === "number" &&
+  Number.isFinite(event.latitude) &&
+  typeof event.longitude === "number" &&
+  Number.isFinite(event.longitude);
+
+const getGeolocationPrecision = (
+  event: Pick<Event, "latitude" | "longitude" | "geolocationPrecision">
+): GeolocationPrecision => event.geolocationPrecision ?? (hasResolvedCoordinates(event) ? "EXACT" : "UNRESOLVED");
+
+const hasSubmittableGeolocation = (
+  event: Pick<Event, "latitude" | "longitude" | "geolocationPrecision">
+) => getGeolocationPrecision(event) !== "UNRESOLVED" && hasResolvedCoordinates(event);
+
 const resolveCoordinates = async (
   input: EventDraftInput
-): Promise<ServiceResult<{ latitude: number; longitude: number }>> => {
+): Promise<{ latitude: number; longitude: number; geolocationPrecision: GeolocationPrecision } | null> => {
   try {
     const result = await geocodeEventLocation({
       address: input.address,
@@ -18,12 +34,9 @@ const resolveCoordinates = async (
       postalCode: input.postalCode,
       city: input.city
     });
-    if (!result) {
-      return { ok: false, errors: ["Adresse introuvable."] };
-    }
-    return { ok: true, value: result };
+    return result;
   } catch {
-    return { ok: false, errors: ["Le service de géolocalisation est indisponible."] };
+    return null;
   }
 };
 
@@ -45,15 +58,13 @@ export const createEvent = async (
   }
 
   const coordinates = await resolveCoordinates(validation.value);
-  if (!coordinates.ok) {
-    return { ok: false, errors: coordinates.errors };
-  }
 
   try {
     const created = await repo.create({
       ...validation.value,
-      latitude: coordinates.value.latitude,
-      longitude: coordinates.value.longitude,
+      latitude: coordinates?.latitude ?? null,
+      longitude: coordinates?.longitude ?? null,
+      geolocationPrecision: coordinates?.geolocationPrecision ?? "UNRESOLVED",
       createdByUserId: createdByUserId ?? null
     });
     return { ok: true, value: created };
@@ -79,16 +90,14 @@ export const updateEvent = async (
   }
 
   const coordinates = await resolveCoordinates(validation.value);
-  if (!coordinates.ok) {
-    return { ok: false, errors: coordinates.errors };
-  }
 
   try {
     if (current.status === "PUBLISHED") {
       const updated = await repo.upsertPendingRevision(id, {
         ...validation.value,
-        latitude: coordinates.value.latitude,
-        longitude: coordinates.value.longitude,
+        latitude: coordinates?.latitude ?? null,
+        longitude: coordinates?.longitude ?? null,
+        geolocationPrecision: coordinates?.geolocationPrecision ?? "UNRESOLVED",
         createdByUserId: current.createdByUserId
       }, "DRAFT");
       if (!updated) {
@@ -102,8 +111,9 @@ export const updateEvent = async (
 
     const updated = await repo.update(id, {
       ...validation.value,
-      latitude: coordinates.value.latitude,
-      longitude: coordinates.value.longitude
+      latitude: coordinates?.latitude ?? null,
+      longitude: coordinates?.longitude ?? null,
+      geolocationPrecision: coordinates?.geolocationPrecision ?? "UNRESOLVED"
     });
     if (!updated) {
       return { ok: false, errors: ["Événement introuvable."] };
@@ -130,6 +140,9 @@ export const submitEvent = async (
     if (!current.pendingRevision) {
       return { ok: false, errors: ["Révision introuvable."] };
     }
+    if (!hasSubmittableGeolocation(current.pendingRevision)) {
+      return { ok: false, errors: [missingCoordinatesError] };
+    }
     if (current.pendingRevision.status === "PENDING") {
       return { ok: true, value: current };
     }
@@ -138,6 +151,10 @@ export const submitEvent = async (
       return { ok: false, errors: ["Révision introuvable."] };
     }
     return { ok: true, value: updatedRevision };
+  }
+
+  if (!hasSubmittableGeolocation(current)) {
+    return { ok: false, errors: [missingCoordinatesError] };
   }
 
   const updated = await repo.updateStatus(id, "PENDING", {

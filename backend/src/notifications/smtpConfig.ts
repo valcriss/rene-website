@@ -36,6 +36,14 @@ export const loadSmtpConfig = (): ConfigResult => {
   const user = process.env.SMTP_USER?.trim();
   const pass = process.env.SMTP_PASSWORD?.trim();
 
+  if (secure && port === 587) {
+    errors.push("SMTP_SECURE must be false when SMTP_PORT is 587 (STARTTLS)");
+  }
+
+  if (!secure && port === 465) {
+    errors.push("SMTP_SECURE must be true when SMTP_PORT is 465 (implicit TLS)");
+  }
+
   if (errors.length > 0) {
     return { ok: false, errors };
   }

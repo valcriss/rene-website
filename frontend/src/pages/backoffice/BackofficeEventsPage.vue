@@ -1,5 +1,12 @@
 <template>
   <section class="grid gap-8">
+    <p
+      v-if="draftLocationWarning"
+      class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"
+    >
+      {{ draftLocationWarning }}
+    </p>
+
     <div class="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)]">
       <div class="rounded-[1.75rem] border border-sky-100 bg-[linear-gradient(135deg,rgba(240,249,255,0.96),rgba(255,255,255,0.98))] p-6 shadow-[0_24px_60px_-38px_rgba(15,23,42,0.24)]">
         <p class="text-xs uppercase tracking-[0.3em] text-sky-700/70">{{ t("editor.myEventsEyebrow") }}</p>
@@ -53,6 +60,10 @@
     </div>
 
     <div v-else class="grid gap-6">
+      <p v-if="editorError" class="rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+        {{ editorError }}
+      </p>
+
       <div class="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-[0_24px_60px_-40px_rgba(15,23,42,0.22)]">
         <div class="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -101,12 +112,25 @@
                   <button
                     type="button"
                     class="rounded-full bg-slate-950 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800"
+                    :disabled="!canSubmitForModeration(eventItem)"
                     @click="handleSubmitDraft(eventItem.id)"
                   >
                     {{ t("editor.submit") }}
                   </button>
                 </div>
               </div>
+              <p
+                v-if="hasApproximateGeolocation(eventItem)"
+                class="rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-sky-700"
+              >
+                {{ t("editor.locationApproximateNotice") }}
+              </p>
+              <p
+                v-else-if="!hasResolvedCoordinates(eventItem)"
+                class="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-700"
+              >
+                {{ t("editor.locationNeedsReview") }}
+              </p>
             </article>
           </li>
         </ul>
@@ -160,12 +184,25 @@
                   <button
                     type="button"
                     class="rounded-full bg-slate-950 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800"
+                    :disabled="!canSubmitForModeration(eventItem)"
                     @click="handleSubmitDraft(eventItem.id)"
                   >
                     {{ t("editor.submit") }}
                   </button>
                 </div>
               </div>
+              <p
+                v-if="hasApproximateGeolocation(eventItem)"
+                class="rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-sky-700"
+              >
+                {{ t("editor.locationApproximateNotice") }}
+              </p>
+              <p
+                v-else-if="!hasResolvedCoordinates(eventItem)"
+                class="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-700"
+              >
+                {{ t("editor.locationNeedsReview") }}
+              </p>
               <p v-if="eventItem.rejectionReason" class="whitespace-pre-line rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-700">
                 {{ t("editor.rejectionReasonLabel", { reason: eventItem.rejectionReason }) }}
               </p>
@@ -311,6 +348,7 @@
                     <button
                       type="button"
                       class="rounded-full bg-slate-950 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800"
+                      :disabled="!canSubmitForModeration(eventItem)"
                       @click="handleSubmitDraft(eventItem.id)"
                     >
                       {{ t("editor.submit") }}
@@ -334,6 +372,18 @@
                   </template>
                 </div>
               </div>
+              <p
+                v-if="(eventItem.status === 'DRAFT' || eventItem.status === 'REJECTED') && hasApproximateGeolocation(eventItem)"
+                class="rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-sky-700"
+              >
+                {{ t("editor.locationApproximateNotice") }}
+              </p>
+              <p
+                v-else-if="(eventItem.status === 'DRAFT' || eventItem.status === 'REJECTED') && !hasResolvedCoordinates(eventItem)"
+                class="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-700"
+              >
+                {{ t("editor.locationNeedsReview") }}
+              </p>
               <p v-if="eventItem.rejectionReason" class="whitespace-pre-line rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-700">
                 {{ t("editor.rejectionReasonLabel", { reason: eventItem.rejectionReason }) }}
               </p>
@@ -367,13 +417,14 @@
 import { computed } from "vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { useAuthStore } from "../../stores/auth";
 import { useEditorStore } from "../../stores/editor";
 import { useEventsStore } from "../../stores/events";
 import type { EventItem } from "../../api/events";
 
 const router = useRouter();
+const route = useRoute();
 const { t } = useI18n();
 const authStore = useAuthStore();
 const editorStore = useEditorStore();
@@ -391,6 +442,7 @@ const {
   deleteError
 } =
   storeToRefs(eventsStore);
+const { editorError } = storeToRefs(editorStore);
 const { handleDelete, formatDate } = eventsStore;
 const { handleSubmitDraft } = editorStore;
 
@@ -416,6 +468,19 @@ const lastEditableEvent = computed(
   () => myDraftEvents.value[0] ?? myEditorialReviewEvents.value[0] ?? myPublishedEvents.value[0] ?? null
 );
 const showOtherArticles = computed(() => canModerate.value);
+const draftLocationWarning = computed(() =>
+  route.query.saved === "draft"
+    ? route.query.location === "approximate"
+      ? t("editor.locationSavedAsApproximate")
+      : route.query.location === "unresolved"
+        ? t("editor.locationSavedAsDraft")
+        : ""
+    : ""
+);
+
+const hasResolvedCoordinates = (eventItem: EventItem) => eventsStore.hasResolvedCoordinates(eventItem);
+const hasApproximateGeolocation = (eventItem: EventItem) => eventsStore.hasApproximateGeolocation(eventItem);
+const canSubmitForModeration = (eventItem: EventItem) => eventsStore.canSubmitForModeration(eventItem);
 
 const statusClasses = (status: string) => {
   if (status === "REJECTED") {

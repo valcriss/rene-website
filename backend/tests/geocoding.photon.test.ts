@@ -1,18 +1,35 @@
-import { buildPhotonQuery, geocodeAddress, geocodeEventLocation } from "../src/geocoding/photon";
+import { buildPhotonQueries, buildPhotonQuery, geocodeAddress, geocodeEventLocation } from "../src/geocoding/photon";
 
 describe("photon geocoding", () => {
   afterEach(() => {
     jest.restoreAllMocks();
   });
 
-  it("builds query from parts", () => {
-    const query = buildPhotonQuery({
+  it("builds ordered fallback queries from parts", () => {
+    const queries = buildPhotonQueries({
       address: "1 rue du centre",
       venueName: "Salle",
       postalCode: "37160",
       city: "Descartes"
     });
-    expect(query).toBe("1 rue du centre Salle 37160 Descartes");
+    expect(queries).toEqual([
+      { query: "1 rue du centre 37160 Descartes", geolocationPrecision: "EXACT" },
+      { query: "1 rue du centre Salle 37160 Descartes", geolocationPrecision: "EXACT" },
+      { query: "Salle 37160 Descartes", geolocationPrecision: "APPROXIMATE" },
+      { query: "37160 Descartes", geolocationPrecision: "APPROXIMATE" },
+      { query: "Descartes", geolocationPrecision: "APPROXIMATE" }
+    ]);
+  });
+
+  it("builds the legacy single query helper", () => {
+    expect(
+      buildPhotonQuery({
+        address: "1 rue du centre",
+        venueName: "Salle",
+        postalCode: "37160",
+        city: "Descartes"
+      })
+    ).toBe("1 rue du centre Salle 37160 Descartes");
   });
 
   it("returns null when query is empty", async () => {
@@ -23,6 +40,47 @@ describe("photon geocoding", () => {
       city: ""
     });
     expect(result).toBeNull();
+  });
+
+  it("returns approximate result after falling back to city", async () => {
+    global.fetch = jest
+      .fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ features: [] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ features: [] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ features: [] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ features: [] }) })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ features: [{ geometry: { coordinates: [0.7, 46.97] } }] })
+      }) as unknown as typeof fetch;
+
+    await expect(
+      geocodeEventLocation({
+        address: "1 rue du centre",
+        venueName: "Salle",
+        postalCode: "37160",
+        city: "Descartes"
+      })
+    ).resolves.toEqual({ latitude: 46.97, longitude: 0.7, geolocationPrecision: "APPROXIMATE" });
+  });
+
+  it("returns null when every fallback attempt is exhausted", async () => {
+    global.fetch = jest
+      .fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ features: [] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ features: [] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ features: [] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ features: [] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ features: [] }) }) as unknown as typeof fetch;
+
+    await expect(
+      geocodeEventLocation({
+        address: "1 rue du centre",
+        venueName: "Salle",
+        postalCode: "37160",
+        city: "Descartes"
+      })
+    ).resolves.toBeNull();
   });
 
   it("throws when photon responds with error", async () => {

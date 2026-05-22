@@ -1,0 +1,7 @@
+ALTER TABLE "Event"
+  ALTER COLUMN "latitude" DROP NOT NULL,
+  ALTER COLUMN "longitude" DROP NOT NULL;
+
+ALTER TABLE "EventRevision"
+  ALTER COLUMN "latitude" DROP NOT NULL,
+  ALTER COLUMN "longitude" DROP NOT NULL;

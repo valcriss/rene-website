@@ -274,6 +274,45 @@ describe("createPrismaEventRepository", () => {
 
     expect(result.id).toBe("3");
     expect(prismaMocks.create).toHaveBeenCalled();
+    expect(prismaMocks.create.mock.calls[0][0]).toMatchObject({
+      data: { geolocationPrecision: "EXACT" }
+    });
+  });
+
+  it("defaults geolocation precision to unresolved when coordinates are missing", async () => {
+    const repo = createPrismaEventRepository();
+    const item = buildEvent({
+      id: "3b",
+      latitude: null,
+      longitude: null,
+      geolocationPrecision: "UNRESOLVED"
+    });
+    prismaMocks.create.mockResolvedValue(item);
+    prismaMocks.findCategory.mockResolvedValue({ id: "book", name: "Lecture", createdAt: new Date(), updatedAt: new Date() });
+    prismaMocks.findAudience.mockResolvedValue({ id: "all", name: "Tous publics", createdAt: new Date(), updatedAt: new Date() });
+
+    await repo.create({
+      title: "Lecture",
+      content: "Livre",
+      image: "img",
+      createdByUserId: null,
+      categoryId: "book",
+      audienceId: "all",
+      eventStartAt: "2026-03-01T10:00:00.000Z",
+      eventEndAt: "2026-03-01T12:00:00.000Z",
+      allDay: true,
+      venueName: "Bibliothèque",
+      address: "1 rue du centre",
+      postalCode: "37000",
+      city: "Tours",
+      latitude: null,
+      longitude: null,
+      organizerName: "Mairie"
+    });
+
+    expect(prismaMocks.create.mock.calls.at(-1)?.[0]).toMatchObject({
+      data: { geolocationPrecision: "UNRESOLVED" }
+    });
   });
 
   it("throws when category is missing", async () => {

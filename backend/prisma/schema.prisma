@@ -20,6 +20,12 @@ enum EventRevisionStatus {
   REJECTED
 }
 
+enum GeolocationPrecision {
+  EXACT
+  APPROXIMATE
+  UNRESOLVED
+}
+
 enum UserRole {
   EDITOR
   MODERATOR
@@ -41,8 +47,9 @@ model Event {
   address          String?
   postalCode       String
   city             String
-  latitude         Float
-  longitude        Float
+  latitude         Float?
+  longitude        Float?
+  geolocationPrecision GeolocationPrecision @default(UNRESOLVED)
   organizerName    String
   organizerUrl     String?
   contactEmail     String?
@@ -85,8 +92,9 @@ model EventRevision {
   address         String?
   postalCode      String
   city            String
-  latitude        Float
-  longitude       Float
+  latitude        Float?
+  longitude       Float?
+  geolocationPrecision GeolocationPrecision @default(UNRESOLVED)
   organizerName   String
   organizerUrl    String?
   contactEmail    String?

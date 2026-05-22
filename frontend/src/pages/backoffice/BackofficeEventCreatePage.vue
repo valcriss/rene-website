@@ -297,7 +297,29 @@ const { categories, loading: categoriesLoading } = storeToRefs(categoriesStore);
 const { audiences, loading: audiencesLoading } = storeToRefs(audiencesStore);
 const { editorMode, editingPublishedEvent, editingPublishedRevisionStatus, editorError, editorForm, isPersisting } = storeToRefs(editorStore);
 
-const { resetEditorForm, handleSaveDraft, handleSaveAndSubmit, savePreviewSnapshot, setImageFile } = editorStore;
+const { resetEditorForm, saveDraftAndReturn, handleSaveAndSubmit, savePreviewSnapshot, setImageFile } = editorStore;
+
+const hasResolvedCoordinates = (event: { latitude: number | null; longitude: number | null }) =>
+  typeof event.latitude === "number" &&
+  Number.isFinite(event.latitude) &&
+  typeof event.longitude === "number" &&
+  Number.isFinite(event.longitude);
+
+const getLocationQuery = (event: {
+  latitude: number | null;
+  longitude: number | null;
+  geolocationPrecision?: "EXACT" | "APPROXIMATE" | "UNRESOLVED";
+}) => {
+  if (!hasResolvedCoordinates(event)) {
+    return { location: "unresolved", saved: "draft" };
+  }
+
+  if (event.geolocationPrecision === "APPROXIMATE") {
+    return { location: "approximate", saved: "draft" };
+  }
+
+  return {};
+};
 
 const modeDescription = computed(() =>
   editingPublishedEvent.value
@@ -344,9 +366,12 @@ const handleImageChange = (event: Event) => {
 };
 
 const handleSaveAndRedirect = async () => {
-  const ok = await handleSaveDraft();
-  if (ok) {
-    router.push("/backoffice/events");
+  const savedEvent = await saveDraftAndReturn();
+  if (savedEvent) {
+    router.push({
+      path: "/backoffice/events",
+      query: getLocationQuery(savedEvent)
+    });
   }
 };
 

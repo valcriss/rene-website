@@ -263,10 +263,10 @@ describe("events api", () => {
   it("fails to submit an event", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(() => Promise.resolve({ ok: false, json: () => Promise.resolve({}) }))
+      vi.fn(() => Promise.resolve({ ok: false, json: () => Promise.resolve({ errors: ["Adresse à corriger."] }) }))
     );
 
-    await expect(submitEvent("1", "EDITOR")).rejects.toThrow("Impossible de soumettre l'événement");
+    await expect(submitEvent("1", "EDITOR")).rejects.toThrow("Adresse à corriger.");
   });
 
   it("deletes an event", async () => {

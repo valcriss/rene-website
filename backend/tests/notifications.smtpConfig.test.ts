@@ -51,6 +51,34 @@ describe("smtp config", () => {
     expect(result.value.user).toBe("user");
   });
 
+  it("returns error when secure is enabled on port 587", () => {
+    process.env.SMTP_HOST = "smtp.test";
+    process.env.SENDER_EMAIL = "noreply@test";
+    process.env.SMTP_PORT = "587";
+    process.env.SMTP_SECURE = "true";
+
+    const result = loadSmtpConfig();
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContain("SMTP_SECURE must be false when SMTP_PORT is 587 (STARTTLS)");
+    }
+  });
+
+  it("returns error when secure is disabled on port 465", () => {
+    process.env.SMTP_HOST = "smtp.test";
+    process.env.SENDER_EMAIL = "noreply@test";
+    process.env.SMTP_PORT = "465";
+    process.env.SMTP_SECURE = "false";
+
+    const result = loadSmtpConfig();
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContain("SMTP_SECURE must be true when SMTP_PORT is 465 (implicit TLS)");
+    }
+  });
+
   it("falls back to default port on invalid value", () => {
     process.env.SMTP_HOST = "smtp.test";
     process.env.SENDER_EMAIL = "noreply@test";

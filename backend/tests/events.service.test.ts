@@ -24,6 +24,7 @@ const fallbackEvent: Event = {
   city: "Descartes",
   latitude: 46.97,
   longitude: 0.7,
+  geolocationPrecision: "EXACT",
   organizerName: "Association",
   status: "DRAFT",
   publishedAt: null,
@@ -50,6 +51,14 @@ const createRepo = (event: Event | null, overrides: Partial<EventRepository> = {
 
 describe("event services", () => {
   const fetchMock = jest.fn();
+  const mockPhotonNotFound = () => {
+    fetchMock
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ features: [] }) })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ features: [] }) })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ features: [] }) })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ features: [] }) })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ features: [] }) });
+  };
 
   beforeEach(() => {
     fetchMock.mockResolvedValue({
@@ -83,6 +92,7 @@ describe("event services", () => {
     city: "Descartes",
     latitude: 46.97,
     longitude: 0.7,
+    geolocationPrecision: "EXACT",
     organizerName: "Association",
     status: "DRAFT",
     publishedAt: null,
@@ -133,12 +143,16 @@ describe("event services", () => {
   });
 
   it("updateEvent returns errors when geocoding fails", async () => {
-    fetchMock.mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ features: [] }) });
-    const repo = createRepo(baseEvent);
+    mockPhotonNotFound();
+    const repo = createRepo(baseEvent, {
+      update: async (_id, input) => ({ ...baseEvent, ...input })
+    });
     const result = await updateEvent(repo, "id", baseEvent);
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.errors).toContain("Adresse introuvable.");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.latitude).toBeNull();
+      expect(result.value.longitude).toBeNull();
+      expect(result.value.geolocationPrecision).toBe("UNRESOLVED");
     }
   });
 
@@ -245,22 +259,93 @@ describe("event services", () => {
   });
 
   it("createEvent returns errors when geocoding fails", async () => {
-    fetchMock.mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ features: [] }) });
-    const repo = createRepo(baseEvent);
+    mockPhotonNotFound();
+    const repo = createRepo(baseEvent, {
+      create: async (input) => ({ ...fallbackEvent, ...input, id: "created" })
+    });
     const result = await createEvent(repo, baseEvent);
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.errors).toContain("Adresse introuvable.");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.latitude).toBeNull();
+      expect(result.value.longitude).toBeNull();
+      expect(result.value.geolocationPrecision).toBe("UNRESOLVED");
     }
   });
 
   it("createEvent returns errors when geocoding throws", async () => {
     fetchMock.mockRejectedValueOnce(new Error("boom"));
-    const repo = createRepo(baseEvent);
+    const repo = createRepo(baseEvent, {
+      create: async (input) => ({ ...fallbackEvent, ...input, id: "created" })
+    });
     const result = await createEvent(repo, baseEvent);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.latitude).toBeNull();
+      expect(result.value.longitude).toBeNull();
+      expect(result.value.geolocationPrecision).toBe("UNRESOLVED");
+    }
+  });
+
+  it("submitEvent allows approximate geolocation", async () => {
+    const repo = createRepo({ ...baseEvent, geolocationPrecision: "APPROXIMATE" }, {
+      list: async () => [],
+      updateStatus: async () => ({ ...baseEvent, geolocationPrecision: "APPROXIMATE", status: "PENDING" })
+    });
+    const result = await submitEvent(repo, "id");
+    expect(result.ok).toBe(true);
+  });
+
+  it("submitEvent treats legacy geolocated events without explicit precision as exact", async () => {
+    const legacyEvent = { ...baseEvent };
+    delete legacyEvent.geolocationPrecision;
+    const repo = createRepo(legacyEvent, {
+      list: async () => [],
+      updateStatus: async () => ({ ...baseEvent, status: "PENDING" })
+    });
+    const result = await submitEvent(repo, "id");
+    expect(result.ok).toBe(true);
+  });
+
+  it("submitEvent blocks legacy unresolved events without explicit precision", async () => {
+    const legacyEvent = { ...baseEvent, latitude: null, longitude: null };
+    delete legacyEvent.geolocationPrecision;
+    const repo = createRepo(legacyEvent);
+    const result = await submitEvent(repo, "id");
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.errors).toContain("Le service de géolocalisation est indisponible.");
+      expect(result.errors).toContain("L'adresse doit être corrigée avant la soumission à modération.");
+    }
+  });
+
+  it("submitEvent blocks draft without resolved location", async () => {
+    const repo = createRepo({ ...baseEvent, latitude: null, longitude: null });
+    const result = await submitEvent(repo, "id");
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContain("L'adresse doit être corrigée avant la soumission à modération.");
+    }
+  });
+
+  it("submitEvent blocks published revision without resolved location", async () => {
+    const repo = createRepo({
+      ...baseEvent,
+      status: "PUBLISHED",
+      publishedAt: "2026-01-01T00:00:00.000Z",
+      pendingRevision: {
+        ...baseEvent,
+        id: "rev-1",
+        eventId: "id",
+        createdByUserId: null,
+        latitude: null,
+        longitude: null,
+        status: "DRAFT",
+        rejectionReason: null
+      }
+    });
+    const result = await submitEvent(repo, "id");
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContain("L'adresse doit être corrigée avant la soumission à modération.");
     }
   });
 
@@ -373,6 +458,37 @@ describe("event services", () => {
     }
   });
 
+  it("creates a pending revision with null coordinates when geocoding fails for a published event", async () => {
+    mockPhotonNotFound();
+    const publishedEvent: Event = {
+      ...baseEvent,
+      status: "PUBLISHED",
+      publishedAt: "2026-01-01T00:00:00.000Z"
+    };
+    const repo = createRepo(publishedEvent, {
+      upsertPendingRevision: async (_id, input, status) => ({
+        ...publishedEvent,
+        pendingRevision: {
+          ...baseEvent,
+          ...input,
+          id: "revision-1",
+          eventId: publishedEvent.id,
+          createdByUserId: null,
+          status,
+          rejectionReason: null
+        }
+      })
+    });
+
+    const result = await updateEvent(repo, publishedEvent.id, baseEvent);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.pendingRevision?.latitude).toBeNull();
+      expect(result.value.pendingRevision?.longitude).toBeNull();
+    }
+  });
+
   it("returns not found when published revision cannot be saved", async () => {
     const publishedEvent: Event = {
       ...baseEvent,
@@ -420,6 +536,37 @@ describe("event services", () => {
     await updateEvent(repo, "id", baseEvent);
 
     expect(deleteUploadIfLocal).toHaveBeenCalledWith("/uploads/old-revision.png");
+  });
+
+  it("keeps pending revision image when it is unchanged on published update", async () => {
+    const publishedEvent: Event = {
+      ...baseEvent,
+      status: "PUBLISHED",
+      publishedAt: "2026-01-01T00:00:00.000Z",
+      pendingRevision: {
+        ...baseEvent,
+        id: "rev-1",
+        eventId: "id",
+        image: "/uploads/same-revision.png",
+        createdByUserId: null,
+        status: "DRAFT",
+        rejectionReason: null
+      }
+    };
+    const repo = createRepo(publishedEvent, {
+      upsertPendingRevision: async (_id, _input, status) => ({
+        ...publishedEvent,
+        pendingRevision: {
+          ...publishedEvent.pendingRevision!,
+          image: "/uploads/same-revision.png",
+          status
+        }
+      })
+    });
+
+    await updateEvent(repo, "id", baseEvent);
+
+    expect(deleteUploadIfLocal).not.toHaveBeenCalledWith("/uploads/same-revision.png");
   });
 
   it("submits a published draft revision", async () => {
