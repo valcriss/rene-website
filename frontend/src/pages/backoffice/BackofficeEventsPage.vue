@@ -78,6 +78,10 @@
           </span>
         </div>
 
+        <p v-if="deleteError && myDraftEvents.length > 0" class="mt-5 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          {{ deleteError }}
+        </p>
+
         <div v-if="myDraftEvents.length === 0" class="mt-6 rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-6 text-sm text-slate-500">
           {{ t("editor.noMyDrafts") }}
         </div>
@@ -100,9 +104,13 @@
                   </div>
                   <h4 class="mt-3 text-lg font-semibold text-slate-950">{{ eventItem.title }}</h4>
                   <p class="mt-2 text-sm text-slate-600">{{ eventItem.venueName }} · {{ eventItem.city }}</p>
+                  <p v-if="formatUpdatedAtLabel(eventItem.updatedAt)" class="mt-2 text-xs text-slate-400">
+                    {{ formatUpdatedAtLabel(eventItem.updatedAt) }}
+                  </p>
                 </div>
                 <div class="flex flex-wrap gap-2">
                   <button
+                    v-if="canEditEvent(eventItem)"
                     type="button"
                     class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-sky-200 hover:bg-sky-50/70"
                     @click="editEvent(eventItem)"
@@ -117,6 +125,13 @@
                   >
                     {{ t("editor.submit") }}
                   </button>
+                  <button
+                    type="button"
+                    class="rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-100"
+                    @click="handleDelete(eventItem.id)"
+                  >
+                    {{ t("common.delete") }}
+                  </button>
                 </div>
               </div>
               <p
@@ -130,6 +145,12 @@
                 class="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-700"
               >
                 {{ t("editor.locationNeedsReview") }}
+              </p>
+              <p
+                v-if="isEditLocked(eventItem)"
+                class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600"
+              >
+                {{ t("editor.editLockedWhilePending") }}
               </p>
             </article>
           </li>
@@ -172,9 +193,13 @@
                   </div>
                   <h4 class="mt-3 text-lg font-semibold text-slate-950">{{ eventItem.title }}</h4>
                   <p class="mt-2 text-sm text-slate-600">{{ eventItem.venueName }} · {{ eventItem.city }}</p>
+                  <p v-if="formatUpdatedAtLabel(eventItem.updatedAt)" class="mt-2 text-xs text-slate-400">
+                    {{ formatUpdatedAtLabel(eventItem.updatedAt) }}
+                  </p>
                 </div>
                 <div class="flex flex-wrap gap-2">
                   <button
+                    v-if="canEditEvent(eventItem)"
                     type="button"
                     class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-sky-200 hover:bg-sky-50/70"
                     @click="editEvent(eventItem)"
@@ -251,9 +276,13 @@
                   </div>
                   <h4 class="mt-3 text-lg font-semibold text-slate-950">{{ eventItem.title }}</h4>
                   <p class="mt-2 text-sm text-slate-600">{{ eventItem.venueName }} · {{ eventItem.city }}</p>
+                  <p v-if="formatUpdatedAtLabel(eventItem.updatedAt)" class="mt-2 text-xs text-slate-400">
+                    {{ formatUpdatedAtLabel(eventItem.updatedAt) }}
+                  </p>
                 </div>
                 <div class="flex flex-wrap gap-2">
                   <button
+                    v-if="canEditEvent(eventItem)"
                     type="button"
                     class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-sky-200 hover:bg-sky-50/70"
                     @click="editEvent(eventItem)"
@@ -261,6 +290,15 @@
                     {{ t("common.edit") }}
                   </button>
                   <button
+                    v-if="canModerate && eventItem.status === 'PUBLISHED'"
+                    type="button"
+                    class="rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 transition hover:bg-amber-100"
+                    @click="toggleFeatured(eventItem)"
+                  >
+                    {{ eventItem.featured ? t("moderation.removeFeatured") : t("moderation.markAsFeatured") }}
+                  </button>
+                  <button
+                    v-if="canModerate"
                     type="button"
                     class="rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-100"
                     @click="handleDelete(eventItem.id)"
@@ -286,6 +324,12 @@
                 class="whitespace-pre-line rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-700"
               >
                 {{ t("editor.rejectedPublishedRevisionNotice", { reason: eventItem.pendingRevision.rejectionReason }) }}
+              </p>
+              <p
+                v-if="isEditLocked(eventItem)"
+                class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600"
+              >
+                {{ t("editor.editLockedWhilePending") }}
               </p>
             </article>
           </li>
@@ -335,10 +379,14 @@
                   </div>
                   <h4 class="mt-3 text-lg font-semibold text-slate-950">{{ eventItem.title }}</h4>
                   <p class="mt-2 text-sm text-slate-600">{{ eventItem.venueName }} · {{ eventItem.city }}</p>
+                  <p v-if="formatUpdatedAtLabel(eventItem.updatedAt)" class="mt-2 text-xs text-slate-400">
+                    {{ formatUpdatedAtLabel(eventItem.updatedAt) }}
+                  </p>
                 </div>
                 <div class="flex flex-wrap gap-2">
                   <template v-if="eventItem.status === 'DRAFT' || eventItem.status === 'REJECTED'">
                     <button
+                      v-if="canEditEvent(eventItem)"
                       type="button"
                       class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-sky-200 hover:bg-sky-50/70"
                       @click="editEvent(eventItem)"
@@ -356,11 +404,20 @@
                   </template>
                   <template v-else-if="eventItem.status === 'PUBLISHED'">
                     <button
+                      v-if="canEditEvent(eventItem)"
                       type="button"
                       class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-sky-200 hover:bg-sky-50/70"
                       @click="editEvent(eventItem)"
                     >
                       {{ t("common.edit") }}
+                    </button>
+                    <button
+                      v-if="canModerate"
+                      type="button"
+                      class="rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 transition hover:bg-amber-100"
+                      @click="toggleFeatured(eventItem)"
+                    >
+                      {{ eventItem.featured ? t("moderation.removeFeatured") : t("moderation.markAsFeatured") }}
                     </button>
                     <button
                       type="button"
@@ -405,6 +462,12 @@
               >
                 {{ t("editor.rejectedPublishedRevisionNotice", { reason: eventItem.pendingRevision.rejectionReason }) }}
               </p>
+              <p
+                v-if="isEditLocked(eventItem)"
+                class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600"
+              >
+                {{ t("editor.editLockedWhilePending") }}
+              </p>
             </article>
           </li>
         </ul>
@@ -443,7 +506,7 @@ const {
 } =
   storeToRefs(eventsStore);
 const { editorError } = storeToRefs(editorStore);
-const { handleDelete, formatDate } = eventsStore;
+const { handleDelete, formatDate, formatUpdatedAtLabel, handleUpdateFeatured } = eventsStore;
 const { handleSubmitDraft } = editorStore;
 
 const statusLabels = computed<Record<string, string>>(() => ({
@@ -464,8 +527,17 @@ const inProgressEventsCount = computed(
 const rejectedEventsCount = computed(
   () => myEditorialReviewEvents.value.length + publishedRevisionRejectedEvents.value.length
 );
+const isEditLocked = (eventItem: EventItem) =>
+  eventItem.status === "PENDING" || eventItem.pendingRevision?.status === "PENDING";
+
+const canEditEvent = (eventItem: EventItem) => !isEditLocked(eventItem);
+
 const lastEditableEvent = computed(
-  () => myDraftEvents.value[0] ?? myEditorialReviewEvents.value[0] ?? myPublishedEvents.value[0] ?? null
+  () =>
+    myDraftEvents.value[0] ??
+    myEditorialReviewEvents.value[0] ??
+    myPublishedEvents.value.find((eventItem) => canEditEvent(eventItem)) ??
+    null
 );
 const showOtherArticles = computed(() => canModerate.value);
 const draftLocationWarning = computed(() =>
@@ -500,7 +572,14 @@ const goToCreate = () => {
 };
 
 const editEvent = (eventItem: EventItem) => {
+  if (!canEditEvent(eventItem)) {
+    return;
+  }
   editorStore.startEdit(eventItem);
   router.push("/backoffice/events/new");
+};
+
+const toggleFeatured = (eventItem: EventItem) => {
+  handleUpdateFeatured(eventItem.id, eventItem.featured !== true);
 };
 </script>

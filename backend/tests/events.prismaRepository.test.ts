@@ -92,6 +92,8 @@ describe("createPrismaEventRepository", () => {
     ticketUrl: null,
     pricingInfo: null,
     websiteUrl: null,
+    socialLinks: [],
+    featured: false,
     status: "DRAFT",
     rejectionReason: null,
     createdAt: new Date("2026-01-01T00:00:00.000Z"),
@@ -123,6 +125,8 @@ describe("createPrismaEventRepository", () => {
     ticketUrl: null,
     pricingInfo: null,
     websiteUrl: null,
+    socialLinks: [],
+    featured: false,
     status: "DRAFT",
     publishedAt: null,
     publicationEndAt: new Date("2026-01-15T22:00:00.000Z"),
@@ -157,7 +161,10 @@ describe("createPrismaEventRepository", () => {
       contactEmail: null,
       contactPhone: null,
       ticketUrl: null,
+      pricingInfo: null,
       websiteUrl: null,
+      socialLinks: [{ type: "FACEBOOK", url: "https://facebook.com/rene" }],
+      featured: false,
       status: "DRAFT" as const,
       publishedAt: null,
       publicationEndAt: new Date("2026-01-15T22:00:00.000Z"),
@@ -171,7 +178,21 @@ describe("createPrismaEventRepository", () => {
     const result = await repo.list();
 
     expect(result[0].eventStartAt).toBe("2026-01-15T20:00:00.000Z");
+    expect(result[0].socialLinks).toEqual([{ type: "FACEBOOK", url: "https://facebook.com/rene" }]);
     expect(prismaMocks.findMany).toHaveBeenCalledWith({ include: { pendingRevision: true }, orderBy: { eventStartAt: "asc" } });
+  });
+
+  it("filters invalid social links when mapping prisma events", async () => {
+    const repo = createPrismaEventRepository();
+    prismaMocks.findMany.mockResolvedValue([
+      buildEvent({
+        socialLinks: [null, { type: "FACEBOOK", url: 12 }, { type: "INSTAGRAM", url: "https://instagram.com/rene" }]
+      })
+    ]);
+
+    const result = await repo.list();
+
+    expect(result[0]?.socialLinks).toEqual([{ type: "INSTAGRAM", url: "https://instagram.com/rene" }]);
   });
 
   it("maps single event", async () => {
@@ -198,7 +219,10 @@ describe("createPrismaEventRepository", () => {
       contactEmail: null,
       contactPhone: null,
       ticketUrl: null,
+      pricingInfo: null,
       websiteUrl: null,
+      socialLinks: [],
+      featured: false,
       status: "DRAFT" as const,
       publishedAt: new Date("2026-02-01T09:00:00.000Z"),
       publicationEndAt: new Date("2026-02-01T12:00:00.000Z"),
@@ -241,6 +265,7 @@ describe("createPrismaEventRepository", () => {
       contactPhone: null,
       ticketUrl: null,
       websiteUrl: null,
+      featured: false,
       status: "DRAFT" as const,
       publishedAt: null,
       publicationEndAt: new Date("2026-03-01T12:00:00.000Z"),
@@ -270,12 +295,16 @@ describe("createPrismaEventRepository", () => {
       latitude: 47,
       longitude: 0.69,
       organizerName: "Mairie"
+      ,socialLinks: [{ type: "INSTAGRAM", url: "https://instagram.com/rene" }]
     });
 
     expect(result.id).toBe("3");
     expect(prismaMocks.create).toHaveBeenCalled();
     expect(prismaMocks.create.mock.calls[0][0]).toMatchObject({
-      data: { geolocationPrecision: "EXACT" }
+      data: {
+        geolocationPrecision: "EXACT",
+        socialLinks: [{ type: "INSTAGRAM", url: "https://instagram.com/rene" }]
+      }
     });
   });
 
@@ -730,7 +759,31 @@ describe("createPrismaEventRepository", () => {
 
     expect(prismaMocks.transaction).toHaveBeenCalled();
     expect(result?.status).toBe("PUBLISHED");
+    expect(result?.featured).toBe(false);
     expect(result?.pendingRevision).toBeNull();
+  });
+
+  it("updates featured flag", async () => {
+    const repo = createPrismaEventRepository();
+    prismaMocks.update.mockResolvedValue(buildEvent({ status: "PUBLISHED", featured: true }));
+
+    const result = await repo.updateFeatured("1", true);
+
+    expect(prismaMocks.update).toHaveBeenCalledWith({
+      where: { id: "1" },
+      include: { pendingRevision: true },
+      data: { featured: true }
+    });
+    expect(result?.featured).toBe(true);
+  });
+
+  it("returns null when updating featured flag fails", async () => {
+    const repo = createPrismaEventRepository();
+    prismaMocks.update.mockRejectedValue(new Error("boom"));
+
+    const result = await repo.updateFeatured("1", true);
+
+    expect(result).toBeNull();
   });
 
   it("returns null when pending revision is missing during publish", async () => {

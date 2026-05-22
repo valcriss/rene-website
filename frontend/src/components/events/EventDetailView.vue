@@ -75,6 +75,9 @@
                   <div>
                     <p class="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700/70">{{ t("detail.summaryEyebrow") }}</p>
                     <h2 class="font-display mt-2 text-2xl font-semibold tracking-tight text-slate-950">{{ t("detail.summaryTitle") }}</h2>
+                    <p v-if="detailUpdatedAtLabel" class="mt-2 text-xs text-slate-400">
+                      {{ detailUpdatedAtLabel }}
+                    </p>
                   </div>
                   <div class="rounded-full border border-sky-100 bg-sky-50/70 px-4 py-2 text-sm font-medium text-sky-900">
                     {{ detailEvent.venueName }} · {{ detailEvent.city }}
@@ -102,6 +105,29 @@
 
                 <!-- eslint-disable-next-line vue/no-v-html -->
                 <div class="prose prose-slate mt-8 max-w-none prose-p:text-slate-600 prose-a:text-sky-700 prose-strong:text-slate-900" v-html="sanitizedContent"></div>
+
+                <div v-if="socialLinks.length > 0" class="mt-8 rounded-[1.5rem] border border-sky-100 bg-sky-50/60 p-5" data-testid="detail-social-links">
+                  <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p class="text-xs font-semibold uppercase tracking-[0.22em] text-sky-700/70">{{ t("detail.socialLinks") }}</p>
+                      <p class="mt-2 text-sm text-slate-500">{{ t("detail.socialLinksLead") }}</p>
+                    </div>
+                    <div class="flex flex-wrap gap-3">
+                      <a
+                        v-for="socialLink in socialLinks"
+                        :key="`${socialLink.type}-${socialLink.url}`"
+                        class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-sky-200 bg-white text-sky-700 shadow-sm shadow-sky-100/70 transition hover:border-sky-300 hover:bg-sky-50"
+                        :href="socialLink.url"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        :aria-label="t('detail.openSocialLink', { network: socialLink.label })"
+                        :title="socialLink.label"
+                      >
+                        <font-awesome-icon class="h-5 w-5" :icon="socialLink.icon" />
+                      </a>
+                    </div>
+                  </div>
+                </div>
               </section>
 
               <section class="rounded-[2rem] border border-sky-100 bg-gradient-to-br from-white to-sky-50/70 p-5 shadow-[0_20px_72px_-54px_rgba(30,41,59,0.18)] sm:p-6">
@@ -216,6 +242,8 @@
 import { computed } from "vue";
 import DOMPurify from "dompurify";
 import { storeToRefs } from "pinia";
+import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
+import { faFacebook, faInstagram, faLinkedin, faTiktok, faXTwitter, faYoutube } from "@fortawesome/free-brands-svg-icons";
 import { useI18n } from "vue-i18n";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import {
@@ -232,7 +260,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import EventMap from "../EventMap.vue";
 import RelatedEvents from "./RelatedEvents.vue";
-import type { EventItem } from "../../api/events";
+import type { EventItem, SocialLinkType } from "../../api/events";
 import { useAudiencesStore } from "../../stores/audiences";
 import { useCategoriesStore } from "../../stores/categories";
 import { useEventsStore } from "../../stores/events";
@@ -241,6 +269,13 @@ type CategoryTheme = {
   backgroundColor: string;
   color: string;
   borderColor: string;
+};
+
+type SocialLinkViewModel = {
+  type: SocialLinkType;
+  url: string;
+  label: string;
+  icon: IconDefinition;
 };
 
 const props = defineProps<{ eventId: string; event?: EventItem | null }>();
@@ -287,6 +322,8 @@ const sanitizedPricingInfo = computed(() => {
   });
 });
 
+const detailUpdatedAtLabel = computed(() => formatUpdatedAtLabel(detailEvent.value?.updatedAt));
+
 const optionalAddress = computed(() => {
   if (!detailEvent.value) {
     return "";
@@ -305,6 +342,23 @@ const categoryName = computed(() => {
 const audienceName = computed(() => {
   return audienceNames.value.get(detailEvent.value?.audienceId ?? "") ?? "";
 });
+
+const socialIconMap: Record<SocialLinkType, IconDefinition> = {
+  FACEBOOK: faFacebook,
+  INSTAGRAM: faInstagram,
+  YOUTUBE: faYoutube,
+  LINKEDIN: faLinkedin,
+  X: faXTwitter,
+  TIKTOK: faTiktok
+};
+
+const socialLinks = computed<SocialLinkViewModel[]>(() =>
+  (detailEvent.value?.socialLinks ?? []).map((socialLink) => ({
+    ...socialLink,
+    label: t(`editor.socialLinkTypes.${socialLink.type}`),
+    icon: socialIconMap[socialLink.type]
+  }))
+);
 
 const categoryThemeMap: Record<string, CategoryTheme> = {
   atelier: { backgroundColor: "rgba(125, 211, 252, 0.2)", color: "#075985", borderColor: "rgba(56, 189, 248, 0.32)" },
@@ -340,6 +394,7 @@ const {
   getEventImage,
   markImageError,
   formatDateTimeRange,
+  formatUpdatedAtLabel,
   formatOptional,
   buildDirectionsUrl,
   buildCalendarUrl

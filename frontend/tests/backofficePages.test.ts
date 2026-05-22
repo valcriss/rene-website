@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom";
-import { fireEvent, render, screen } from "@testing-library/vue";
+import { fireEvent, render, screen, within } from "@testing-library/vue";
 import { createPinia } from "pinia";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createTestRouter } from "./testRouter";
@@ -74,7 +74,25 @@ describe("BackofficeLayout", () => {
     await fireEvent.click(screen.getByText("Retour au site"));
     expect(pushSpy).toHaveBeenCalledWith("/");
 
-    await fireEvent.click(screen.getByText("Me connecter"));
+    await fireEvent.click(screen.getAllByText("Me connecter")[0]);
+    expect(pushSpy).toHaveBeenCalledWith("/login");
+  });
+
+  it("moves logout to the shared header account menu", async () => {
+    const { router, pinia } = await setup("/backoffice/events", "EDITOR");
+    const pushSpy = vi.spyOn(router, "push");
+
+    render(BackofficeLayout, {
+      global: {
+        plugins: [pinia, router]
+      }
+    });
+
+    expect(screen.queryByRole("button", { name: "Se déconnecter" })).not.toBeInTheDocument();
+
+    await fireEvent.click(screen.getAllByRole("button", { name: "Compte" })[0]);
+    await fireEvent.click(screen.getByRole("button", { name: "Se déconnecter" }));
+
     expect(pushSpy).toHaveBeenCalledWith("/login");
   });
 });
@@ -138,10 +156,11 @@ describe("BackofficeEventsPage", () => {
     expect(screen.getByText("Mon brouillon")).toBeInTheDocument();
     expect(screen.getByText("Ma reprise")).toBeInTheDocument();
     expect(screen.getByText("Mon article publié")).toBeInTheDocument();
+    expect(screen.getAllByText(/Mis à jour le/i).length).toBeGreaterThan(0);
     expect(screen.queryByText("Brouillon externe")).not.toBeInTheDocument();
   });
 
-  it("shows published revision notices and keeps published edit action", async () => {
+  it("shows published revision notices and hides edit action while revision is pending", async () => {
     const { router, pinia } = await setup("/backoffice/events", "EDITOR");
     const eventsStore = useEventsStore(pinia);
     eventsStore.events = [
@@ -183,7 +202,9 @@ describe("BackofficeEventsPage", () => {
 
     expect(screen.getByText("Mon article publié")).toBeInTheDocument();
     expect(screen.getByText(/Une nouvelle version est actuellement en attente de validation/i)).toBeInTheDocument();
-    expect(screen.getAllByText("Modifier").length).toBeGreaterThan(0);
+    expect(screen.getByText(/Modification indisponible tant que cet événement est en cours de modération/i)).toBeInTheDocument();
+    expect(screen.queryByText("Modifier")).not.toBeInTheDocument();
+    expect(screen.queryByText("Reprendre mon brouillon")).not.toBeInTheDocument();
   });
 
   it("shows published draft revision notices", async () => {
@@ -226,7 +247,11 @@ describe("BackofficeEventsPage", () => {
       }
     });
 
+    const publishedCard = screen.getByText("Mon article publié").closest("li");
+
     expect(screen.getByText(/Une nouvelle version est enregistrée en brouillon/i)).toBeInTheDocument();
+    expect(publishedCard).not.toBeNull();
+    expect(within(publishedCard as HTMLElement).queryByText("Supprimer")).not.toBeInTheDocument();
   });
 
   it("shows other articles for moderators and excludes owned items from that block", async () => {
@@ -257,6 +282,7 @@ describe("BackofficeEventsPage", () => {
     expect(screen.getAllByText("Les autres articles").length).toBeGreaterThan(0);
     expect(screen.getByText("Validation externe")).toBeInTheDocument();
     expect(screen.getByText("Publication externe")).toBeInTheDocument();
+    expect(screen.getByText(/Modification indisponible tant que cet événement est en cours de modération/i)).toBeInTheDocument();
     expect(screen.getAllByText("Mon brouillon")).toHaveLength(1);
   });
 
@@ -279,15 +305,15 @@ describe("BackofficeEventsPage", () => {
     expect(pushSpy).toHaveBeenCalledWith("/backoffice/events/new");
   });
 
-  it("submits drafts and deletes published events", async () => {
+  it("submits drafts and deletes only draft events for editors", async () => {
     const { router, pinia } = await setup("/backoffice/events", "EDITOR");
     const eventsStore = useEventsStore(pinia);
     const editorStore = useEditorStore(pinia);
     const submitSpy = vi.spyOn(editorStore, "handleSubmitDraft").mockResolvedValue(true);
     const deleteSpy = vi.spyOn(eventsStore, "handleDelete").mockResolvedValue();
     eventsStore.events = [
-      buildEvent({ id: "1", status: "DRAFT" }),
-      buildEvent({ id: "2", status: "PUBLISHED" })
+      buildEvent({ id: "1", status: "DRAFT", title: "Mon brouillon" }),
+      buildEvent({ id: "2", status: "PUBLISHED", title: "Mon article publié" })
     ];
 
     render(BackofficeEventsPage, {
@@ -296,11 +322,20 @@ describe("BackofficeEventsPage", () => {
       }
     });
 
-    await fireEvent.click(screen.getByText("Soumettre"));
-    await fireEvent.click(screen.getByText("Supprimer"));
+    const draftCard = screen.getByText("Mon brouillon").closest("li");
+    const publishedCard = screen.getByText("Mon article publié").closest("li");
+
+    expect(draftCard).not.toBeNull();
+    expect(publishedCard).not.toBeNull();
+
+    await fireEvent.click(within(draftCard as HTMLElement).getByText("Soumettre"));
+    await fireEvent.click(within(draftCard as HTMLElement).getByText("Supprimer"));
+
+    expect(within(publishedCard as HTMLElement).queryByText("Supprimer")).not.toBeInTheDocument();
 
     expect(submitSpy).toHaveBeenCalledWith("1");
-    expect(deleteSpy).toHaveBeenCalledWith("2");
+    expect(deleteSpy).toHaveBeenCalledWith("1");
+    expect(deleteSpy).toHaveBeenCalledTimes(1);
   });
 
   it("shows an unresolved-location banner and disables draft submission when coordinates are missing", async () => {
@@ -531,6 +566,21 @@ describe("BackofficeModerationPage", () => {
 
     await fireEvent.update(field, "Première ligne\nDeuxième ligne");
     expect(eventsStore.rejectionReasons["1"]).toBe("Première ligne\nDeuxième ligne");
+  });
+
+  it("allows moderators to mark an event as featured before publishing", async () => {
+    const { router, pinia } = await setup("/backoffice/moderation", "MODERATOR");
+    const eventsStore = useEventsStore(pinia);
+    eventsStore.events = [buildEvent({ status: "PENDING", featured: false })];
+
+    render(BackofficeModerationPage, { global: { plugins: [pinia, router] } });
+
+    const checkbox = screen.getByLabelText(/Cet événement peut être mis en avant/i) as HTMLInputElement;
+    expect(checkbox.checked).toBe(false);
+
+    await fireEvent.click(checkbox);
+
+    expect(eventsStore.featuredEventIds["1"]).toBe(true);
   });
 });
 

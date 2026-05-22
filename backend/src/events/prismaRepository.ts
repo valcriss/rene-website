@@ -1,6 +1,6 @@
 import { prisma } from "../prisma/client";
 import { EventRepository } from "./repository";
-import { CreateEventInput, Event, EventRevision, EventStatus, GeolocationPrecision } from "./types";
+import { CreateEventInput, Event, EventRevision, EventStatus, GeolocationPrecision, SocialLink } from "./types";
 
 type PrismaEventsClient = {
   category: {
@@ -44,7 +44,9 @@ type PrismaEvent = {
   ticketUrl: string | null;
   pricingInfo: string | null;
   websiteUrl: string | null;
+  socialLinks: unknown;
   status: "DRAFT" | "PENDING" | "PUBLISHED" | "REJECTED";
+  featured: boolean;
   publishedAt: Date | null;
   publicationEndAt: Date;
   rejectionReason: string | null;
@@ -79,10 +81,27 @@ type PrismaEventRevision = {
   ticketUrl: string | null;
   pricingInfo: string | null;
   websiteUrl: string | null;
+  socialLinks: unknown;
   status: "DRAFT" | "PENDING" | "REJECTED";
+  featured: boolean;
   rejectionReason: string | null;
   createdAt: Date;
   updatedAt: Date;
+};
+
+const asSocialLinks = (value: unknown): SocialLink[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter((item): item is SocialLink => {
+    if (item === null || typeof item !== "object") {
+      return false;
+    }
+
+    const candidate = item as Record<string, unknown>;
+    return typeof candidate.type === "string" && typeof candidate.url === "string";
+  });
 };
 
 const toRevision = (data: PrismaEventRevision): EventRevision => ({
@@ -111,7 +130,9 @@ const toRevision = (data: PrismaEventRevision): EventRevision => ({
   ticketUrl: data.ticketUrl ?? undefined,
   pricingInfo: data.pricingInfo ?? undefined,
   websiteUrl: data.websiteUrl ?? undefined,
+  socialLinks: asSocialLinks(data.socialLinks),
   status: data.status,
+  featured: data.featured,
   rejectionReason: data.rejectionReason,
   createdAt: data.createdAt.toISOString(),
   updatedAt: data.updatedAt.toISOString()
@@ -142,7 +163,9 @@ const toEvent = (data: PrismaEvent): Event => ({
   ticketUrl: data.ticketUrl ?? undefined,
   pricingInfo: data.pricingInfo ?? undefined,
   websiteUrl: data.websiteUrl ?? undefined,
+  socialLinks: asSocialLinks(data.socialLinks),
   status: data.status,
+  featured: data.featured,
   publishedAt: data.publishedAt ? data.publishedAt.toISOString() : null,
   publicationEndAt: data.publicationEndAt.toISOString(),
   rejectionReason: data.rejectionReason,
@@ -208,7 +231,9 @@ export const createPrismaEventRepository = (): EventRepository => ({
       ticketUrl: input.ticketUrl ?? null,
       pricingInfo: input.pricingInfo ?? null,
       websiteUrl: input.websiteUrl ?? null,
+      socialLinks: input.socialLinks ?? [],
       status: "DRAFT" as EventStatus,
+      featured: false,
       publishedAt: null,
       publicationEndAt: new Date(input.eventEndAt),
       rejectionReason: null
@@ -246,6 +271,7 @@ export const createPrismaEventRepository = (): EventRepository => ({
           ticketUrl: input.ticketUrl ?? null,
           pricingInfo: input.pricingInfo ?? null,
           websiteUrl: input.websiteUrl ?? null,
+          socialLinks: input.socialLinks ?? [],
           publicationEndAt: new Date(input.eventEndAt)
         }
       });
@@ -288,6 +314,8 @@ export const createPrismaEventRepository = (): EventRepository => ({
                 ticketUrl: input.ticketUrl ?? null,
                 pricingInfo: input.pricingInfo ?? null,
                 websiteUrl: input.websiteUrl ?? null,
+                socialLinks: input.socialLinks ?? [],
+                featured: input.featured ?? false,
                 status: status as never,
                 rejectionReason: null
               },
@@ -315,6 +343,8 @@ export const createPrismaEventRepository = (): EventRepository => ({
                 ticketUrl: input.ticketUrl ?? null,
                 pricingInfo: input.pricingInfo ?? null,
                 websiteUrl: input.websiteUrl ?? null,
+                socialLinks: input.socialLinks ?? [],
+                featured: input.featured ?? false,
                 status: status as never,
                 rejectionReason: null
               }
@@ -407,6 +437,7 @@ export const createPrismaEventRepository = (): EventRepository => ({
             ticketUrl: revision.ticketUrl,
             pricingInfo: revision.pricingInfo,
             websiteUrl: revision.websiteUrl,
+            featured: false,
             status: "PUBLISHED",
             publishedAt: new Date(publishedAt),
             rejectionReason: null,
@@ -434,6 +465,18 @@ export const createPrismaEventRepository = (): EventRepository => ({
       return false;
     }
   },
+  updateFeatured: async (id, featured) => {
+    try {
+      const updated = await prismaClient.event.update({
+        where: { id },
+        include: { pendingRevision: true },
+        data: { featured }
+      });
+      return toEvent(updated);
+    } catch {
+      return null;
+    }
+  },
   updateStatus: async (id, status, data) => {
     try {
       const updated = await prismaClient.event.update({
@@ -441,6 +484,7 @@ export const createPrismaEventRepository = (): EventRepository => ({
         include: { pendingRevision: true },
         data: {
           status,
+          featured: data.featured,
           publishedAt: data.publishedAt ? new Date(data.publishedAt) : null,
           rejectionReason: data.rejectionReason,
           publicationEndAt: new Date(data.publicationEndAt)

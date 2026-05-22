@@ -26,6 +26,7 @@ const inMemoryMock = jest.fn(() => ({
     createdAt: "",
     updatedAt: ""
   })),
+  updateFeatured: jest.fn(async () => null),
   delete: jest.fn(async () => true)
 }));
 const prismaMock = jest.fn(() => ({
@@ -54,6 +55,7 @@ const prismaMock = jest.fn(() => ({
     createdAt: "",
     updatedAt: ""
   })),
+  updateFeatured: jest.fn(async () => null),
   delete: jest.fn(async () => true)
 }));
 

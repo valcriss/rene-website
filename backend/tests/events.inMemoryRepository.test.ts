@@ -1,6 +1,7 @@
 import { createInMemoryEventRepository } from "../src/events/inMemoryRepository";
+import type { CreateEventInput } from "../src/events/types";
 
-const payload = {
+const payload: CreateEventInput = {
   title: "Concert",
   content: "Soirée",
   image: "img",
@@ -15,7 +16,9 @@ const payload = {
   city: "Descartes",
   latitude: 46.97,
   longitude: 0.7,
-  organizerName: "Association"
+  organizerName: "Association",
+  socialLinks: [{ type: "FACEBOOK", url: "https://facebook.com/rene" }],
+  featured: false
 };
 
 describe("inMemoryEventRepository", () => {
@@ -25,6 +28,7 @@ describe("inMemoryEventRepository", () => {
 
     await expect(repo.list()).resolves.toEqual([created]);
     await expect(repo.getById(created.id)).resolves.toEqual(created);
+    expect(created.socialLinks).toEqual([{ type: "FACEBOOK", url: "https://facebook.com/rene" }]);
   });
 
   it("updates and updates status", async () => {
@@ -40,6 +44,21 @@ describe("inMemoryEventRepository", () => {
       publicationEndAt: payload.eventEndAt
     });
     expect(statusUpdated?.status).toBe("PUBLISHED");
+  });
+
+  it("updates featured flag on published event", async () => {
+    const repo = createInMemoryEventRepository();
+    const created = await repo.create(payload);
+
+    const updated = await repo.updateFeatured(created.id, true);
+
+    expect(updated?.featured).toBe(true);
+  });
+
+  it("returns null when updating featured flag on missing event", async () => {
+    const repo = createInMemoryEventRepository();
+
+    await expect(repo.updateFeatured("missing", true)).resolves.toBeNull();
   });
 
   it("returns null for missing ids", async () => {
@@ -87,7 +106,41 @@ describe("inMemoryEventRepository", () => {
 
     expect(published?.status).toBe("PUBLISHED");
     expect(published?.title).toBe("Révision finale");
+    expect(published?.featured).toBe(false);
+    expect(published?.socialLinks).toEqual([{ type: "FACEBOOK", url: "https://facebook.com/rene" }]);
     expect(published?.pendingRevision).toBeNull();
+  });
+
+  it("stores featured flag on pending revision and preserves it across updates", async () => {
+    const repo = createInMemoryEventRepository();
+    const created = await repo.create(payload);
+    const { featured, ...revisionPayload } = payload;
+    void featured;
+
+    const firstDraft = await repo.upsertPendingRevision(
+      created.id,
+      { ...revisionPayload, title: "Révision mise en avant", featured: true },
+      "DRAFT"
+    );
+    const secondDraft = await repo.upsertPendingRevision(
+      created.id,
+      { ...revisionPayload, title: "Révision conservée" },
+      "DRAFT"
+    );
+
+    expect(firstDraft?.pendingRevision?.featured).toBe(true);
+    expect(secondDraft?.pendingRevision?.featured).toBe(true);
+  });
+
+  it("defaults pending revision featured flag to false when omitted", async () => {
+    const repo = createInMemoryEventRepository();
+    const created = await repo.create(payload);
+    const { featured, ...revisionPayload } = payload;
+    void featured;
+
+    const drafted = await repo.upsertPendingRevision(created.id, revisionPayload, "DRAFT");
+
+    expect(drafted?.pendingRevision?.featured).toBe(false);
   });
 
   it("preserves original creator when publishing a pending revision", async () => {

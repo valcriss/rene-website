@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 import { EventRepository } from "./repository";
 import { CreateEventInput, Event, EventRevision, EventRevisionStatus } from "./types";
 
+const cloneSocialLinks = (socialLinks: CreateEventInput["socialLinks"]) => socialLinks?.map((link) => ({ ...link })) ?? [];
+
 export const createInMemoryEventRepository = (): EventRepository => {
   const events = new Map<string, Event>();
 
@@ -14,9 +16,11 @@ export const createInMemoryEventRepository = (): EventRepository => {
     const now = new Date().toISOString();
     return {
       ...input,
+      socialLinks: cloneSocialLinks(input.socialLinks),
       id: existing?.id ?? randomUUID(),
       eventId,
       createdByUserId: input.createdByUserId ?? existing?.createdByUserId ?? null,
+      featured: input.featured ?? existing?.featured ?? false,
       status,
       rejectionReason: null,
       createdAt: existing?.createdAt ?? now,
@@ -33,6 +37,7 @@ export const createInMemoryEventRepository = (): EventRepository => {
       id: event.id,
       createdByUserId: event.createdByUserId,
       status: "PUBLISHED",
+      featured: false,
       publishedAt,
       publicationEndAt: revision.eventEndAt,
       rejectionReason: null,
@@ -49,8 +54,10 @@ export const createInMemoryEventRepository = (): EventRepository => {
       const now = new Date().toISOString();
       const event: Event = {
         ...input,
+        socialLinks: cloneSocialLinks(input.socialLinks),
         id: randomUUID(),
         createdByUserId: input.createdByUserId ?? null,
+        featured: false,
         status: "DRAFT",
         publishedAt: null,
         publicationEndAt: input.eventEndAt,
@@ -71,6 +78,7 @@ export const createInMemoryEventRepository = (): EventRepository => {
       const updated: Event = {
         ...existing,
         ...input,
+        socialLinks: cloneSocialLinks(input.socialLinks),
         createdByUserId: existing.createdByUserId ?? null,
         publicationEndAt: input.eventEndAt,
         pendingRevision: existing.pendingRevision,
@@ -141,6 +149,19 @@ export const createInMemoryEventRepository = (): EventRepository => {
       events.set(id, updated);
       return updated;
     },
+    updateFeatured: async (id, featured) => {
+      const existing = events.get(id);
+      if (!existing) {
+        return null;
+      }
+      const updated: Event = {
+        ...existing,
+        featured,
+        updatedAt: new Date().toISOString()
+      };
+      events.set(id, updated);
+      return updated;
+    },
     delete: async (id) => events.delete(id),
     updateStatus: async (id, status, data) => {
       const existing = events.get(id);
@@ -150,6 +171,7 @@ export const createInMemoryEventRepository = (): EventRepository => {
       const updated: Event = {
         ...existing,
         status,
+        featured: data.featured ?? existing.featured,
         publishedAt: data.publishedAt,
         rejectionReason: data.rejectionReason,
         publicationEndAt: data.publicationEndAt,

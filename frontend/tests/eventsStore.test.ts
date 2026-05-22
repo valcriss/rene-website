@@ -4,6 +4,7 @@ import { useEventsStore } from "../src/stores/events";
 import { useAuthStore } from "../src/stores/auth";
 import type { EventItem } from "../src/api/events";
 import { deleteEvent, fetchEvents } from "../src/api/events";
+import { publishEventWithFeatured, updateEventFeatured } from "../src/api/moderation";
 
 vi.mock("../src/api/events", () => ({
   fetchEvents: vi.fn(),
@@ -11,7 +12,8 @@ vi.mock("../src/api/events", () => ({
 }));
 
 vi.mock("../src/api/moderation", () => ({
-  publishEvent: vi.fn(),
+  publishEventWithFeatured: vi.fn(),
+  updateEventFeatured: vi.fn(),
   rejectEvent: vi.fn()
 }));
 
@@ -21,9 +23,9 @@ const buildEvent = (overrides: Partial<EventItem> = {}): EventItem => ({
   content: "Texte",
   image: "img",
   categoryId: "music",
-  eventStartAt: "2026-01-15T20:00:00.000Z",
-  eventEndAt: "2026-01-15T22:00:00.000Z",
-  allDay: false,
+  eventStartAt: "2026-01-15T00:00:00.000Z",
+  eventEndAt: "2026-01-15T23:59:59.999Z",
+  allDay: true,
   venueName: "Salle",
   address: "",
   postalCode: "",
@@ -33,7 +35,7 @@ const buildEvent = (overrides: Partial<EventItem> = {}): EventItem => ({
   organizerName: "Org",
   status: "PUBLISHED",
   publishedAt: null,
-  publicationEndAt: "2026-01-15T22:00:00.000Z",
+  publicationEndAt: "2026-01-15T23:59:59.999Z",
   rejectionReason: null,
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z",
@@ -61,11 +63,19 @@ describe("events store", () => {
     expect(store.formatDateRange("2026-01-15", "2026-01-16")).toContain("→");
 
     expect(store.formatDateTimeRange("invalid", "invalid")).toContain("Invalid");
-    const sameTime = store.formatDateTimeRange("2026-01-15T20:00:00.000Z", "2026-01-15T20:00:00.000Z");
-    expect(sameTime).toContain("à");
+    const sameTime = store.formatDateTimeRange("2026-01-15T00:00:00.000Z", "2026-01-15T23:59:59.999Z");
+    expect(sameTime).not.toContain(":");
 
-    const multiDay = store.formatDateTimeRange("2026-01-15T20:00:00.000Z", "2026-01-16T20:00:00.000Z");
+    const multiDay = store.formatDateTimeRange("2026-01-15T00:00:00.000Z", "2026-01-16T23:59:59.999Z");
     expect(multiDay).toContain("→");
+  });
+
+  it("builds all-day calendar urls", () => {
+    const store = useEventsStore();
+    const url = decodeURIComponent(store.buildCalendarUrl(buildEvent()));
+
+    expect(url).toContain("DTSTART;VALUE=DATE:20260115");
+    expect(url).toContain("DTEND;VALUE=DATE:20260116");
   });
 
   it("formats datetime input with fallback", () => {
@@ -121,5 +131,36 @@ describe("events store", () => {
     fetchEventsMock.mockResolvedValue([buildEvent()]);
     await store.fetchEvents();
     expect(store.events).toHaveLength(1);
+  });
+
+  it("publishes with featured flag and updates featured state", async () => {
+    const store = useEventsStore();
+    const authStore = useAuthStore();
+    authStore.setRole("MODERATOR");
+    store.events = [buildEvent({ id: "1", status: "PENDING", featured: false })];
+    store.setFeaturedEvent("1", true);
+
+    const publishMock = vi.mocked(publishEventWithFeatured);
+    publishMock.mockResolvedValue(buildEvent({ id: "1", status: "PUBLISHED", featured: true }));
+
+    await store.handlePublish("1");
+
+    expect(publishMock).toHaveBeenCalledWith("1", "MODERATOR", true);
+    expect(store.events[0].featured).toBe(true);
+  });
+
+  it("updates featured state on published event", async () => {
+    const store = useEventsStore();
+    const authStore = useAuthStore();
+    authStore.setRole("ADMIN");
+    store.events = [buildEvent({ id: "1", featured: false })];
+
+    const updateFeaturedMock = vi.mocked(updateEventFeatured);
+    updateFeaturedMock.mockResolvedValue(buildEvent({ id: "1", featured: true }));
+
+    await store.handleUpdateFeatured("1", true);
+
+    expect(updateFeaturedMock).toHaveBeenCalledWith("1", "ADMIN", true);
+    expect(store.events[0].featured).toBe(true);
   });
 });

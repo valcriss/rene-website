@@ -1,5 +1,11 @@
 <template>
-  <NavigationHeader @login="goToLogin" />
+  <NavigationHeader
+    :is-authenticated="isAuthenticated"
+    :account-label="accountLabel"
+    :role-label="roleLabel"
+    @login="goToLogin"
+    @logout="handleLogout"
+  />
 
   <section class="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(191,219,254,0.55),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(224,231,255,0.85),_transparent_30%),linear-gradient(180deg,_#f7fbff_0%,_#eef4ff_42%,_#f8fbff_100%)]">
     <div class="pointer-events-none absolute inset-0">
@@ -27,19 +33,19 @@
         </div>
 
         <article
-          v-if="featuredEvent"
+          v-if="carouselEvents.length > 0 && currentCarouselEvent"
           class="group relative overflow-hidden rounded-[2.25rem] border border-slate-900/10 bg-slate-950 text-white shadow-[0_36px_120px_-52px_rgba(15,23,42,0.55)]"
-          :data-testid="`event-card-${featuredEvent.id}`"
+          :data-testid="`featured-card-${currentCarouselEvent.id}`"
           role="button"
           tabindex="0"
-          @click="openEventDetail(featuredEvent.id)"
-          @keydown.enter="openEventDetail(featuredEvent.id)"
+          @click="openEventDetail(currentCarouselEvent.id)"
+          @keydown.enter="openEventDetail(currentCarouselEvent.id)"
         >
           <img
             class="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
-            :src="getEventImage(featuredEvent)"
-            :alt="featuredEvent.title"
-            @error="markImageError(featuredEvent.id)"
+            :src="getEventImage(currentCarouselEvent)"
+            :alt="currentCarouselEvent.title"
+            @error="markImageError(currentCarouselEvent.id)"
           />
           <div class="pointer-events-none absolute inset-x-0 bottom-0 h-[44%] bg-gradient-to-t from-slate-950/74 via-slate-950/34 to-transparent"></div>
           <div class="relative flex min-h-[420px] flex-col justify-between p-6 sm:p-8 xl:min-h-[520px]">
@@ -48,26 +54,29 @@
                 {{ t("home.featured") }}
               </span>
               <span class="rounded-full bg-slate-950/40 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-white ring-1 ring-white/20 backdrop-blur">
-                {{ formatDateRange(featuredEvent.eventStartAt, featuredEvent.eventEndAt) }}
+                {{ formatDateRange(currentCarouselEvent.eventStartAt, currentCarouselEvent.eventEndAt) }}
               </span>
               <span
-                v-if="getCategoryName(featuredEvent.categoryId)"
+                v-if="getCategoryName(currentCarouselEvent.categoryId)"
                 class="rounded-full px-4 py-2 text-xs font-semibold ring-1 backdrop-blur"
-                :style="getCategoryTheme(featuredEvent.categoryId)"
+                :style="getCategoryTheme(currentCarouselEvent.categoryId)"
               >
-                {{ getCategoryName(featuredEvent.categoryId) }}
+                {{ getCategoryName(currentCarouselEvent.categoryId) }}
               </span>
             </div>
 
             <div class="max-w-2xl space-y-4 rounded-[1.5rem] border border-white/10 bg-slate-950/28 p-5 backdrop-blur-md sm:p-6">
               <p class="text-sm font-medium uppercase tracking-[0.28em] text-white/88 [text-shadow:0_1px_10px_rgba(15,23,42,0.8)]">
-                {{ featuredEvent.venueName }} · {{ featuredEvent.city }}
+                {{ currentCarouselEvent.venueName }} · {{ currentCarouselEvent.city }}
               </p>
               <h2 class="font-display max-w-2xl text-4xl font-semibold leading-tight tracking-tight text-white [text-shadow:0_4px_18px_rgba(15,23,42,0.82)] sm:text-5xl">
-                {{ featuredEvent.title }}
+                {{ currentCarouselEvent.title }}
               </h2>
               <p class="max-w-xl text-base leading-7 text-white/92 [text-shadow:0_2px_12px_rgba(15,23,42,0.78)] sm:text-lg">
-                {{ getEventShortExcerpt(featuredEvent) || t("home.featuredFallback") }}
+                {{ getEventShortExcerpt(currentCarouselEvent) || t("home.featuredFallback") }}
+              </p>
+              <p v-if="formatUpdatedAtLabel(currentCarouselEvent.updatedAt)" class="text-xs font-medium tracking-[0.18em] text-white/72">
+                {{ formatUpdatedAtLabel(currentCarouselEvent.updatedAt) }}
               </p>
               <div class="flex flex-wrap items-center gap-4 pt-3">
                 <span class="rounded-full bg-gradient-to-r from-sky-500 to-indigo-400 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-slate-900/20">
@@ -76,6 +85,35 @@
                 <span class="text-sm font-medium uppercase tracking-[0.24em] text-white/82 [text-shadow:0_2px_10px_rgba(15,23,42,0.8)]">
                   {{ t("home.recommended") }}
                 </span>
+                <div v-if="carouselEvents.length > 1" class="ml-auto flex items-center gap-2">
+                  <button
+                    type="button"
+                    class="rounded-full border border-white/20 bg-white/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-white backdrop-blur transition hover:bg-white/20"
+                    :aria-label="t('home.previousFeatured')"
+                    @click.stop="goToPreviousSlide"
+                  >
+                    ‹
+                  </button>
+                  <button
+                    type="button"
+                    class="rounded-full border border-white/20 bg-white/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-white backdrop-blur transition hover:bg-white/20"
+                    :aria-label="t('home.nextFeatured')"
+                    @click.stop="goToNextSlide"
+                  >
+                    ›
+                  </button>
+                </div>
+              </div>
+              <div v-if="carouselEvents.length > 1" class="flex gap-2 pt-2">
+                <button
+                  v-for="(_eventItem, index) in carouselEvents"
+                  :key="index"
+                  type="button"
+                  class="h-2.5 w-8 rounded-full transition"
+                  :class="index === currentSlide ? 'bg-white' : 'bg-white/35 hover:bg-white/55'"
+                  :aria-label="`${t('home.featured')} ${index + 1}`"
+                  @click.stop="currentSlide = index"
+                />
               </div>
             </div>
           </div>
@@ -185,6 +223,9 @@
                     <p class="text-base leading-7 text-slate-600 [display:-webkit-box] [-webkit-line-clamp:3] [-webkit-box-orient:vertical] overflow-hidden">
                       {{ getEventShortExcerpt(eventItem) }}
                     </p>
+                    <p v-if="formatUpdatedAtLabel(eventItem.updatedAt)" class="text-xs text-slate-400">
+                      {{ formatUpdatedAtLabel(eventItem.updatedAt) }}
+                    </p>
                   </div>
 
                   <div class="flex items-center justify-between gap-4 border-t border-sky-100 pt-4">
@@ -215,7 +256,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
@@ -224,6 +265,7 @@ import HomeFilters from "../components/home/Filters.vue";
 import HomeSearch from "../components/home/Search.vue";
 import HomeTitle from "../components/home/Title.vue";
 import NavigationHeader from "../components/navigation/Header.vue";
+import { useAuthStore } from "../stores/auth";
 import { useAudiencesStore } from "../stores/audiences";
 import { useCategoriesStore } from "../stores/categories";
 import { useEventsStore } from "../stores/events";
@@ -236,6 +278,7 @@ type CategoryTheme = {
 
 const router = useRouter();
 const { t } = useI18n();
+const authStore = useAuthStore();
 const eventsStore = useEventsStore();
 const categoriesStore = useCategoriesStore();
 const audiencesStore = useAudiencesStore();
@@ -249,13 +292,46 @@ const {
 } = storeToRefs(eventsStore);
 const { categories } = storeToRefs(categoriesStore);
 const { audiences } = storeToRefs(audiencesStore);
+const { isAuthenticated, role, userName } = storeToRefs(authStore);
+
+const roleLabel = computed(() => t(`backoffice.roleLabels.${role.value}`));
+const accountLabel = computed(() => userName.value || t("common.mySpace"));
 
 const categoryNames = computed(() =>
   new Map(categories.value.map((category) => [category.id, category.name]))
 );
 
-const featuredEvent = computed(() => filteredEvents.value[0] ?? null);
-const spotlightEvents = computed(() => filteredEvents.value.slice(1));
+const now = () => Date.now();
+const activeFeaturedEvents = computed(() =>
+  filteredEvents.value.filter((event) => event.featured === true && new Date(event.eventEndAt).getTime() > now())
+);
+const fallbackFeaturedEvent = computed(
+  () => filteredEvents.value.find((event) => new Date(event.eventEndAt).getTime() > now()) ?? null
+);
+const carouselEvents = computed(() =>
+  activeFeaturedEvents.value.length > 0
+    ? [...activeFeaturedEvents.value].sort((left, right) => left.eventStartAt.localeCompare(right.eventStartAt))
+    : fallbackFeaturedEvent.value
+      ? [fallbackFeaturedEvent.value]
+      : []
+);
+const spotlightEvents = computed(() => filteredEvents.value);
+const currentSlide = ref(0);
+const currentCarouselEvent = computed(() => carouselEvents.value[currentSlide.value] ?? null);
+
+watch(
+  () => carouselEvents.value.length,
+  (length) => {
+    if (length === 0) {
+      currentSlide.value = 0;
+      return;
+    }
+    if (currentSlide.value >= length) {
+      currentSlide.value = 0;
+    }
+  },
+  { immediate: true }
+);
 
 const {
   resetFilters,
@@ -267,6 +343,7 @@ const {
   getEventImage,
   markImageError,
   formatDateRange,
+  formatUpdatedAtLabel,
   getEventShortExcerpt
 } = eventsStore;
 
@@ -302,7 +379,25 @@ const goToLogin = () => {
   router.push("/login");
 };
 
+const handleLogout = () => {
+  authStore.logout();
+};
+
 const openEventDetail = (id: string) => {
   router.push(`/event/${id}`);
+};
+
+const goToPreviousSlide = () => {
+  if (carouselEvents.value.length < 2) {
+    return;
+  }
+  currentSlide.value = (currentSlide.value - 1 + carouselEvents.value.length) % carouselEvents.value.length;
+};
+
+const goToNextSlide = () => {
+  if (carouselEvents.value.length < 2) {
+    return;
+  }
+  currentSlide.value = (currentSlide.value + 1) % carouselEvents.value.length;
 };
 </script>

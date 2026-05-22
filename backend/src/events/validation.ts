@@ -1,4 +1,4 @@
-import { EventDraftInput } from "./types";
+import { EventDraftInput, SocialLink, SocialLinkType } from "./types";
 import { sanitizeEventContent, sanitizeEventPricingInfo } from "./sanitize";
 
 type ValidationResult =
@@ -14,6 +14,72 @@ const isValidDate = (value: string) => {
 };
 
 const asNumber = (value: unknown) => (typeof value === "number" ? value : Number.NaN);
+const socialLinkTypes = new Set<SocialLinkType>(["FACEBOOK", "INSTAGRAM", "YOUTUBE", "LINKEDIN", "X", "TIKTOK"]);
+
+const isRecord = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === "object";
+
+const normalizeSocialLinks = (value: unknown): { links?: SocialLink[]; errors: string[] } => {
+  if (value === undefined || value === null) {
+    return { errors: [] };
+  }
+
+  if (!Array.isArray(value)) {
+    return { errors: ["Les réseaux sociaux doivent être une liste."] };
+  }
+
+  const errors: string[] = [];
+  const seenTypes = new Set<SocialLinkType>();
+  const links: SocialLink[] = [];
+
+  value.forEach((item, index) => {
+    if (!isRecord(item)) {
+      errors.push(`Le réseau social #${index + 1} est invalide.`);
+      return;
+    }
+
+    const rawType = item.type;
+    const rawUrl = item.url;
+
+    if (typeof rawType !== "string" || !socialLinkTypes.has(rawType as SocialLinkType)) {
+      errors.push(`Le type du réseau social #${index + 1} est invalide.`);
+    }
+
+    if (typeof rawUrl !== "string") {
+      errors.push(`L'URL du réseau social #${index + 1} est invalide.`);
+      return;
+    }
+
+    const url = rawUrl.trim();
+    if (url.length === 0) {
+      errors.push(`L'URL du réseau social #${index + 1} est requise.`);
+      return;
+    }
+
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+        errors.push(`L'URL du réseau social #${index + 1} doit commencer par http:// ou https://.`);
+        return;
+      }
+    } catch {
+      errors.push(`L'URL du réseau social #${index + 1} est invalide.`);
+      return;
+    }
+
+    if (typeof rawType === "string" && socialLinkTypes.has(rawType as SocialLinkType)) {
+      const type = rawType as SocialLinkType;
+      if (seenTypes.has(type)) {
+        errors.push(`Le réseau social ${type} est présent plusieurs fois.`);
+        return;
+      }
+
+      seenTypes.add(type);
+      links.push({ type, url });
+    }
+  });
+
+  return { links, errors };
+};
 
 export const validateCreateEvent = (input: unknown): ValidationResult => {
   if (input === null || typeof input !== "object") {
@@ -44,6 +110,9 @@ export const validateCreateEvent = (input: unknown): ValidationResult => {
   if (!isOptionalString(data.ticketUrl)) errors.push("Le lien de billetterie doit être une chaîne.");
   if (!isOptionalString(data.pricingInfo)) errors.push("Les informations tarifaires doivent être une chaîne.");
   if (!isOptionalString(data.websiteUrl)) errors.push("Le site web doit être une chaîne.");
+
+  const socialLinksResult = normalizeSocialLinks(data.socialLinks);
+  errors.push(...socialLinksResult.errors);
 
   const latitude = data.latitude === undefined ? undefined : asNumber(data.latitude);
   const longitude = data.longitude === undefined ? undefined : asNumber(data.longitude);
@@ -120,7 +189,8 @@ export const validateCreateEvent = (input: unknown): ValidationResult => {
       contactPhone: data.contactPhone as string | undefined,
       ticketUrl: data.ticketUrl as string | undefined,
       pricingInfo: sanitizedPricingInfo,
-      websiteUrl: data.websiteUrl as string | undefined
+      websiteUrl: data.websiteUrl as string | undefined,
+      socialLinks: socialLinksResult.links
     }
   };
 };

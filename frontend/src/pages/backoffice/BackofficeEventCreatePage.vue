@@ -148,15 +148,11 @@
             <div class="mt-5 grid gap-4 md:grid-cols-2">
               <label class="text-sm text-slate-600">
                 {{ t("common.start") }}
-                <input v-model="editorForm.eventStartAt" type="datetime-local" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" />
+                <input v-model="editorForm.eventStartAt" type="date" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" />
               </label>
               <label class="text-sm text-slate-600">
                 {{ t("common.end") }}
-                <input v-model="editorForm.eventEndAt" type="datetime-local" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" />
-              </label>
-              <label class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 md:col-span-2">
-                <input v-model="editorForm.allDay" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-slate-900" />
-                {{ t("editor.allDay") }}
+                <input v-model="editorForm.eventEndAt" type="date" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" />
               </label>
             </div>
           </section>
@@ -220,6 +216,64 @@
                 <input v-model="editorForm.websiteUrl" type="text" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" placeholder="https://..." />
               </label>
               <div class="text-sm text-slate-600 md:col-span-2">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <span>{{ t("editor.socialLinksTitle") }}</span>
+                    <p class="mt-1 text-xs leading-5 text-slate-500">{{ t("editor.socialLinksLead") }}</p>
+                  </div>
+                  <button
+                    type="button"
+                    class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-sky-200 hover:bg-sky-50/70 hover:text-slate-900"
+                    @click="addSocialLink"
+                  >
+                    {{ t("editor.addSocialLink") }}
+                  </button>
+                </div>
+
+                <div v-if="editorForm.socialLinks.length > 0" class="mt-4 grid gap-3">
+                  <div
+                    v-for="(socialLink, index) in editorForm.socialLinks"
+                    :key="`${socialLink.type}-${index}`"
+                    class="grid gap-3 rounded-[1.25rem] border border-slate-200 bg-slate-50/70 p-4 md:grid-cols-[12rem_minmax(0,1fr)_auto] md:items-end"
+                    :data-testid="`social-link-row-${index}`"
+                  >
+                    <label class="text-sm text-slate-600">
+                      {{ t("editor.socialNetwork") }}
+                      <select
+                        :value="socialLink.type"
+                        class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"
+                        @change="updateSocialLink(index, 'type', ($event.target as HTMLSelectElement).value)"
+                      >
+                        <option
+                          v-for="option in socialLinkTypeOptions"
+                          :key="option.value"
+                          :value="option.value"
+                        >
+                          {{ option.label }}
+                        </option>
+                      </select>
+                    </label>
+                    <label class="text-sm text-slate-600">
+                      {{ t("editor.socialLinkUrl") }}
+                      <input
+                        :value="socialLink.url"
+                        type="url"
+                        class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"
+                        placeholder="https://..."
+                        @input="updateSocialLink(index, 'url', ($event.target as HTMLInputElement).value)"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700"
+                      @click="removeSocialLink(index)"
+                    >
+                      {{ t("editor.removeSocialLink") }}
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="text-sm text-slate-600 md:col-span-2">
                 <span>{{ t("editor.pricingInfoTitle") }}</span>
                 <p class="mt-1 text-xs leading-5 text-slate-500">{{ t("editor.pricingInfoLead") }}</p>
                 <div class="mt-2">
@@ -279,6 +333,7 @@ import { computed, onMounted } from "vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
+import type { SocialLinkType } from "../../api/events";
 import RichTextEditor from "../../components/form/RichTextEditor.vue";
 import { useAuthStore } from "../../stores/auth";
 import { useAudiencesStore } from "../../stores/audiences";
@@ -297,7 +352,16 @@ const { categories, loading: categoriesLoading } = storeToRefs(categoriesStore);
 const { audiences, loading: audiencesLoading } = storeToRefs(audiencesStore);
 const { editorMode, editingPublishedEvent, editingPublishedRevisionStatus, editorError, editorForm, isPersisting } = storeToRefs(editorStore);
 
-const { resetEditorForm, saveDraftAndReturn, handleSaveAndSubmit, savePreviewSnapshot, setImageFile } = editorStore;
+const { resetEditorForm, saveDraftAndReturn, handleSaveAndSubmit, savePreviewSnapshot, setImageFile, addSocialLink, removeSocialLink, updateSocialLink } = editorStore;
+
+const socialLinkTypes: SocialLinkType[] = ["FACEBOOK", "INSTAGRAM", "YOUTUBE", "LINKEDIN", "X", "TIKTOK"];
+
+const socialLinkTypeOptions = computed(() =>
+  socialLinkTypes.map((value) => ({
+    value,
+    label: t(`editor.socialLinkTypes.${value}`)
+  }))
+);
 
 const hasResolvedCoordinates = (event: { latitude: number | null; longitude: number | null }) =>
   typeof event.latitude === "number" &&

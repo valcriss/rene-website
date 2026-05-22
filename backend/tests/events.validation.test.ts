@@ -7,9 +7,9 @@ describe("validateCreateEvent", () => {
     image: "https://example.com/image.jpg",
     categoryId: "music",
     audienceId: "all",
-    eventStartAt: "2026-01-15T20:00:00.000Z",
-    eventEndAt: "2026-01-15T22:00:00.000Z",
-    allDay: false,
+    eventStartAt: "2026-01-15T00:00:00.000Z",
+    eventEndAt: "2026-01-15T23:59:59.999Z",
+    allDay: true,
     venueName: "Salle des fêtes",
     postalCode: "37160",
     city: "Descartes",
@@ -20,7 +20,8 @@ describe("validateCreateEvent", () => {
     contactPhone: "0102030405",
     ticketUrl: "https://tickets.example.com",
     pricingInfo: "<p>Plein tarif : 12 €</p>",
-    websiteUrl: "https://example.com/site"
+    websiteUrl: "https://example.com/site",
+    socialLinks: [{ type: "FACEBOOK", url: "https://facebook.com/rene" }]
   };
 
   it("returns ok for valid payload", () => {
@@ -84,13 +85,23 @@ describe("validateCreateEvent", () => {
   it("returns errors when end is before start", () => {
     const result = validateCreateEvent({
       ...validPayload,
-      eventStartAt: "2026-01-15T20:00:00.000Z",
-      eventEndAt: "2026-01-14T20:00:00.000Z"
+      eventStartAt: "2026-01-15T00:00:00.000Z",
+      eventEndAt: "2026-01-14T23:59:59.999Z"
     });
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.errors).toContain("La date de fin doit être après la date de début.");
     }
+  });
+
+  it("accepts date-only payloads", () => {
+    const result = validateCreateEvent({
+      ...validPayload,
+      eventStartAt: "2026-01-15",
+      eventEndAt: "2026-01-16"
+    });
+
+    expect(result.ok).toBe(true);
   });
 
   it("returns errors for coordinates", () => {
@@ -186,6 +197,109 @@ describe("validateCreateEvent", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.errors).toContain("Le contenu est requis.");
+    }
+  });
+
+  it("accepts valid social links", () => {
+    const result = validateCreateEvent({
+      ...validPayload,
+      socialLinks: [
+        { type: "FACEBOOK", url: "https://facebook.com/rene" },
+        { type: "INSTAGRAM", url: "https://instagram.com/rene" }
+      ]
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.socialLinks).toEqual([
+        { type: "FACEBOOK", url: "https://facebook.com/rene" },
+        { type: "INSTAGRAM", url: "https://instagram.com/rene" }
+      ]);
+    }
+  });
+
+  it("rejects invalid social links payload", () => {
+    const result = validateCreateEvent({
+      ...validPayload,
+      socialLinks: [{ type: "MYSPACE", url: "notaurl" }]
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toEqual(
+        expect.arrayContaining([
+          "Le type du réseau social #1 est invalide.",
+          "L'URL du réseau social #1 est invalide."
+        ])
+      );
+    }
+  });
+
+  it("rejects duplicate social link types", () => {
+    const result = validateCreateEvent({
+      ...validPayload,
+      socialLinks: [
+        { type: "FACEBOOK", url: "https://facebook.com/rene" },
+        { type: "FACEBOOK", url: "https://facebook.com/autre" }
+      ]
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContain("Le réseau social FACEBOOK est présent plusieurs fois.");
+    }
+  });
+
+  it("rejects social links when payload is not an array", () => {
+    const result = validateCreateEvent({
+      ...validPayload,
+      socialLinks: "https://facebook.com/rene"
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContain("Les réseaux sociaux doivent être une liste.");
+    }
+  });
+
+  it("rejects social links with non-string urls", () => {
+    const result = validateCreateEvent({
+      ...validPayload,
+      socialLinks: [{ type: "FACEBOOK", url: 12 }]
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContain("L'URL du réseau social #1 est invalide.");
+    }
+  });
+
+  it("rejects invalid social link objects and blank urls", () => {
+    const result = validateCreateEvent({
+      ...validPayload,
+      socialLinks: [null, { type: "FACEBOOK", url: "   " }]
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toEqual(
+        expect.arrayContaining([
+          "Le réseau social #1 est invalide.",
+          "L'URL du réseau social #2 est requise."
+        ])
+      );
+    }
+  });
+
+  it("rejects social link urls with unsupported protocols", () => {
+    const result = validateCreateEvent({
+      ...validPayload,
+      socialLinks: [{ type: "FACEBOOK", url: "ftp://facebook.com/rene" }]
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContain("L'URL du réseau social #1 doit commencer par http:// ou https://.");
     }
   });
 });

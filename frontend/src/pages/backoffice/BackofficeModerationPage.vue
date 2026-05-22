@@ -86,6 +86,15 @@
                   class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm leading-6"
                 />
               </label>
+              <label class="mt-4 flex items-center gap-3 text-sm text-slate-700">
+                <input
+                  :checked="featuredEventIds[eventItem.id] ?? eventItem.featured === true"
+                  type="checkbox"
+                  class="h-4 w-4 rounded border-slate-300"
+                  @change="setFeaturedEvent(eventItem.id, ($event.target as HTMLInputElement).checked)"
+                />
+                <span>{{ t("moderation.markAsFeatured") }}</span>
+              </label>
               <div class="mt-4 flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -130,8 +139,8 @@ const router = useRouter();
 const { t } = useI18n();
 
 const { canModerate } = storeToRefs(authStore);
-const { pendingEvents, rejectionReasons, moderationError } = storeToRefs(eventsStore);
-const { handlePublish, handleReject, formatDate } = eventsStore;
+const { pendingEvents, rejectionReasons, moderationError, featuredEventIds } = storeToRefs(eventsStore);
+const { handlePublish, handleReject, formatDate, setFeaturedEvent } = eventsStore;
 
 const openModerationView = (id: string) => {
   router.push(`/backoffice/moderation/view/${id}`);

@@ -125,9 +125,9 @@ describe("BackofficeEventCreatePage", () => {
       image: "/uploads/test.png",
       categoryId: "music",
       audienceId: "all",
-      eventStartAt: "2026-01-15T20:00:00.000Z",
-      eventEndAt: "2026-01-15T22:00:00.000Z",
-      allDay: false,
+      eventStartAt: "2026-01-15T00:00:00.000Z",
+      eventEndAt: "2026-01-15T23:59:59.999Z",
+      allDay: true,
       venueName: "Salle",
       address: "1 rue du centre",
       postalCode: "37160",
@@ -191,9 +191,9 @@ describe("BackofficeEventCreatePage", () => {
       image: "/uploads/test.png",
       categoryId: "music",
       audienceId: "all",
-      eventStartAt: "2026-01-15T20:00:00.000Z",
-      eventEndAt: "2026-01-15T22:00:00.000Z",
-      allDay: false,
+      eventStartAt: "2026-01-15T00:00:00.000Z",
+      eventEndAt: "2026-01-15T23:59:59.999Z",
+      allDay: true,
       venueName: "Salle",
       address: "1 rue du centre",
       postalCode: "37160",
@@ -243,9 +243,9 @@ describe("BackofficeEventCreatePage", () => {
       image: "/uploads/test.png",
       categoryId: "music",
       audienceId: "all",
-      eventStartAt: "2026-01-15T20:00:00.000Z",
-      eventEndAt: "2026-01-15T22:00:00.000Z",
-      allDay: false,
+      eventStartAt: "2026-01-15T00:00:00.000Z",
+      eventEndAt: "2026-01-15T23:59:59.999Z",
+      allDay: true,
       venueName: "Salle",
       address: "1 rue du centre",
       postalCode: "37160",
@@ -453,5 +453,28 @@ describe("BackofficeEventCreatePage", () => {
     const buttons = wrapper.findAll("[data-testid='pricing-editor-update']");
     await buttons[1].trigger("click");
     expect(setup.editorStore.editorForm.pricingInfo).toBe("<p>Plein tarif : 12 €</p>");
+  });
+
+  it("adds and removes social links", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) }))
+    );
+
+    const setup = await setupPage();
+    setup.categoriesStore.hasLoaded = true;
+    renderPage(setup);
+
+    await fireEvent.click(await screen.findByRole("button", { name: "Ajouter un réseau social" }));
+
+    expect(setup.editorStore.editorForm.socialLinks).toHaveLength(1);
+    expect(await screen.findByTestId("social-link-row-0")).toBeInTheDocument();
+
+    await fireEvent.update(screen.getByLabelText("URL"), "https://facebook.com/rene");
+
+    expect(setup.editorStore.editorForm.socialLinks[0]?.url).toBe("https://facebook.com/rene");
+
+    await fireEvent.click(screen.getByRole("button", { name: "Supprimer" }));
+    expect(setup.editorStore.editorForm.socialLinks).toHaveLength(0);
   });
 });

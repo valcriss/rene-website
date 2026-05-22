@@ -52,6 +52,9 @@
           <p class="text-sm leading-6 text-slate-600 [display:-webkit-box] [-webkit-line-clamp:3] [-webkit-box-orient:vertical] overflow-hidden">
             {{ getEventExcerpt(eventItem) }}
           </p>
+          <p v-if="formatUpdatedAtLabel(eventItem.updatedAt)" class="text-xs text-slate-400">
+            {{ formatUpdatedAtLabel(eventItem.updatedAt) }}
+          </p>
           <div class="border-t border-sky-100 pt-3">
             <span class="text-sm font-semibold text-slate-900">{{ $t("home.viewEvent") }}</span>
           </div>
@@ -100,7 +103,7 @@ const categoryThemeMap: Record<string, CategoryTheme> = {
   science: { backgroundColor: "rgba(110, 231, 245, 0.2)", color: "#0f766e", borderColor: "rgba(45, 212, 191, 0.28)" }
 };
 
-const { getEventImage, markImageError, formatDateRange, getEventExcerpt } = eventsStore;
+const { getEventImage, markImageError, formatDateRange, formatUpdatedAtLabel, getEventExcerpt } = eventsStore;
 
 const getCategoryName = (categoryId: string) => categoryNames.value.get(categoryId) ?? "";
 

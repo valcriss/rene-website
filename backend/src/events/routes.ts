@@ -2,7 +2,7 @@ import { Request, Response, Router } from "express";
 import { requireRole } from "../auth/roles";
 import { AuthRepository } from "../auth/repository";
 import { EventRepository } from "./repository";
-import { createEvent, deleteEvent, getEvent, listEvents, publishEvent, rejectEvent, submitEvent, updateEvent } from "./service";
+import { createEvent, deleteEvent, getEvent, listEvents, publishEvent, rejectEvent, submitEvent, updateEvent, updateEventFeatured } from "./service";
 import {
   notifyEventDeleted,
   notifyEventPublished,
@@ -13,6 +13,15 @@ import {
 import { Event } from "./types";
 
 type AsyncHandler = (req: Request, res: Response) => Promise<void>;
+
+const getRequestUserId = (req: Request) => {
+  const headerUserId = req.header("x-user-id");
+  if (req.user?.id) {
+    return req.user.id;
+  }
+
+  return typeof headerUserId === "string" && headerUserId.trim().length > 0 ? headerUserId.trim() : null;
+};
 
 const withErrorHandling = (handler: AsyncHandler) => async (req: Request, res: Response) => {
   try {
@@ -104,9 +113,10 @@ export const createEventRouter = (repo: EventRepository, authRepo: AuthRepositor
   }));
 
   router.post("/events/:id/publish", requireRole(["MODERATOR", "ADMIN"]), withErrorHandling(async (req, res) => {
-    const result = await publishEvent(repo, req.params.id);
+    const result = await publishEvent(repo, req.params.id, req.body?.featured ?? false);
     if (!result.ok) {
-      res.status(404).json({ errors: result.errors });
+      const status = result.errors.includes("Événement introuvable.") ? 404 : 400;
+      res.status(status).json({ errors: result.errors });
       return;
     }
     const notification = await notifyEventPublished(result.value, authRepo);
@@ -114,6 +124,17 @@ export const createEventRouter = (repo: EventRepository, authRepo: AuthRepositor
       // eslint-disable-next-line no-console
       console.warn("Notifications publish failed", notification.errors);
     }
+    res.json(result.value);
+  }));
+
+  router.patch("/events/:id/featured", requireRole(["MODERATOR", "ADMIN"]), withErrorHandling(async (req, res) => {
+    const result = await updateEventFeatured(repo, req.params.id, req.body?.featured);
+    if (!result.ok) {
+      const status = result.errors.includes("Événement introuvable.") ? 404 : 400;
+      res.status(status).json({ errors: result.errors });
+      return;
+    }
+
     res.json(result.value);
   }));
 
@@ -136,9 +157,12 @@ export const createEventRouter = (repo: EventRepository, authRepo: AuthRepositor
 
   router.delete("/events/:id", requireRole(["EDITOR", "MODERATOR", "ADMIN"]), withErrorHandling(async (req, res) => {
     const current = await getEvent(repo, req.params.id);
-    const result = await deleteEvent(repo, req.params.id);
+    const result = await deleteEvent(repo, req.params.id, {
+      role: (req.user?.role ?? req.header("x-user-role")) as "EDITOR" | "MODERATOR" | "ADMIN",
+      userId: getRequestUserId(req)
+    });
     if (!result.ok) {
-      const status = result.errors.includes("Événement introuvable.") ? 404 : 400;
+      const status = result.errors.includes("Événement introuvable.") ? 404 : result.errors.includes("Suppression non autorisée.") ? 403 : 400;
       res.status(status).json({ errors: result.errors });
       return;
     }

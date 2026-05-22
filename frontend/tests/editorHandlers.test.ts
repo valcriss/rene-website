@@ -151,8 +151,8 @@ describe("editor handlers", () => {
     editorStore.editorForm.image = "/uploads/test.png";
     editorStore.editorForm.title = "Concert";
     editorStore.editorForm.categoryId = "music";
-    editorStore.editorForm.eventStartAt = "2026-01-15T20:00";
-    editorStore.editorForm.eventEndAt = "2026-01-15T22:00";
+    editorStore.editorForm.eventStartAt = "2026-01-15";
+    editorStore.editorForm.eventEndAt = "2026-01-15";
     editorStore.editorForm.venueName = "Salle";
     editorStore.editorForm.city = "Descartes";
     vm.setRole("EDITOR");
@@ -173,8 +173,8 @@ describe("editor handlers", () => {
       title: "Concert",
       image: "/uploads/test.png",
       categoryId: "music",
-      eventStartAt: "2026-01-15T20:00:00.000Z",
-      eventEndAt: "2026-01-15T22:00:00.000Z",
+      eventStartAt: "2026-01-15T00:00:00.000Z",
+      eventEndAt: "2026-01-15T23:59:59.999Z",
       venueName: "Salle",
       city: "Descartes",
       latitude: 46.97,
@@ -228,8 +228,8 @@ describe("editor handlers", () => {
       title: "Concert",
       image: "/uploads/test.png",
       categoryId: "music",
-      eventStartAt: "2026-01-15T20:00:00.000Z",
-      eventEndAt: "2026-01-15T22:00:00.000Z",
+      eventStartAt: "2026-01-15T00:00:00.000Z",
+      eventEndAt: "2026-01-15T23:59:59.999Z",
       venueName: "Salle",
       city: "Descartes",
       latitude: 46.97,
@@ -258,8 +258,8 @@ describe("editor handlers", () => {
     editorStore.editorForm.image = "/uploads/test.png";
     editorStore.editorForm.title = "Concert";
     editorStore.editorForm.categoryId = "music";
-    editorStore.editorForm.eventStartAt = "2026-01-15T20:00";
-    editorStore.editorForm.eventEndAt = "2026-01-15T22:00";
+    editorStore.editorForm.eventStartAt = "2026-01-15";
+    editorStore.editorForm.eventEndAt = "2026-01-15";
     editorStore.editorForm.venueName = "Salle";
     editorStore.editorForm.city = "Descartes";
     vm.setRole("EDITOR");
@@ -268,6 +268,88 @@ describe("editor handlers", () => {
 
     expect(createMock).toHaveBeenCalledOnce();
     expect(submitMock).toHaveBeenCalledWith("created-1", "EDITOR");
+  });
+
+  it("keeps editor state after saving a new draft", async () => {
+    createMock.mockResolvedValue({
+      id: "created-keep-1",
+      title: "Concert",
+      image: "/uploads/test.png",
+      categoryId: "music",
+      audienceId: "all",
+      eventStartAt: "2026-01-15T00:00:00.000Z",
+      eventEndAt: "2026-01-15T23:59:59.999Z",
+      venueName: "Salle",
+      city: "Descartes",
+      latitude: 46.97,
+      longitude: 0.7,
+      status: "DRAFT"
+    });
+
+    const { wrapper } = await mountWithRouter();
+    await nextTick();
+
+    const vm = wrapper.vm as unknown as Exposed;
+    const editorStore = useEditorStore();
+    editorStore.editorForm.image = "/uploads/test.png";
+    editorStore.editorForm.title = "Concert";
+    editorStore.editorForm.categoryId = "music";
+    editorStore.editorForm.audienceId = "all";
+    editorStore.editorForm.eventStartAt = "2026-01-15";
+    editorStore.editorForm.eventEndAt = "2026-01-15";
+    editorStore.editorForm.venueName = "Salle";
+    editorStore.editorForm.city = "Descartes";
+    vm.setRole("EDITOR");
+
+    await expect(vm.handleSaveDraft()).resolves.toBe(true);
+
+    expect(editorStore.editorMode).toBe("edit");
+    expect(editorStore.editingEventId).toBe("created-keep-1");
+    expect(editorStore.editorForm.title).toBe("Concert");
+    expect(editorStore.editorForm.image).toBe("/uploads/test.png");
+  });
+
+  it("serializes social links in the editor payload", async () => {
+    createMock.mockResolvedValue({
+      id: "created-social-1",
+      title: "Concert",
+      image: "/uploads/test.png",
+      categoryId: "music",
+      audienceId: "all",
+      eventStartAt: "2026-01-15T00:00:00.000Z",
+      eventEndAt: "2026-01-15T23:59:59.999Z",
+      venueName: "Salle",
+      city: "Descartes",
+      latitude: 46.97,
+      longitude: 0.7,
+      socialLinks: [{ type: "FACEBOOK", url: "https://facebook.com/rene" }],
+      status: "DRAFT"
+    });
+
+    const { wrapper } = await mountWithRouter();
+    await nextTick();
+
+    const vm = wrapper.vm as unknown as Exposed;
+    const editorStore = useEditorStore();
+    editorStore.editorForm.image = "/uploads/test.png";
+    editorStore.editorForm.title = "Concert";
+    editorStore.editorForm.categoryId = "music";
+    editorStore.editorForm.audienceId = "all";
+    editorStore.editorForm.eventStartAt = "2026-01-15";
+    editorStore.editorForm.eventEndAt = "2026-01-15";
+    editorStore.editorForm.venueName = "Salle";
+    editorStore.editorForm.city = "Descartes";
+    editorStore.editorForm.socialLinks = [{ type: "FACEBOOK", url: " https://facebook.com/rene " }];
+    vm.setRole("EDITOR");
+
+    await vm.handleSaveDraft();
+
+    expect(createMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        socialLinks: [{ type: "FACEBOOK", url: "https://facebook.com/rene" }]
+      }),
+      "EDITOR"
+    );
   });
 
   it("prevents duplicate save and submit while submission is in progress", async () => {
@@ -577,7 +659,7 @@ describe("editor handlers", () => {
     });
     await nextTick();
 
-    const dateInputs = wrapper.findAll('input[type="datetime-local"]');
+    const dateInputs = wrapper.findAll('input[type="date"]');
     expect((dateInputs[0].element as HTMLInputElement).value).toBe("");
     expect((dateInputs[1].element as HTMLInputElement).value).toBe("");
   });
@@ -598,8 +680,8 @@ describe("editor handlers", () => {
       content: "Desc",
       image: "img",
       categoryId: "music",
-      eventStartAt: "2026-01-15T20:00:00.000Z",
-      eventEndAt: "2026-01-15T22:00:00.000Z",
+      eventStartAt: "2026-01-15T00:00:00.000Z",
+      eventEndAt: "2026-01-15T23:59:59.999Z",
       allDay: false,
       venueName: "Salle",
       address: "Rue",
@@ -643,8 +725,8 @@ describe("editor handlers", () => {
       title: "Concert",
       image: "img",
       categoryId: "music",
-      eventStartAt: "2026-01-15T20:00:00.000Z",
-      eventEndAt: "2026-01-15T22:00:00.000Z",
+      eventStartAt: "2026-01-15T00:00:00.000Z",
+      eventEndAt: "2026-01-15T23:59:59.999Z",
       venueName: "Salle",
       city: "Descartes",
       latitude: 46.97,

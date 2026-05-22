@@ -3,12 +3,45 @@ import { validateCreateEvent } from "./validation";
 import { Event, EventDraftInput, GeolocationPrecision } from "./types";
 import { geocodeEventLocation } from "../geocoding/photon";
 import { deleteUploadIfLocal } from "../uploads/storage";
+import { UserRole } from "../auth/roles";
 
 type ServiceResult<T> =
   | { ok: true; value: T }
   | { ok: false; errors: string[] };
 
 const missingCoordinatesError = "L'adresse doit être corrigée avant la soumission à modération.";
+const pendingEditionError = "L'événement ne peut pas être modifié tant qu'il est en attente de modération.";
+const invalidFeaturedError = "La mise en avant doit être un booléen.";
+const deleteForbiddenError = "Suppression non autorisée.";
+
+type DeleteActor = {
+  role: UserRole;
+  userId: string | null;
+};
+
+const extractIsoDate = (value: string) => {
+  const match = value.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (match) {
+    return match[1];
+  }
+
+  const date = new Date(value);
+
+  const pad = (part: number) => part.toString().padStart(2, "0");
+  return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
+};
+
+const normalizeEventDates = (input: EventDraftInput): EventDraftInput => {
+  const startDate = extractIsoDate(input.eventStartAt);
+  const endDate = extractIsoDate(input.eventEndAt);
+
+  return {
+    ...input,
+    eventStartAt: `${startDate}T00:00:00.000Z`,
+    eventEndAt: `${endDate}T23:59:59.999Z`,
+    allDay: true
+  };
+};
 
 const hasResolvedCoordinates = (event: Pick<Event, "latitude" | "longitude">) =>
   typeof event.latitude === "number" &&
@@ -44,6 +77,14 @@ export const listEvents = (repo: EventRepository): Promise<Event[]> => repo.list
 
 export const getEvent = (repo: EventRepository, id: string): Promise<Event | null> => repo.getById(id);
 
+const canDeleteEvent = (event: Event, actor: DeleteActor) => {
+  if (actor.role === "ADMIN" || actor.role === "MODERATOR") {
+    return true;
+  }
+
+  return actor.userId !== null && event.status === "DRAFT" && event.createdByUserId === actor.userId;
+};
+
 export const createEvent = async (
   repo: EventRepository,
   input: unknown,
@@ -57,11 +98,14 @@ export const createEvent = async (
     return { ok: false, errors: validation.errors };
   }
 
-  const coordinates = await resolveCoordinates(validation.value);
+  const normalizedInput = normalizeEventDates(validation.value);
+
+  const coordinates = await resolveCoordinates(normalizedInput);
 
   try {
     const created = await repo.create({
       ...validation.value,
+      ...normalizedInput,
       latitude: coordinates?.latitude ?? null,
       longitude: coordinates?.longitude ?? null,
       geolocationPrecision: coordinates?.geolocationPrecision ?? "UNRESOLVED",
@@ -83,21 +127,27 @@ export const updateEvent = async (
   if (!current) {
     return { ok: false, errors: ["Événement introuvable."] };
   }
+  if (current.status === "PENDING" || current.pendingRevision?.status === "PENDING") {
+    return { ok: false, errors: [pendingEditionError] };
+  }
 
   const validation = validateCreateEvent(input);
   if (!validation.ok) {
     return { ok: false, errors: validation.errors };
   }
 
-  const coordinates = await resolveCoordinates(validation.value);
+  const normalizedInput = normalizeEventDates(validation.value);
+
+  const coordinates = await resolveCoordinates(normalizedInput);
 
   try {
     if (current.status === "PUBLISHED") {
       const updated = await repo.upsertPendingRevision(id, {
-        ...validation.value,
+        ...normalizedInput,
         latitude: coordinates?.latitude ?? null,
         longitude: coordinates?.longitude ?? null,
         geolocationPrecision: coordinates?.geolocationPrecision ?? "UNRESOLVED",
+        featured: current.pendingRevision?.featured ?? false,
         createdByUserId: current.createdByUserId
       }, "DRAFT");
       if (!updated) {
@@ -110,10 +160,11 @@ export const updateEvent = async (
     }
 
     const updated = await repo.update(id, {
-      ...validation.value,
+      ...normalizedInput,
       latitude: coordinates?.latitude ?? null,
       longitude: coordinates?.longitude ?? null,
-      geolocationPrecision: coordinates?.geolocationPrecision ?? "UNRESOLVED"
+      geolocationPrecision: coordinates?.geolocationPrecision ?? "UNRESOLVED",
+      featured: current.featured
     });
     if (!updated) {
       return { ok: false, errors: ["Événement introuvable."] };
@@ -170,8 +221,12 @@ export const submitEvent = async (
 
 export const publishEvent = async (
   repo: EventRepository,
-  id: string
+  id: string,
+  featured: unknown = false
 ): Promise<ServiceResult<Event>> => {
+  if (typeof featured !== "boolean") {
+    return { ok: false, errors: [invalidFeaturedError] };
+  }
   const current = await repo.getById(id);
   if (!current) {
     return { ok: false, errors: ["Événement introuvable."] };
@@ -195,6 +250,7 @@ export const publishEvent = async (
   }
 
   const updated = await repo.updateStatus(id, "PUBLISHED", {
+    featured,
     publishedAt: now,
     rejectionReason: null,
     publicationEndAt: current.publicationEndAt
@@ -202,6 +258,31 @@ export const publishEvent = async (
   if (!updated) {
     return { ok: false, errors: ["Événement introuvable."] };
   }
+  return { ok: true, value: updated };
+};
+
+export const updateEventFeatured = async (
+  repo: EventRepository,
+  id: string,
+  featured: unknown
+): Promise<ServiceResult<Event>> => {
+  if (typeof featured !== "boolean") {
+    return { ok: false, errors: [invalidFeaturedError] };
+  }
+
+  const current = await repo.getById(id);
+  if (!current) {
+    return { ok: false, errors: ["Événement introuvable."] };
+  }
+  if (current.status !== "PUBLISHED") {
+    return { ok: false, errors: ["Seuls les événements publiés peuvent être mis en avant."] };
+  }
+
+  const updated = await repo.updateFeatured(id, featured);
+  if (!updated) {
+    return { ok: false, errors: ["Événement introuvable."] };
+  }
+
   return { ok: true, value: updated };
 };
 
@@ -244,11 +325,16 @@ export const rejectEvent = async (
 
 export const deleteEvent = async (
   repo: EventRepository,
-  id: string
+  id: string,
+  actor: DeleteActor
 ): Promise<ServiceResult<{ id: string }>> => {
   const current = await repo.getById(id);
   if (!current) {
     return { ok: false, errors: ["Événement introuvable."] };
+  }
+
+  if (!canDeleteEvent(current, actor)) {
+    return { ok: false, errors: [deleteForbiddenError] };
   }
 
   const deleted = await repo.delete(id);

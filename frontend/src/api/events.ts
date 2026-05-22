@@ -6,6 +6,13 @@ export type EventRevisionStatus = "DRAFT" | "PENDING" | "REJECTED";
 
 export type GeolocationPrecision = "EXACT" | "APPROXIMATE" | "UNRESOLVED";
 
+export type SocialLinkType = "FACEBOOK" | "INSTAGRAM" | "YOUTUBE" | "LINKEDIN" | "X" | "TIKTOK";
+
+export type SocialLink = {
+  type: SocialLinkType;
+  url: string;
+};
+
 export type EventPendingRevision = {
   id: string;
   eventId: string;
@@ -32,6 +39,8 @@ export type EventPendingRevision = {
   ticketUrl?: string;
   pricingInfo?: string;
   websiteUrl?: string;
+  socialLinks?: SocialLink[];
+  featured?: boolean;
   status: EventRevisionStatus;
   rejectionReason?: string | null;
   createdAt?: string;
@@ -63,6 +72,8 @@ export type EventItem = {
   ticketUrl?: string;
   pricingInfo?: string;
   websiteUrl?: string;
+  socialLinks?: SocialLink[];
+  featured?: boolean;
   status: EventStatus;
   publishedAt?: string | null;
   publicationEndAt?: string;
@@ -92,6 +103,7 @@ export type CreateEventPayload = {
   ticketUrl?: string;
   pricingInfo?: string;
   websiteUrl?: string;
+  socialLinks?: SocialLink[];
 };
 
 const parseApiError = async (response: Response, fallback: string) => {

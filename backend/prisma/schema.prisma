@@ -57,7 +57,9 @@ model Event {
   ticketUrl        String?
   pricingInfo      String?
   websiteUrl       String?
+  socialLinks      Json?
   status           EventStatus @default(DRAFT)
+  featured         Boolean     @default(false)
   publishedAt      DateTime?
   publicationEndAt DateTime
   rejectionReason  String?
@@ -71,6 +73,7 @@ model Event {
 
   @@index([eventStartAt])
   @@index([status])
+  @@index([featured])
   @@index([categoryId])
   @@index([audienceId])
   @@index([createdByUserId])
@@ -102,7 +105,9 @@ model EventRevision {
   ticketUrl       String?
   pricingInfo     String?
   websiteUrl      String?
+  socialLinks     Json?
   status          EventRevisionStatus @default(PENDING)
+  featured        Boolean             @default(false)
   rejectionReason String?
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt

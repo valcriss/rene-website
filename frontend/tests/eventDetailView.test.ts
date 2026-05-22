@@ -57,6 +57,7 @@ describe("EventDetailView", () => {
     await wrapper.vm.$nextTick();
 
     expect(wrapper.html()).toContain("Non renseigné");
+    expect(wrapper.text()).toContain("Mis à jour le");
     expect(wrapper.find("[data-testid='related-events']").exists()).toBe(false);
 
     await wrapper.find("img").trigger("error");
@@ -176,6 +177,7 @@ describe("EventDetailView", () => {
           latitude: 46.97,
           longitude: 0.7,
           organizerName: "Org",
+          socialLinks: [{ type: "FACEBOOK", url: "https://facebook.com/rene" }],
           ticketUrl: "https://tickets.example.com",
           pricingInfo: "<ul><li><strong>Plein tarif</strong> : 12 €</li></ul><script>alert(1)</script>",
           status: "PUBLISHED",
@@ -196,8 +198,10 @@ describe("EventDetailView", () => {
 
     await wrapper.vm.$nextTick();
 
-    expect(wrapper.html()).toContain("Information sur le tarif");
+    expect(wrapper.html()).toContain("Horaires et tarifs");
     expect(wrapper.html()).toContain("<strong>Plein tarif</strong>");
     expect(wrapper.html()).not.toContain("<script>");
+    expect(wrapper.find("[data-testid='detail-social-links']").exists()).toBe(true);
+    expect(wrapper.find("a[title='Facebook']").attributes("href")).toBe("https://facebook.com/rene");
   });
 });

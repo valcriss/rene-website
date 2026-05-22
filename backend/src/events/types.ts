@@ -4,6 +4,13 @@ export type EventRevisionStatus = "DRAFT" | "PENDING" | "REJECTED";
 
 export type GeolocationPrecision = "EXACT" | "APPROXIMATE" | "UNRESOLVED";
 
+export type SocialLinkType = "FACEBOOK" | "INSTAGRAM" | "YOUTUBE" | "LINKEDIN" | "X" | "TIKTOK";
+
+export type SocialLink = {
+  type: SocialLinkType;
+  url: string;
+};
+
 export type EventDraftInput = {
   title: string;
   content: string;
@@ -27,6 +34,8 @@ export type EventDraftInput = {
   ticketUrl?: string;
   pricingInfo?: string;
   websiteUrl?: string;
+  socialLinks?: SocialLink[];
+  featured?: boolean;
 };
 
 export type CreateEventInput = EventDraftInput & {

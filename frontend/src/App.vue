@@ -50,9 +50,11 @@ onMounted(async () => {
 
 defineExpose({
   handlePublish: eventsStore.handlePublish,
+  handleUpdateFeatured: eventsStore.handleUpdateFeatured,
   handleReject: eventsStore.handleReject,
   setRole: authStore.setRole,
   setRejectionReason: eventsStore.setRejectionReason,
+  setFeaturedEvent: eventsStore.setFeaturedEvent,
   getModerationError: eventsStore.getModerationError,
   resetEditorForm: editorStore.resetEditorForm,
   startEdit: editorStore.startEdit,

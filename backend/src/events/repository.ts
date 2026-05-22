@@ -9,10 +9,12 @@ export interface EventRepository {
   submitPendingRevision(id: string): Promise<Event | null>;
   rejectPendingRevision(id: string, reason: string): Promise<Event | null>;
   publishPendingRevision(id: string, publishedAt: string): Promise<Event | null>;
+  updateFeatured(id: string, featured: boolean): Promise<Event | null>;
   delete(id: string): Promise<boolean>;
   updateStatus(id: string, status: EventStatus, data: {
     publishedAt: string | null;
     rejectionReason: string | null;
     publicationEndAt: string;
+    featured?: boolean;
   }): Promise<Event | null>;
 }

@@ -76,6 +76,7 @@ describe("events routes", () => {
       submitPendingRevision: async () => null,
       rejectPendingRevision: async () => null,
       publishPendingRevision: async () => null,
+      updateFeatured: async () => null,
       delete: async () => false,
       updateStatus: async () => null
     };
@@ -138,6 +139,32 @@ describe("events routes", () => {
 
     expect(createResponse.status).toBe(201);
     expect(createResponse.body.createdByUserId).toBe("user-1");
+  });
+
+  it("deletes an owned draft using the authenticated user from the token", async () => {
+    process.env.JWT_SECRET = "test-secret";
+    const tokenResult = signUserToken({
+      id: "user-1",
+      name: "User",
+      email: "user@test",
+      role: "EDITOR"
+    });
+    if (!tokenResult.ok) throw new Error("Token generation failed");
+
+    const app = createApp();
+    const createResponse = await request(app)
+      .post("/api/events")
+      .set("Authorization", `Bearer ${tokenResult.value}`)
+      .set("x-user-role", "EDITOR")
+      .send(validPayload);
+
+    const deleteResponse = await request(app)
+      .delete(`/api/events/${createResponse.body.id}`)
+      .set("Authorization", `Bearer ${tokenResult.value}`)
+      .set("x-user-role", "EDITOR");
+
+    expect(deleteResponse.status).toBe(200);
+    expect(deleteResponse.body).toEqual({ id: createResponse.body.id });
   });
 
   it("stores creator from x-user-id header", async () => {
@@ -213,6 +240,7 @@ describe("events routes", () => {
       .set("x-user-role", "MODERATOR");
     expect(publishResponse.status).toBe(200);
     expect(publishResponse.body.status).toBe("PUBLISHED");
+    expect(publishResponse.body.featured).toBe(false);
 
     const createRejectedCandidateResponse = await request(app)
       .post("/api/events")
@@ -272,14 +300,43 @@ describe("events routes", () => {
     const createResponse = await request(app)
       .post("/api/events")
       .set("x-user-role", "EDITOR")
+      .set("x-user-id", "editor-1")
       .send(validPayload);
 
     const deleteResponse = await request(app)
       .delete(`/api/events/${createResponse.body.id}`)
-      .set("x-user-role", "EDITOR");
+      .set("x-user-role", "EDITOR")
+      .set("x-user-id", "editor-1");
 
     expect(deleteResponse.status).toBe(200);
     expect(deleteResponse.body).toEqual({ id: createResponse.body.id });
+  });
+
+  it("forbids editors from deleting published events", async () => {
+    const app = createApp();
+    const createResponse = await request(app)
+      .post("/api/events")
+      .set("x-user-role", "EDITOR")
+      .set("x-user-id", "editor-1")
+      .send(validPayload);
+    const id = createResponse.body.id;
+
+    await request(app)
+      .post(`/api/events/${id}/submit`)
+      .set("x-user-role", "EDITOR")
+      .set("x-user-id", "editor-1");
+
+    await request(app)
+      .post(`/api/events/${id}/publish`)
+      .set("x-user-role", "MODERATOR");
+
+    const deleteResponse = await request(app)
+      .delete(`/api/events/${id}`)
+      .set("x-user-role", "EDITOR")
+      .set("x-user-id", "editor-1");
+
+    expect(deleteResponse.status).toBe(403);
+    expect(deleteResponse.body.errors).toContain("Suppression non autorisée.");
   });
 
   it("returns 404 when delete missing", async () => {
@@ -303,6 +360,72 @@ describe("events routes", () => {
 
     expect(submitResponse.status).toBe(404);
     expect(publishResponse.status).toBe(404);
+  });
+
+  it("publishes with featured flag and updates featured after publication", async () => {
+    const app = createApp();
+    const createResponse = await request(app)
+      .post("/api/events")
+      .set("x-user-role", "EDITOR")
+      .send(validPayload);
+    const id = createResponse.body.id;
+
+    await request(app)
+      .post(`/api/events/${id}/submit`)
+      .set("x-user-role", "EDITOR");
+
+    const publishResponse = await request(app)
+      .post(`/api/events/${id}/publish`)
+      .set("x-user-role", "MODERATOR")
+      .send({ featured: true });
+
+    expect(publishResponse.status).toBe(200);
+    expect(publishResponse.body.featured).toBe(true);
+
+    const toggleResponse = await request(app)
+      .patch(`/api/events/${id}/featured`)
+      .set("x-user-role", "ADMIN")
+      .send({ featured: false });
+
+    expect(toggleResponse.status).toBe(200);
+    expect(toggleResponse.body.featured).toBe(false);
+  });
+
+  it("returns 400 for invalid featured payloads", async () => {
+    const app = createApp();
+    const createResponse = await request(app)
+      .post("/api/events")
+      .set("x-user-role", "EDITOR")
+      .send(validPayload);
+    const id = createResponse.body.id;
+
+    await request(app)
+      .post(`/api/events/${id}/submit`)
+      .set("x-user-role", "EDITOR");
+
+    const publishResponse = await request(app)
+      .post(`/api/events/${id}/publish`)
+      .set("x-user-role", "MODERATOR")
+      .send({ featured: "yes" });
+
+    expect(publishResponse.status).toBe(400);
+
+    const patchResponse = await request(app)
+      .patch(`/api/events/${id}/featured`)
+      .set("x-user-role", "ADMIN")
+      .send({ featured: "yes" });
+
+    expect(patchResponse.status).toBe(400);
+  });
+
+  it("returns 404 when updating featured on a missing event", async () => {
+    const app = createApp();
+    const response = await request(app)
+      .patch("/api/events/missing/featured")
+      .set("x-user-role", "ADMIN")
+      .send({ featured: true });
+
+    expect(response.status).toBe(404);
   });
 
   it("returns 400 for reject without reason", async () => {

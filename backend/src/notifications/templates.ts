@@ -1,6 +1,6 @@
 import { Event } from "../events/types";
 
-const formatDate = (value: string) => new Date(value).toLocaleString("fr-FR");
+const formatDate = (value: string) => new Date(value).toLocaleDateString("fr-FR");
 
 export const buildSubmittedSubject = (event: Event) => `Nouvelle soumission : ${event.title}`;
 

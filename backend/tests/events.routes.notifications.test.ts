@@ -21,9 +21,9 @@ const baseEvent: Event = {
   createdByUserId: null,
   categoryId: "music",
   audienceId: "all",
-  eventStartAt: "2026-01-15T20:00:00.000Z",
-  eventEndAt: "2026-01-15T22:00:00.000Z",
-  allDay: false,
+  eventStartAt: "2026-01-15T00:00:00.000Z",
+  eventEndAt: "2026-01-15T23:59:59.999Z",
+  allDay: true,
   venueName: "Salle",
   address: "1 rue",
   postalCode: "37160",
@@ -31,9 +31,10 @@ const baseEvent: Event = {
   latitude: 46.97,
   longitude: 0.7,
   organizerName: "Association",
+  featured: false,
   status: "DRAFT",
   publishedAt: null,
-  publicationEndAt: "2026-01-15T22:00:00.000Z",
+  publicationEndAt: "2026-01-15T23:59:59.999Z",
   rejectionReason: null,
   pendingRevision: null,
   createdAt: "2026-01-01T00:00:00.000Z",
@@ -68,6 +69,7 @@ const buildRepo = (event: Event): EventRepository => ({
   submitPendingRevision: async () => event,
   rejectPendingRevision: async () => event,
   publishPendingRevision: async () => event,
+  updateFeatured: async () => event,
   delete: async () => true,
   updateStatus: async (_id, status, data) => ({
     ...event,
@@ -191,7 +193,7 @@ describe("events routes notification warnings", () => {
 
     const response = await request(app)
       .delete("/api/events/1")
-      .set("x-user-role", "EDITOR");
+      .set("x-user-role", "MODERATOR");
 
     expect(response.status).toBe(200);
     expect(warnSpy).toHaveBeenCalled();

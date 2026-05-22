@@ -1,7 +1,7 @@
 import { computed, reactive, ref } from "vue";
 import { defineStore } from "pinia";
 import type { EventRevisionStatus } from "../api/events";
-import { CreateEventPayload, EventItem, createEvent, submitEvent, updateEvent } from "../api/events";
+import { CreateEventPayload, EventItem, SocialLink, SocialLinkType, createEvent, submitEvent, updateEvent } from "../api/events";
 import { uploadImage } from "../api/uploads";
 import { useAuthStore } from "./auth";
 import { useEventsStore } from "./events";
@@ -14,7 +14,7 @@ const defaultEditorForm = (): CreateEventPayload => ({
   audienceId: "",
   eventStartAt: "",
   eventEndAt: "",
-  allDay: false,
+  allDay: true,
   venueName: "",
   address: "",
   postalCode: "",
@@ -25,10 +25,42 @@ const defaultEditorForm = (): CreateEventPayload => ({
   contactPhone: "",
   ticketUrl: "",
   pricingInfo: "",
-  websiteUrl: ""
+  websiteUrl: "",
+  socialLinks: []
 });
 
+const defaultSocialLink = (): SocialLink => ({
+  type: "FACEBOOK",
+  url: ""
+});
+
+const cloneSocialLinks = (socialLinks?: SocialLink[]) => socialLinks?.map((link) => ({ ...link })) ?? [];
+
 const PREVIEW_STORAGE_PREFIX = "rene-website-preview";
+
+const extractDateInput = (value: string) => {
+  const match = value.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (match) {
+    return match[1];
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const pad = (val: number) => val.toString().padStart(2, "0");
+  return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
+};
+
+const normalizeDateBoundary = (value: string, endOfDay: boolean) => {
+  const date = extractDateInput(value);
+  if (!date) {
+    return "";
+  }
+
+  return `${date}T${endOfDay ? "23:59:59.999" : "00:00:00.000"}Z`;
+};
 
 export type EditorPreviewSnapshot = {
   token: string;
@@ -87,9 +119,9 @@ export const useEditorStore = defineStore("editor", () => {
     editorForm.image = source.image;
     editorForm.categoryId = source.categoryId;
     editorForm.audienceId = source.audienceId;
-    editorForm.eventStartAt = formatDateTimeInput(source.eventStartAt);
-    editorForm.eventEndAt = formatDateTimeInput(source.eventEndAt);
-    editorForm.allDay = source.allDay ?? false;
+    editorForm.eventStartAt = formatDateInput(source.eventStartAt);
+    editorForm.eventEndAt = formatDateInput(source.eventEndAt);
+    editorForm.allDay = true;
     editorForm.venueName = source.venueName;
     editorForm.address = source.address ?? "";
     editorForm.postalCode = source.postalCode ?? "";
@@ -101,6 +133,7 @@ export const useEditorStore = defineStore("editor", () => {
     editorForm.ticketUrl = source.ticketUrl ?? "";
     editorForm.pricingInfo = source.pricingInfo ?? "";
     editorForm.websiteUrl = source.websiteUrl ?? "";
+    editorForm.socialLinks = cloneSocialLinks(source.socialLinks);
   };
 
   const setImageFile = (file: File | null) => {
@@ -109,12 +142,19 @@ export const useEditorStore = defineStore("editor", () => {
 
   const buildEditorPayload = (): CreateEventPayload => ({
     ...editorForm,
+    eventStartAt: normalizeDateBoundary(editorForm.eventStartAt, false),
+    eventEndAt: normalizeDateBoundary(editorForm.eventEndAt, true),
+    allDay: true,
     organizerUrl: editorForm.organizerUrl || undefined,
     contactEmail: editorForm.contactEmail || undefined,
     contactPhone: editorForm.contactPhone || undefined,
     ticketUrl: editorForm.ticketUrl || undefined,
     pricingInfo: editorForm.pricingInfo || undefined,
-    websiteUrl: editorForm.websiteUrl || undefined
+    websiteUrl: editorForm.websiteUrl || undefined,
+    socialLinks:
+      editorForm.socialLinks
+        ?.map((link) => ({ type: link.type, url: link.url.trim() }))
+        .filter((link) => link.url.length > 0) ?? []
   });
 
   const buildPreviewEvent = (): EventItem => ({
@@ -124,9 +164,10 @@ export const useEditorStore = defineStore("editor", () => {
     image: imageFile.value ? URL.createObjectURL(imageFile.value) : editorForm.image,
     categoryId: editorForm.categoryId,
     audienceId: editorForm.audienceId,
-    eventStartAt: editorForm.eventStartAt || new Date().toISOString(),
-    eventEndAt: editorForm.eventEndAt || editorForm.eventStartAt || new Date().toISOString(),
-    allDay: editorForm.allDay,
+    eventStartAt: normalizeDateBoundary(editorForm.eventStartAt, false) || new Date().toISOString(),
+    eventEndAt:
+      normalizeDateBoundary(editorForm.eventEndAt || editorForm.eventStartAt, true) || new Date().toISOString(),
+    allDay: true,
     venueName: editorForm.venueName || "Lieu à confirmer",
     address: editorForm.address,
     postalCode: editorForm.postalCode,
@@ -140,9 +181,11 @@ export const useEditorStore = defineStore("editor", () => {
     ticketUrl: editorForm.ticketUrl,
     pricingInfo: editorForm.pricingInfo,
     websiteUrl: editorForm.websiteUrl,
+    socialLinks: cloneSocialLinks(editorForm.socialLinks),
     status: "DRAFT",
     publishedAt: null,
-    publicationEndAt: editorForm.eventEndAt || editorForm.eventStartAt || new Date().toISOString(),
+    publicationEndAt:
+      normalizeDateBoundary(editorForm.eventEndAt || editorForm.eventStartAt, true) || new Date().toISOString(),
     rejectionReason: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
@@ -184,11 +227,11 @@ export const useEditorStore = defineStore("editor", () => {
           : await createEvent(payload, authStore.role);
       eventsStore.updateEventState(updated);
       imageFile.value = null;
-      if (editorMode.value === "create") {
-        resetEditorForm();
-      } else {
-        editorForm.image = updated.image;
-      }
+      editorMode.value = "edit";
+      editingEventId.value = updated.id;
+      editingPublishedEvent.value = updated.status === "PUBLISHED";
+      editingPublishedRevisionStatus.value = updated.pendingRevision?.status ?? null;
+      editorForm.image = updated.image;
       return updated;
     } catch (err) {
       editorError.value = err instanceof Error ? err.message : "Erreur inconnue";
@@ -261,15 +304,30 @@ export const useEditorStore = defineStore("editor", () => {
     }
   };
 
-  const formatDateTimeInput = (value: string) => {
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      return "";
+  const formatDateInput = (value: string) => extractDateInput(value);
+
+  const addSocialLink = () => {
+    editorForm.socialLinks = [...(editorForm.socialLinks ?? []), defaultSocialLink()];
+  };
+
+  const removeSocialLink = (index: number) => {
+    editorForm.socialLinks = (editorForm.socialLinks ?? []).filter((_, currentIndex) => currentIndex !== index);
+  };
+
+  const updateSocialLink = (index: number, field: keyof SocialLink, value: string) => {
+    const nextLinks = cloneSocialLinks(editorForm.socialLinks);
+    const current = nextLinks[index];
+    if (!current) {
+      return;
     }
-    const pad = (val: number) => val.toString().padStart(2, "0");
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(
-      date.getHours()
-    )}:${pad(date.getMinutes())}`;
+
+    if (field === "type") {
+      current.type = value as SocialLinkType;
+    } else {
+      current.url = value;
+    }
+
+    editorForm.socialLinks = nextLinks;
   };
 
   const getEditorError = () => editorError.value;
@@ -293,6 +351,9 @@ export const useEditorStore = defineStore("editor", () => {
     handleSaveDraft,
     handleSaveAndSubmit,
     handleSubmitDraft,
+    addSocialLink,
+    removeSocialLink,
+    updateSocialLink,
     getEditorError,
     getEditorFormValues
   };

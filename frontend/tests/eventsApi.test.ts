@@ -42,7 +42,9 @@ describe("events api", () => {
       contactEmail: "contact@example.com",
       contactPhone: "0102030405",
       ticketUrl: "https://tickets.example.com",
-      websiteUrl: "https://example.com"
+      websiteUrl: "https://example.com",
+      socialLinks: [{ type: "FACEBOOK", url: "https://facebook.com/rene" }],
+      audienceId: "all"
     };
 
     vi.stubGlobal(
@@ -74,12 +76,14 @@ describe("events api", () => {
           address: "Rue",
           postalCode: "37100",
           city: "Descartes",
+          audienceId: "all",
           organizerName: "Asso",
           organizerUrl: "https://example.com",
           contactEmail: "contact@example.com",
           contactPhone: "0102030405",
           ticketUrl: "https://tickets.example.com",
-          websiteUrl: "https://example.com"
+          websiteUrl: "https://example.com",
+          socialLinks: [{ type: "FACEBOOK", url: "https://facebook.com/rene" }]
         },
         "EDITOR"
       )
@@ -106,12 +110,14 @@ describe("events api", () => {
           address: "Rue",
           postalCode: "37100",
           city: "Descartes",
+          audienceId: "all",
           organizerName: "Asso",
           organizerUrl: "https://example.com",
           contactEmail: "contact@example.com",
           contactPhone: "0102030405",
           ticketUrl: "https://tickets.example.com",
-          websiteUrl: "https://example.com"
+          websiteUrl: "https://example.com",
+          socialLinks: [{ type: "FACEBOOK", url: "https://facebook.com/rene" }]
         },
         "EDITOR"
       )
@@ -138,12 +144,14 @@ describe("events api", () => {
         address: "Rue",
         postalCode: "37100",
         city: "Descartes",
+        audienceId: "all",
         organizerName: "Asso",
         organizerUrl: "https://example.com",
         contactEmail: "contact@example.com",
         contactPhone: "0102030405",
         ticketUrl: "https://tickets.example.com",
-        websiteUrl: "https://example.com"
+        websiteUrl: "https://example.com",
+        socialLinks: [{ type: "FACEBOOK", url: "https://facebook.com/rene" }]
       },
       "EDITOR"
     );
@@ -172,12 +180,14 @@ describe("events api", () => {
           address: "Rue",
           postalCode: "37100",
           city: "Descartes",
+          audienceId: "all",
           organizerName: "Asso",
           organizerUrl: "https://example.com",
           contactEmail: "contact@example.com",
           contactPhone: "0102030405",
           ticketUrl: "https://tickets.example.com",
-          websiteUrl: "https://example.com"
+          websiteUrl: "https://example.com",
+          socialLinks: [{ type: "FACEBOOK", url: "https://facebook.com/rene" }]
         },
         "EDITOR"
       )

@@ -3,11 +3,12 @@ import { defineStore } from "pinia";
 import { EventItem, GeolocationPrecision, deleteEvent, fetchEvents } from "../api/events";
 import { filterEvents, type EventFilters } from "../events/filterEvents";
 import placeholderEvent from "../assets/event-placeholder.svg";
-import { publishEvent, rejectEvent, type ModeratorRole } from "../api/moderation";
+import { publishEventWithFeatured, rejectEvent, updateEventFeatured, type ModeratorRole } from "../api/moderation";
 import {
   formatDate,
   formatDateRange,
   formatDateTimeRange,
+  formatUpdatedAtLabel,
   formatOptional
 } from "../utils/formatters";
 import { useAuthStore } from "./auth";
@@ -37,6 +38,7 @@ export const useEventsStore = defineStore("events", () => {
   const deleteError = ref<string | null>(null);
   const imageErrorById = reactive<Record<string, boolean>>({});
   const rejectionReasons = reactive<Record<string, string>>({});
+  const featuredEventIds = reactive<Record<string, boolean>>({});
 
   const hasResolvedCoordinates = (event: Pick<EventItem, "latitude" | "longitude">) =>
     typeof event.latitude === "number" &&
@@ -337,8 +339,24 @@ export const useEventsStore = defineStore("events", () => {
     return `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
   };
 
-  const toIcsDate = (value: string) =>
-    new Date(value).toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+  const toIcsDateValue = (value: string) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return "";
+    }
+
+    return `${date.getUTCFullYear()}${pad(date.getUTCMonth() + 1)}${pad(date.getUTCDate())}`;
+  };
+
+  const addDays = (value: string, days: number) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+
+    date.setUTCDate(date.getUTCDate() + days);
+    return date.toISOString();
+  };
 
   const buildCalendarUrl = (eventItem: EventItem) => {
     const lines = [
@@ -347,9 +365,9 @@ export const useEventsStore = defineStore("events", () => {
       "PRODID:-//rene-website//agenda//FR",
       "BEGIN:VEVENT",
       `UID:${eventItem.id}@rene-website`,
-      `DTSTAMP:${toIcsDate(new Date().toISOString())}`,
-      `DTSTART:${toIcsDate(eventItem.eventStartAt)}`,
-      `DTEND:${toIcsDate(eventItem.eventEndAt)}`,
+      `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").split(".")[0]}Z`,
+      `DTSTART;VALUE=DATE:${toIcsDateValue(eventItem.eventStartAt)}`,
+      `DTEND;VALUE=DATE:${toIcsDateValue(addDays(eventItem.eventEndAt, 1))}`,
       `SUMMARY:${eventItem.title}`,
       `LOCATION:${eventItem.venueName} - ${eventItem.city}`,
       "END:VEVENT",
@@ -363,8 +381,26 @@ export const useEventsStore = defineStore("events", () => {
     const authStore = useAuthStore();
     if (!authStore.canModerate) return;
     try {
-      const updated = await publishEvent(id, authStore.role as ModeratorRole);
+      const updated = await publishEventWithFeatured(
+        id,
+        authStore.role as ModeratorRole,
+        featuredEventIds[id] === true
+      );
       updateEventState(updated);
+      featuredEventIds[id] = updated.featured === true;
+    } catch (err) {
+      moderationError.value = err instanceof Error ? err.message : "Erreur inconnue";
+    }
+  };
+
+  const handleUpdateFeatured = async (id: string, featured: boolean) => {
+    moderationError.value = null;
+    const authStore = useAuthStore();
+    if (!authStore.canModerate) return;
+    try {
+      const updated = await updateEventFeatured(id, authStore.role as ModeratorRole, featured);
+      updateEventState(updated);
+      featuredEventIds[id] = updated.featured === true;
     } catch (err) {
       moderationError.value = err instanceof Error ? err.message : "Erreur inconnue";
     }
@@ -400,6 +436,10 @@ export const useEventsStore = defineStore("events", () => {
     rejectionReasons[id] = value;
   };
 
+  const setFeaturedEvent = (id: string, featured: boolean) => {
+    featuredEventIds[id] = featured;
+  };
+
   const getModerationError = () => moderationError.value;
   const getDeleteError = () => deleteError.value;
 
@@ -410,6 +450,7 @@ export const useEventsStore = defineStore("events", () => {
     moderationError,
     imageErrorById,
     rejectionReasons,
+    featuredEventIds,
     filters,
     deleteError,
     publishedEvents,
@@ -449,13 +490,16 @@ export const useEventsStore = defineStore("events", () => {
     formatDate,
     formatDateRange,
     formatDateTimeRange,
+    formatUpdatedAtLabel,
     formatOptional,
     formatDateTimeInput,
     buildDirectionsUrl,
     buildCalendarUrl,
     handlePublish,
+    handleUpdateFeatured,
     handleReject,
     handleDelete,
+    setFeaturedEvent,
     setRejectionReason,
     getModerationError,
     getDeleteError

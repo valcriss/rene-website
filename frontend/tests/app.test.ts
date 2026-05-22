@@ -96,11 +96,27 @@ describe("App", () => {
     const router = await loginAsRole("MODERATOR");
 
     expect(await screen.findByRole("heading", { level: 2, name: "Événements" })).toBeInTheDocument();
+    await fireEvent.click(screen.getByRole("button", { name: "Compte" }));
     await fireEvent.click(screen.getByRole("button", { name: "Se déconnecter" }));
 
     await waitFor(() => expect(router.currentRoute.value.path).toBe("/login"));
     expect(await screen.findByText("Connexion")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Se déconnecter" })).not.toBeInTheDocument();
+  });
+
+  it("shows account access instead of login on home when authenticated", async () => {
+    window.localStorage.setItem("rene-auth-role", "EDITOR");
+    window.localStorage.setItem("rene-auth-token", "token");
+    window.localStorage.setItem("rene-auth-user-id", "user-1");
+    window.localStorage.setItem("rene-auth-user-name", "User");
+    window.localStorage.setItem("rene-auth-user-email", "user@test");
+    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) })));
+
+    await renderWithRouter("/");
+
+    expect(screen.queryByRole("button", { name: "Me connecter" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Compte" })).toBeInTheDocument();
+    expect(screen.getByText("User")).toBeInTheDocument();
   });
 
   it("returns to home from login page", async () => {
@@ -498,7 +514,7 @@ describe("App", () => {
     await fireEvent.update(screen.getByLabelText("Du"), "2026-01-15");
     await fireEvent.update(screen.getByLabelText("Au"), "2026-01-15");
 
-    expect(await screen.findByText("Concert")).toBeInTheDocument();
+    expect((await screen.findAllByText("Concert")).length).toBeGreaterThan(0);
     expect(screen.queryByText("Expo")).not.toBeInTheDocument();
   });
 
@@ -547,7 +563,7 @@ describe("App", () => {
 
     await fireEvent.update(screen.getByLabelText("Présélection"), "weekend");
 
-    expect(await screen.findByText("Concert")).toBeInTheDocument();
+    expect((await screen.findAllByText("Concert")).length).toBeGreaterThan(0);
     expect(screen.queryByText("Expo")).not.toBeInTheDocument();
 
     vi.useRealTimers();

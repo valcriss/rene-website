@@ -1,5 +1,14 @@
 <template>
-  <NavigationHeader :title="t('backoffice.title')" :tagline="t('backoffice.tagline')" :show-login="false" />
+  <NavigationHeader
+    :title="t('backoffice.title')"
+    :tagline="t('backoffice.tagline')"
+    :is-authenticated="isAuthenticated"
+    :account-label="accountLabel"
+    :role-label="currentRoleLabel"
+    :is-backoffice-route="true"
+    @login="goToLogin"
+    @logout="handleLogout"
+  />
 
   <section class="relative overflow-hidden">
     <div class="absolute inset-x-0 top-0 h-72 bg-[radial-gradient(circle_at_top_left,_rgba(186,230,253,0.5),_transparent_48%),radial-gradient(circle_at_top_right,_rgba(224,242,254,0.7),_transparent_42%)]"></div>
@@ -57,14 +66,6 @@
                 @click="goToHome"
               >
                 {{ t("backoffice.returnToSite") }}
-              </button>
-              <button
-                v-if="isAuthenticated"
-                type="button"
-                class="rounded-full border border-slate-200 bg-slate-950 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800"
-                @click="handleLogout"
-              >
-                {{ t("common.logout") }}
               </button>
             </div>
           </div>
@@ -160,6 +161,9 @@ const roleLabels = computed<Record<Role, string>>(() => ({
   ADMIN: t("backoffice.roleLabels.ADMIN")
 }));
 
+const currentRoleLabel = computed(() => roleLabels.value[role.value]);
+const accountLabel = computed(() => authStore.userName || t("common.mySpace"));
+
 const isEventsRoute = computed(() => route.path.startsWith("/backoffice/events"));
 const isModerationRoute = computed(() => route.path.startsWith("/backoffice/moderation"));
 const isAdminRoute = computed(() => route.path.startsWith("/backoffice/admin"));
@@ -217,16 +221,15 @@ const subNavClasses = (active: boolean) =>
     ? "bg-slate-950 text-white shadow-[0_14px_28px_-20px_rgba(15,23,42,0.7)]"
     : "border border-slate-200 bg-white text-slate-600 hover:border-sky-200 hover:bg-white";
 
-const handleLogout = () => {
-  authStore.logout();
-  router.push("/login");
-};
-
 const goToHome = () => {
   router.push("/");
 };
 
 const goToLogin = () => {
   router.push("/login");
+};
+
+const handleLogout = () => {
+  authStore.logout();
 };
 </script>

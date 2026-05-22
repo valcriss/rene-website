@@ -72,5 +72,43 @@ describe("HomePage", () => {
     expect(wrapper.get("[data-testid='event-grid']").classes()).toContain("xl:grid-cols-3");
     expect(wrapper.text()).toContain("Première phrase. Deuxième phrase.");
     expect(wrapper.text()).not.toContain("Troisième phrase inutile.");
+    expect(wrapper.text()).toContain("Mis à jour le");
+  });
+
+  it("shows featured carousel controls and keeps featured items in the grid", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const eventsStore = useEventsStore();
+    const categoriesStore = useCategoriesStore();
+    eventsStore.isLoading = false;
+    eventsStore.error = null;
+    eventsStore.events = [
+      buildEvent(),
+      { ...buildEvent(), id: "2", title: "Expo", featured: true, eventStartAt: "2030-01-16T20:00:00.000Z", eventEndAt: "2030-01-16T22:00:00.000Z" }
+    ].map((eventItem) => ({ ...eventItem, featured: true }));
+    categoriesStore.hasLoaded = true;
+
+    const router = createTestRouter("/");
+    await router.isReady();
+
+    const wrapper = mount(HomePage, {
+      global: {
+        plugins: [pinia, router],
+        stubs: {
+          HomeFilters: { template: "<div></div>" },
+          HomeSearch: { template: "<div></div>" },
+          HomeTitle: { template: "<div></div>" },
+          EventMap: { template: "<div></div>" },
+          NavigationHeader: { template: "<div></div>" }
+        }
+      }
+    });
+
+    expect(wrapper.find("[data-testid='featured-card-1']").exists()).toBe(true);
+    expect(wrapper.find("[data-testid='event-card-1']").exists()).toBe(true);
+
+    await wrapper.get("button[aria-label='Événement suivant']").trigger("click");
+
+    expect(wrapper.find("[data-testid='featured-card-2']").exists()).toBe(true);
   });
 });
