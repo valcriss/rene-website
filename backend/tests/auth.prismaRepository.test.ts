@@ -1,23 +1,34 @@
 jest.mock("@prisma/client", () => {
-  const findUnique = jest.fn();
-  const findMany = jest.fn();
-  const create = jest.fn();
-  const update = jest.fn();
+  const userFindUnique = jest.fn();
+  const userFindMany = jest.fn();
+  const userCreate = jest.fn();
+  const userUpdate = jest.fn();
+  const passwordResetTokenCreate = jest.fn();
+  const passwordResetTokenFindUnique = jest.fn();
+  const passwordResetTokenDeleteMany = jest.fn();
 
   return {
     PrismaClient: jest.fn(() => ({
       user: {
-        findUnique,
-        findMany,
-        create,
-        update
+        findUnique: userFindUnique,
+        findMany: userFindMany,
+        create: userCreate,
+        update: userUpdate
+      },
+      passwordResetToken: {
+        create: passwordResetTokenCreate,
+        findUnique: passwordResetTokenFindUnique,
+        deleteMany: passwordResetTokenDeleteMany
       }
     })),
     __mocks: {
-      findUnique,
-      findMany,
-      create,
-      update
+      userFindUnique,
+      userFindMany,
+      userCreate,
+      userUpdate,
+      passwordResetTokenCreate,
+      passwordResetTokenFindUnique,
+      passwordResetTokenDeleteMany
     }
   };
 });
@@ -25,22 +36,28 @@ jest.mock("@prisma/client", () => {
 import { createPrismaAuthRepository } from "../src/auth/prismaRepository";
 
 const prismaMocks = jest.requireMock("@prisma/client").__mocks as {
-  findUnique: jest.Mock;
-  findMany: jest.Mock;
-  create: jest.Mock;
-  update: jest.Mock;
+  userFindUnique: jest.Mock;
+  userFindMany: jest.Mock;
+  userCreate: jest.Mock;
+  userUpdate: jest.Mock;
+  passwordResetTokenCreate: jest.Mock;
+  passwordResetTokenFindUnique: jest.Mock;
+  passwordResetTokenDeleteMany: jest.Mock;
 };
 
 describe("createPrismaAuthRepository", () => {
   beforeEach(() => {
-    prismaMocks.findUnique.mockReset();
-    prismaMocks.findMany.mockReset();
-    prismaMocks.create.mockReset();
-    prismaMocks.update.mockReset();
+    prismaMocks.userFindUnique.mockReset();
+    prismaMocks.userFindMany.mockReset();
+    prismaMocks.userCreate.mockReset();
+    prismaMocks.userUpdate.mockReset();
+    prismaMocks.passwordResetTokenCreate.mockReset();
+    prismaMocks.passwordResetTokenFindUnique.mockReset();
+    prismaMocks.passwordResetTokenDeleteMany.mockReset();
   });
 
   it("gets user by email", async () => {
-    prismaMocks.findUnique.mockResolvedValue({
+    prismaMocks.userFindUnique.mockResolvedValue({
       id: "user-1",
       name: "Test",
       email: "test@example.com",
@@ -55,7 +72,7 @@ describe("createPrismaAuthRepository", () => {
   });
 
   it("gets user by id", async () => {
-    prismaMocks.findUnique.mockResolvedValue({
+    prismaMocks.userFindUnique.mockResolvedValue({
       id: "user-2",
       name: "Test",
       email: "id@example.com",
@@ -70,7 +87,7 @@ describe("createPrismaAuthRepository", () => {
   });
 
   it("returns null when user not found", async () => {
-    prismaMocks.findUnique.mockResolvedValue(null);
+    prismaMocks.userFindUnique.mockResolvedValue(null);
 
     const repo = createPrismaAuthRepository();
     const result = await repo.getUserById("missing");
@@ -79,7 +96,7 @@ describe("createPrismaAuthRepository", () => {
   });
 
   it("returns null when user not found by email", async () => {
-    prismaMocks.findUnique.mockResolvedValue(null);
+    prismaMocks.userFindUnique.mockResolvedValue(null);
 
     const repo = createPrismaAuthRepository();
     const result = await repo.getUserByEmail("missing@example.com");
@@ -88,7 +105,7 @@ describe("createPrismaAuthRepository", () => {
   });
 
   it("lists users by role", async () => {
-    prismaMocks.findMany.mockResolvedValue([
+    prismaMocks.userFindMany.mockResolvedValue([
       { id: "u1", name: "A", email: "a@test", role: "MODERATOR", passwordHash: "h1" },
       { id: "u2", name: "B", email: "b@test", role: "ADMIN", passwordHash: "h2" }
     ]);
@@ -101,7 +118,7 @@ describe("createPrismaAuthRepository", () => {
   });
 
   it("creates an editor user", async () => {
-    prismaMocks.create.mockResolvedValue({
+    prismaMocks.userCreate.mockResolvedValue({
       id: "created-user",
       name: "Writer",
       email: "writer@example.com",
@@ -116,7 +133,7 @@ describe("createPrismaAuthRepository", () => {
       passwordHash: "hash"
     });
 
-    expect(prismaMocks.create).toHaveBeenCalledWith({
+    expect(prismaMocks.userCreate).toHaveBeenCalledWith({
       data: {
         name: "Writer",
         email: "writer@example.com",
@@ -133,7 +150,7 @@ describe("createPrismaAuthRepository", () => {
   });
 
   it("returns null when create hits unique constraint", async () => {
-    prismaMocks.create.mockRejectedValue({ code: "P2002" });
+    prismaMocks.userCreate.mockRejectedValue({ code: "P2002" });
 
     const repo = createPrismaAuthRepository();
     const result = await repo.createEditorUser({
@@ -146,7 +163,7 @@ describe("createPrismaAuthRepository", () => {
   });
 
   it("rethrows non-unique create errors", async () => {
-    prismaMocks.create.mockRejectedValue(new Error("boom"));
+    prismaMocks.userCreate.mockRejectedValue(new Error("boom"));
 
     const repo = createPrismaAuthRepository();
 
@@ -164,9 +181,59 @@ describe("createPrismaAuthRepository", () => {
 
     await repo.updatePasswordHash("user-1", "hash");
 
-    expect(prismaMocks.update).toHaveBeenCalledWith({
+    expect(prismaMocks.userUpdate).toHaveBeenCalledWith({
       where: { id: "user-1" },
       data: { passwordHash: "hash" }
     });
+  });
+
+  it("creates a password reset token after deleting previous ones", async () => {
+    const repo = createPrismaAuthRepository();
+    const expiresAt = new Date("2026-05-22T11:00:00.000Z");
+
+    await repo.createPasswordResetToken("user-1", "token-hash", expiresAt);
+
+    expect(prismaMocks.passwordResetTokenDeleteMany).toHaveBeenCalledWith({ where: { userId: "user-1" } });
+    expect(prismaMocks.passwordResetTokenCreate).toHaveBeenCalledWith({
+      data: {
+        userId: "user-1",
+        tokenHash: "token-hash",
+        expiresAt
+      }
+    });
+  });
+
+  it("gets a password reset token by hash", async () => {
+    prismaMocks.passwordResetTokenFindUnique.mockResolvedValue({
+      id: "token-1",
+      userId: "user-1",
+      expiresAt: new Date("2026-05-22T11:00:00.000Z")
+    });
+
+    const repo = createPrismaAuthRepository();
+    const result = await repo.getPasswordResetTokenByHash("token-hash");
+
+    expect(result).toEqual({
+      id: "token-1",
+      userId: "user-1",
+      expiresAt: new Date("2026-05-22T11:00:00.000Z")
+    });
+  });
+
+  it("returns null when password reset token is missing", async () => {
+    prismaMocks.passwordResetTokenFindUnique.mockResolvedValue(null);
+
+    const repo = createPrismaAuthRepository();
+    const result = await repo.getPasswordResetTokenByHash("missing-hash");
+
+    expect(result).toBeNull();
+  });
+
+  it("deletes password reset tokens by user id", async () => {
+    const repo = createPrismaAuthRepository();
+
+    await repo.deletePasswordResetTokensByUserId("user-1");
+
+    expect(prismaMocks.passwordResetTokenDeleteMany).toHaveBeenCalledWith({ where: { userId: "user-1" } });
   });
 });

@@ -21,6 +21,7 @@ import {
   updateAdminUser
 } from "../api/admin";
 import { useAuthStore } from "./auth";
+import { useCategoriesStore } from "./categories";
 
 export const useAdminStore = defineStore("admin", () => {
   const adminUsers = ref<AdminUser[]>([]);
@@ -122,6 +123,7 @@ export const useAdminStore = defineStore("admin", () => {
   const handleSaveAdminCategory = async () => {
     adminError.value = null;
     const authStore = useAuthStore();
+    const categoriesStore = useCategoriesStore();
     if (!authStore.isAdmin) return;
     try {
       const payload = { name: adminCategoryForm.name };
@@ -132,6 +134,8 @@ export const useAdminStore = defineStore("admin", () => {
         updated,
         ...adminCategories.value.filter((category) => category.id !== updated.id)
       ];
+      categoriesStore.invalidateCategories();
+      await categoriesStore.refreshCategories();
       resetAdminCategoryForm();
     } catch (err) {
       adminError.value = err instanceof Error ? err.message : "Erreur inconnue";
@@ -141,10 +145,13 @@ export const useAdminStore = defineStore("admin", () => {
   const handleDeleteAdminCategory = async (id: string) => {
     adminError.value = null;
     const authStore = useAuthStore();
+    const categoriesStore = useCategoriesStore();
     if (!authStore.isAdmin) return;
     try {
       await deleteAdminCategory(authStore.role, id);
       adminCategories.value = adminCategories.value.filter((category) => category.id !== id);
+      categoriesStore.invalidateCategories();
+      await categoriesStore.refreshCategories();
       if (adminCategoryEditingId.value === id) {
         resetAdminCategoryForm();
       }

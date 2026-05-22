@@ -1,4 +1,4 @@
-import { reactive, ref } from "vue";
+import { computed, reactive, ref } from "vue";
 import { defineStore } from "pinia";
 import type { EventRevisionStatus } from "../api/events";
 import { CreateEventPayload, EventItem, createEvent, submitEvent, updateEvent } from "../api/events";
@@ -63,6 +63,9 @@ export const useEditorStore = defineStore("editor", () => {
   const editorError = ref<string | null>(null);
   const editorForm = reactive<CreateEventPayload>(defaultEditorForm());
   const imageFile = ref<File | null>(null);
+  const isSavingDraft = ref(false);
+  const isSubmittingForModeration = ref(false);
+  const isPersisting = computed(() => isSavingDraft.value || isSubmittingForModeration.value);
 
   const resetEditorForm = () => {
     editorMode.value = "create";
@@ -200,9 +203,7 @@ export const useEditorStore = defineStore("editor", () => {
     }
   };
 
-  const handleSaveDraft = async (): Promise<boolean> => Boolean(await saveDraft());
-
-  const handleSubmitDraft = async (id?: string): Promise<boolean> => {
+  const submitDraft = async (id?: string): Promise<boolean> => {
     editorError.value = null;
     const authStore = useAuthStore();
     if (!authStore.canEdit) return false;
@@ -220,15 +221,41 @@ export const useEditorStore = defineStore("editor", () => {
     }
   };
 
-  const handleSaveAndSubmit = async (): Promise<boolean> => {
-    editorError.value = null;
-
-    const savedEvent = await saveDraft();
-    if (!savedEvent) {
-      return false;
+  const handleSaveDraft = async (): Promise<boolean> => {
+    if (isPersisting.value) return false;
+    isSavingDraft.value = true;
+    try {
+      return Boolean(await saveDraft());
+    } finally {
+      isSavingDraft.value = false;
     }
+  };
 
-    return handleSubmitDraft(savedEvent.id);
+  const handleSubmitDraft = async (id?: string): Promise<boolean> => {
+    if (isPersisting.value) return false;
+    isSubmittingForModeration.value = true;
+    try {
+      return await submitDraft(id);
+    } finally {
+      isSubmittingForModeration.value = false;
+    }
+  };
+
+  const handleSaveAndSubmit = async (): Promise<boolean> => {
+    if (isPersisting.value) return false;
+    isSubmittingForModeration.value = true;
+    try {
+      editorError.value = null;
+
+      const savedEvent = await saveDraft();
+      if (!savedEvent) {
+        return false;
+      }
+
+      return await submitDraft(savedEvent.id);
+    } finally {
+      isSubmittingForModeration.value = false;
+    }
   };
 
   const formatDateTimeInput = (value: string) => {
@@ -252,6 +279,9 @@ export const useEditorStore = defineStore("editor", () => {
     editingPublishedRevisionStatus,
     editorForm,
     editorError,
+    isSavingDraft,
+    isSubmittingForModeration,
+    isPersisting,
     resetEditorForm,
     startEdit,
     setImageFile,

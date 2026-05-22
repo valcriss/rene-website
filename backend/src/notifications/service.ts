@@ -2,6 +2,8 @@ import { Event } from "../events/types";
 import { AuthRepository } from "../auth/repository";
 import { sendEmail, MailResult } from "./mailer";
 import {
+  buildPasswordResetBody,
+  buildPasswordResetSubject,
   buildSubmittedBody,
   buildSubmittedSubject,
   buildResubmittedBody,
@@ -70,3 +72,14 @@ export const notifyEventDeleted = async (event: Event, authRepo: AuthRepository)
   if (!email) return { ok: true };
   return sendEmail({ to: email, subject: buildDeletedSubject(event), text: buildDeletedBody(event) });
 };
+
+export const notifyPasswordResetRequested = async (
+  email: string,
+  resetUrl: string,
+  ttlMinutes: number
+): Promise<MailResult> =>
+  sendEmail({
+    to: email,
+    subject: buildPasswordResetSubject(),
+    text: buildPasswordResetBody(resetUrl, ttlMinutes)
+  });

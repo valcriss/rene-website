@@ -1,37 +1,64 @@
 jest.mock("@prisma/client", () => {
-  const findMany = jest.fn();
-  const findUnique = jest.fn();
-  const create = jest.fn();
-  const update = jest.fn();
-  const remove = jest.fn();
+  const userFindMany = jest.fn();
+  const userFindUnique = jest.fn();
+  const userCreate = jest.fn();
+  const userUpdate = jest.fn();
+  const userDelete = jest.fn();
+  const categoryFindMany = jest.fn();
+  const categoryFindUnique = jest.fn();
+  const categoryCreate = jest.fn();
+  const categoryUpdate = jest.fn();
+  const categoryDelete = jest.fn();
+  const audienceFindMany = jest.fn();
+  const audienceFindUnique = jest.fn();
+  const audienceCreate = jest.fn();
+  const audienceUpdate = jest.fn();
+  const audienceDelete = jest.fn();
   const count = jest.fn();
 
   return {
     PrismaClient: jest.fn(() => ({
+      user: {
+        findMany: userFindMany,
+        findUnique: userFindUnique,
+        create: userCreate,
+        update: userUpdate,
+        delete: userDelete
+      },
       category: {
-        findMany,
-        findUnique,
-        create,
-        update,
-        delete: remove
+        findMany: categoryFindMany,
+        findUnique: categoryFindUnique,
+        create: categoryCreate,
+        update: categoryUpdate,
+        delete: categoryDelete
       },
       audience: {
-        findMany,
-        findUnique,
-        create,
-        update,
-        delete: remove
+        findMany: audienceFindMany,
+        findUnique: audienceFindUnique,
+        create: audienceCreate,
+        update: audienceUpdate,
+        delete: audienceDelete
       },
       event: {
         count
       }
     })),
     __mocks: {
-      findMany,
-      findUnique,
-      create,
-      update,
-      remove,
+      userFindMany,
+      userFindUnique,
+      userCreate,
+      userUpdate,
+      userDelete,
+      categoryFindMany,
+      categoryFindUnique,
+      categoryCreate,
+      categoryUpdate,
+      categoryDelete,
+      audienceFindMany,
+      audienceFindUnique,
+      audienceCreate,
+      audienceUpdate,
+      audienceDelete,
       count
     }
   };
@@ -40,55 +67,163 @@ jest.mock("@prisma/client", () => {
 import { createPrismaAdminRepository } from "../src/admin/prismaRepository";
 
 const prismaMocks = jest.requireMock("@prisma/client").__mocks as {
-  findMany: jest.Mock;
-  findUnique: jest.Mock;
-  create: jest.Mock;
-  update: jest.Mock;
-  remove: jest.Mock;
+  userFindMany: jest.Mock;
+  userFindUnique: jest.Mock;
+  userCreate: jest.Mock;
+  userUpdate: jest.Mock;
+  userDelete: jest.Mock;
+  categoryFindMany: jest.Mock;
+  categoryFindUnique: jest.Mock;
+  categoryCreate: jest.Mock;
+  categoryUpdate: jest.Mock;
+  categoryDelete: jest.Mock;
+  audienceFindMany: jest.Mock;
+  audienceFindUnique: jest.Mock;
+  audienceCreate: jest.Mock;
+  audienceUpdate: jest.Mock;
+  audienceDelete: jest.Mock;
   count: jest.Mock;
 };
 
 describe("createPrismaAdminRepository", () => {
   beforeEach(() => {
-    prismaMocks.findMany.mockReset();
-    prismaMocks.findUnique.mockReset();
-    prismaMocks.create.mockReset();
-    prismaMocks.update.mockReset();
-    prismaMocks.remove.mockReset();
+    prismaMocks.userFindMany.mockReset();
+    prismaMocks.userFindUnique.mockReset();
+    prismaMocks.userCreate.mockReset();
+    prismaMocks.userUpdate.mockReset();
+    prismaMocks.userDelete.mockReset();
+    prismaMocks.categoryFindMany.mockReset();
+    prismaMocks.categoryFindUnique.mockReset();
+    prismaMocks.categoryCreate.mockReset();
+    prismaMocks.categoryUpdate.mockReset();
+    prismaMocks.categoryDelete.mockReset();
+    prismaMocks.audienceFindMany.mockReset();
+    prismaMocks.audienceFindUnique.mockReset();
+    prismaMocks.audienceCreate.mockReset();
+    prismaMocks.audienceUpdate.mockReset();
+    prismaMocks.audienceDelete.mockReset();
     prismaMocks.count.mockReset();
   });
 
-  it("manages users in memory", async () => {
+  it("lists users from prisma", async () => {
+    prismaMocks.userFindMany.mockResolvedValue([
+      {
+        id: "user-1",
+        name: "Admin",
+        email: "admin@test",
+        role: "ADMIN",
+        passwordHash: "hash",
+        createdAt: new Date("2026-05-22T09:00:00.000Z"),
+        updatedAt: new Date("2026-05-22T09:30:00.000Z")
+      },
+      {
+        id: "user-2",
+        name: "Editor",
+        email: "editor@test",
+        role: "EDITOR",
+        passwordHash: "hash",
+        createdAt: new Date("2026-05-22T08:00:00.000Z"),
+        updatedAt: new Date("2026-05-22T08:30:00.000Z")
+      }
+    ]);
+
     const repo = createPrismaAdminRepository();
-
     const users = await repo.listUsers();
-    expect(users.length).toBe(1);
 
+    expect(prismaMocks.userFindMany).toHaveBeenCalledWith({ orderBy: { createdAt: "desc" } });
+    expect(users).toHaveLength(2);
+    expect(users[0].email).toBe("admin@test");
+  });
+
+  it("gets user by id from prisma", async () => {
+    prismaMocks.userFindUnique.mockResolvedValue({
+      id: "user-1",
+      name: "Admin",
+      email: "admin@test",
+      role: "ADMIN",
+      passwordHash: "hash",
+      createdAt: new Date("2026-05-22T09:00:00.000Z"),
+      updatedAt: new Date("2026-05-22T09:30:00.000Z")
+    });
+
+    const repo = createPrismaAdminRepository();
+    const fetched = await repo.getUserById("user-1");
+
+    expect(fetched?.email).toBe("admin@test");
+  });
+
+  it("creates a user in prisma", async () => {
+    prismaMocks.userCreate.mockResolvedValue({
+      id: "user-3",
+      name: "Alice",
+      email: "alice@test",
+      role: "EDITOR",
+      passwordHash: "",
+      createdAt: new Date("2026-05-22T09:00:00.000Z"),
+      updatedAt: new Date("2026-05-22T09:00:00.000Z")
+    });
+
+    const repo = createPrismaAdminRepository();
     const created = await repo.createUser({ name: "Alice", email: "alice@test", role: "EDITOR" });
-    const fetched = await repo.getUserById(created.id);
-    expect(fetched?.email).toBe("alice@test");
 
-    const updated = await repo.updateUser(created.id, { name: "Alice2", email: "a2@test", role: "ADMIN" });
+    expect(prismaMocks.userCreate).toHaveBeenCalledWith({
+      data: {
+        name: "Alice",
+        email: "alice@test",
+        role: "EDITOR",
+        passwordHash: ""
+      }
+    });
+    expect(created.email).toBe("alice@test");
+  });
+
+  it("updates a user in prisma", async () => {
+    prismaMocks.userUpdate.mockResolvedValue({
+      id: "user-3",
+      name: "Alice2",
+      email: "a2@test",
+      role: "ADMIN",
+      passwordHash: "",
+      createdAt: new Date("2026-05-22T09:00:00.000Z"),
+      updatedAt: new Date("2026-05-22T09:10:00.000Z")
+    });
+
+    const repo = createPrismaAdminRepository();
+    const updated = await repo.updateUser("user-3", { name: "Alice2", email: "a2@test", role: "ADMIN" });
+
     expect(updated?.name).toBe("Alice2");
-
-    const deleted = await repo.deleteUser(created.id);
-    expect(deleted).toBe(true);
   });
 
   it("returns null when updating missing user", async () => {
+    prismaMocks.userUpdate.mockRejectedValue(new Error("missing"));
     const repo = createPrismaAdminRepository();
     const updated = await repo.updateUser("missing", { name: "x", email: "x@test", role: "ADMIN" });
     expect(updated).toBeNull();
   });
 
   it("returns null when user not found", async () => {
+    prismaMocks.userFindUnique.mockResolvedValue(null);
     const repo = createPrismaAdminRepository();
     const user = await repo.getUserById("missing");
     expect(user).toBeNull();
   });
 
+  it("deletes a user in prisma", async () => {
+    prismaMocks.userDelete.mockResolvedValue({ id: "user-3" });
+    const repo = createPrismaAdminRepository();
+    const deleted = await repo.deleteUser("user-3");
+    expect(deleted).toBe(true);
+  });
+
+  it("returns false when deleting missing user", async () => {
+    prismaMocks.userDelete.mockRejectedValue(new Error("missing"));
+    const repo = createPrismaAdminRepository();
+    const deleted = await repo.deleteUser("missing");
+    expect(deleted).toBe(false);
+  });
+
   it("lists categories", async () => {
-    prismaMocks.findMany.mockResolvedValue([
+    prismaMocks.categoryFindMany.mockResolvedValue([
       { id: "music", name: "Musique", createdAt: new Date(), updatedAt: new Date() }
     ]);
     const repo = createPrismaAdminRepository();
@@ -97,7 +232,7 @@ describe("createPrismaAdminRepository", () => {
   });
 
   it("gets category by id", async () => {
-    prismaMocks.findUnique.mockResolvedValue({
+    prismaMocks.categoryFindUnique.mockResolvedValue({
       id: "music",
       name: "Musique",
       createdAt: new Date(),
@@ -109,15 +244,15 @@ describe("createPrismaAdminRepository", () => {
   });
 
   it("returns null when category not found", async () => {
-    prismaMocks.findUnique.mockResolvedValue(null);
+    prismaMocks.categoryFindUnique.mockResolvedValue(null);
     const repo = createPrismaAdminRepository();
     const category = await repo.getCategoryById("missing");
     expect(category).toBeNull();
   });
 
   it("creates category", async () => {
-    prismaMocks.findUnique.mockResolvedValue(null);
-    prismaMocks.create.mockResolvedValue({
+    prismaMocks.categoryFindUnique.mockResolvedValue(null);
+    prismaMocks.categoryCreate.mockResolvedValue({
       id: "lecture",
       name: "Lecture",
       createdAt: new Date(),
@@ -134,7 +269,7 @@ describe("createPrismaAdminRepository", () => {
   });
 
   it("throws when category already exists", async () => {
-    prismaMocks.findUnique.mockResolvedValue({
+    prismaMocks.categoryFindUnique.mockResolvedValue({
       id: "lecture",
       name: "Lecture",
       createdAt: new Date(),
@@ -145,7 +280,7 @@ describe("createPrismaAdminRepository", () => {
   });
 
   it("updates category", async () => {
-    prismaMocks.update.mockResolvedValue({
+    prismaMocks.categoryUpdate.mockResolvedValue({
       id: "lecture",
       name: "Lecture",
       createdAt: new Date(),
@@ -157,7 +292,7 @@ describe("createPrismaAdminRepository", () => {
   });
 
   it("returns null when update fails", async () => {
-    prismaMocks.update.mockRejectedValue(new Error("not found"));
+    prismaMocks.categoryUpdate.mockRejectedValue(new Error("not found"));
     const repo = createPrismaAdminRepository();
     const updated = await repo.updateCategory("missing", { name: "Lecture" });
     expect(updated).toBeNull();
@@ -165,7 +300,7 @@ describe("createPrismaAdminRepository", () => {
 
   it("deletes category", async () => {
     prismaMocks.count.mockResolvedValue(0);
-    prismaMocks.remove.mockResolvedValue({ id: "lecture" });
+    prismaMocks.categoryDelete.mockResolvedValue({ id: "lecture" });
     const repo = createPrismaAdminRepository();
     const result = await repo.deleteCategory("lecture");
     expect(result).toBe(true);
@@ -173,7 +308,7 @@ describe("createPrismaAdminRepository", () => {
 
   it("returns false when delete fails", async () => {
     prismaMocks.count.mockResolvedValue(0);
-    prismaMocks.remove.mockRejectedValue(new Error("not found"));
+    prismaMocks.categoryDelete.mockRejectedValue(new Error("not found"));
     const repo = createPrismaAdminRepository();
     const result = await repo.deleteCategory("missing");
     expect(result).toBe(false);
@@ -198,7 +333,7 @@ describe("createPrismaAdminRepository", () => {
   });
 
   it("lists audiences", async () => {
-    prismaMocks.findMany.mockResolvedValue([
+    prismaMocks.audienceFindMany.mockResolvedValue([
       { id: "all", name: "Tous publics", createdAt: new Date(), updatedAt: new Date() }
     ]);
     const repo = createPrismaAdminRepository();
@@ -207,7 +342,7 @@ describe("createPrismaAdminRepository", () => {
   });
 
   it("gets audience by id", async () => {
-    prismaMocks.findUnique.mockResolvedValue({
+    prismaMocks.audienceFindUnique.mockResolvedValue({
       id: "all",
       name: "Tous publics",
       createdAt: new Date(),
@@ -219,15 +354,15 @@ describe("createPrismaAdminRepository", () => {
   });
 
   it("returns null when audience not found", async () => {
-    prismaMocks.findUnique.mockResolvedValue(null);
+    prismaMocks.audienceFindUnique.mockResolvedValue(null);
     const repo = createPrismaAdminRepository();
     const audience = await repo.getAudienceById("missing");
     expect(audience).toBeNull();
   });
 
   it("creates audience", async () => {
-    prismaMocks.findUnique.mockResolvedValue(null);
-    prismaMocks.create.mockResolvedValue({
+    prismaMocks.audienceFindUnique.mockResolvedValue(null);
+    prismaMocks.audienceCreate.mockResolvedValue({
       id: "jeunes",
       name: "Jeunes",
       createdAt: new Date(),
@@ -244,7 +379,7 @@ describe("createPrismaAdminRepository", () => {
   });
 
   it("throws when audience already exists", async () => {
-    prismaMocks.findUnique.mockResolvedValue({
+    prismaMocks.audienceFindUnique.mockResolvedValue({
       id: "jeunes",
       name: "Jeunes",
       createdAt: new Date(),
@@ -255,7 +390,7 @@ describe("createPrismaAdminRepository", () => {
   });
 
   it("updates audience", async () => {
-    prismaMocks.update.mockResolvedValue({
+    prismaMocks.audienceUpdate.mockResolvedValue({
       id: "jeunes",
       name: "Jeunes",
       createdAt: new Date(),
@@ -267,7 +402,7 @@ describe("createPrismaAdminRepository", () => {
   });
 
   it("returns null when audience update fails", async () => {
-    prismaMocks.update.mockRejectedValue(new Error("not found"));
+    prismaMocks.audienceUpdate.mockRejectedValue(new Error("not found"));
     const repo = createPrismaAdminRepository();
     const updated = await repo.updateAudience("missing", { name: "Jeunes" });
     expect(updated).toBeNull();
@@ -275,7 +410,7 @@ describe("createPrismaAdminRepository", () => {
 
   it("deletes audience", async () => {
     prismaMocks.count.mockResolvedValue(0);
-    prismaMocks.remove.mockResolvedValue({ id: "jeunes" });
+    prismaMocks.audienceDelete.mockResolvedValue({ id: "jeunes" });
     const repo = createPrismaAdminRepository();
     const result = await repo.deleteAudience("jeunes");
     expect(result).toBe(true);
@@ -283,7 +418,7 @@ describe("createPrismaAdminRepository", () => {
 
   it("returns false when audience delete fails", async () => {
     prismaMocks.count.mockResolvedValue(0);
-    prismaMocks.remove.mockRejectedValue(new Error("not found"));
+    prismaMocks.audienceDelete.mockRejectedValue(new Error("not found"));
     const repo = createPrismaAdminRepository();
     const result = await repo.deleteAudience("missing");
     expect(result).toBe(false);

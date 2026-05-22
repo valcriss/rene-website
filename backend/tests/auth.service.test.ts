@@ -1,12 +1,18 @@
 import { createHash } from "node:crypto";
-import { login, signup } from "../src/auth/service";
+import { login, requestPasswordReset, resetPassword, signup } from "../src/auth/service";
 import { hashPassword, verifyPassword } from "../src/auth/password";
 import { AuthRepository } from "../src/auth/repository";
+import { hashPasswordResetToken } from "../src/auth/resetToken";
 
 const buildRepo = (
   passwordHash: string | null,
   createEditorUser?: AuthRepository["createEditorUser"],
-  updatePasswordHash?: AuthRepository["updatePasswordHash"]
+  updatePasswordHash?: AuthRepository["updatePasswordHash"],
+  options?: {
+    createPasswordResetToken?: AuthRepository["createPasswordResetToken"];
+    getPasswordResetTokenByHash?: AuthRepository["getPasswordResetTokenByHash"];
+    deletePasswordResetTokensByUserId?: AuthRepository["deletePasswordResetTokensByUserId"];
+  }
 ): AuthRepository => ({
   getUserByEmail: async (email) =>
     passwordHash && email === "test@example.com"
@@ -28,12 +34,16 @@ const buildRepo = (
       email,
       role: "EDITOR"
     })),
-  updatePasswordHash: updatePasswordHash ?? (async () => undefined)
+  updatePasswordHash: updatePasswordHash ?? (async () => undefined),
+  createPasswordResetToken: options?.createPasswordResetToken ?? (async () => undefined),
+  getPasswordResetTokenByHash: options?.getPasswordResetTokenByHash ?? (async () => null),
+  deletePasswordResetTokensByUserId: options?.deletePasswordResetTokensByUserId ?? (async () => undefined)
 });
 
 describe("auth service", () => {
   beforeEach(() => {
     process.env.JWT_SECRET = "test-secret";
+    process.env.PUBLIC_APP_URL = "https://rene.example.com";
   });
 
   it("returns validation errors", async () => {
@@ -230,5 +240,170 @@ describe("auth service", () => {
     if (!result.ok) {
       expect(result.code).toBe("validation");
     }
+  });
+
+  it("requests a password reset with validation errors", async () => {
+    const repo = buildRepo(await hashPassword("secret"));
+
+    const result = await requestPasswordReset(repo, {});
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe("validation");
+      expect(result.errors).toContain("L'email est requis.");
+    }
+  });
+
+  it("returns a neutral success when password reset email does not exist", async () => {
+    const repo = buildRepo(null);
+
+    const result = await requestPasswordReset(repo, { email: "missing@example.com" });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.message).toContain("Si un compte existe");
+  });
+
+  it("rejects forgot-password when payload is not an object", async () => {
+    const repo = buildRepo(await hashPassword("secret"));
+
+    const result = await requestPasswordReset(repo, null);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe("validation");
+    }
+  });
+
+  it("rejects forgot-password when email is invalid", async () => {
+    const repo = buildRepo(await hashPassword("secret"));
+
+    const result = await requestPasswordReset(repo, { email: "invalid" });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContain("L'email est invalide.");
+    }
+  });
+
+  it("creates a password reset token for an existing user", async () => {
+    const createPasswordResetToken = jest.fn<Promise<void>, [string, string, Date]>(async () => undefined);
+    const repo = buildRepo(await hashPassword("secret"), undefined, undefined, {
+      createPasswordResetToken
+    });
+
+    const result = await requestPasswordReset(repo, { email: "test@example.com" });
+
+    expect(result.ok).toBe(true);
+    expect(createPasswordResetToken).toHaveBeenCalledTimes(1);
+    expect(createPasswordResetToken).toHaveBeenCalledWith("user-1", expect.any(String), expect.any(Date));
+  });
+
+  it("returns notification errors when password reset email cannot be sent", async () => {
+    process.env.NODE_ENV = "production";
+    delete process.env.SMTP_HOST;
+    delete process.env.SENDER_EMAIL;
+    const repo = buildRepo(await hashPassword("secret"));
+
+    const result = await requestPasswordReset(repo, { email: "test@example.com" });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe("notification");
+      expect(result.errors).toContain("SMTP_HOST is required");
+    }
+  });
+
+  it("rejects reset-password when payload is not an object", async () => {
+    const repo = buildRepo(await hashPassword("secret"));
+
+    const result = await resetPassword(repo, null);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe("validation");
+    }
+  });
+
+  it("returns reset-password validation errors", async () => {
+    const repo = buildRepo(await hashPassword("secret"));
+
+    const result = await resetPassword(repo, {
+      token: "valid-token",
+      password: "short",
+      passwordConfirmation: "other"
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContain("Le mot de passe doit contenir au moins 8 caractères.");
+      expect(result.errors).toContain("Les mots de passe ne correspondent pas.");
+    }
+  });
+
+  it("resets a password with a valid token", async () => {
+    const updatePasswordHash = jest.fn<Promise<void>, [string, string]>(async () => undefined);
+    const deletePasswordResetTokensByUserId = jest.fn<Promise<void>, [string]>(async () => undefined);
+    const repo = buildRepo(await hashPassword("secret"), undefined, updatePasswordHash, {
+      getPasswordResetTokenByHash: async (tokenHash) =>
+        tokenHash === hashPasswordResetToken("valid-token")
+          ? {
+              id: "reset-1",
+              userId: "user-1",
+              expiresAt: new Date(Date.now() + 60_000)
+            }
+          : null,
+      deletePasswordResetTokensByUserId
+    });
+
+    const result = await resetPassword(repo, {
+      token: "valid-token",
+      password: "new-secret-123",
+      passwordConfirmation: "new-secret-123"
+    });
+
+    expect(result.ok).toBe(true);
+    expect(updatePasswordHash).toHaveBeenCalledWith("user-1", expect.any(String));
+    await expect(verifyPassword("new-secret-123", updatePasswordHash.mock.calls[0][1])).resolves.toBe(true);
+    expect(deletePasswordResetTokensByUserId).toHaveBeenCalledWith("user-1");
+  });
+
+  it("rejects an invalid reset token", async () => {
+    const repo = buildRepo(await hashPassword("secret"));
+
+    const result = await resetPassword(repo, {
+      token: "invalid-token",
+      password: "new-secret-123",
+      passwordConfirmation: "new-secret-123"
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe("invalid_token");
+    }
+  });
+
+  it("rejects an expired reset token", async () => {
+    const deletePasswordResetTokensByUserId = jest.fn<Promise<void>, [string]>(async () => undefined);
+    const repo = buildRepo(await hashPassword("secret"), undefined, undefined, {
+      getPasswordResetTokenByHash: async () => ({
+        id: "reset-1",
+        userId: "user-1",
+        expiresAt: new Date(Date.now() - 60_000)
+      }),
+      deletePasswordResetTokensByUserId
+    });
+
+    const result = await resetPassword(repo, {
+      token: "expired-token",
+      password: "new-secret-123",
+      passwordConfirmation: "new-secret-123"
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe("expired_token");
+    }
+    expect(deletePasswordResetTokensByUserId).toHaveBeenCalledWith("user-1");
   });
 });

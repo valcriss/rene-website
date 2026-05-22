@@ -11,6 +11,12 @@ type PrismaUser = {
   passwordHash: string;
 };
 
+type PrismaPasswordResetToken = {
+  id: string;
+  userId: string;
+  expiresAt: Date;
+};
+
 const toAuthUserWithPassword = (user: PrismaUser): AuthUserWithPassword => ({
   id: user.id,
   name: user.name,
@@ -63,5 +69,30 @@ export const createPrismaAuthRepository = (): AuthRepository => ({
       where: { id: userId },
       data: { passwordHash }
     });
+  },
+  createPasswordResetToken: async (userId, tokenHash, expiresAt) => {
+    await prisma.passwordResetToken.deleteMany({ where: { userId } });
+    await prisma.passwordResetToken.create({
+      data: {
+        userId,
+        tokenHash,
+        expiresAt
+      }
+    });
+  },
+  getPasswordResetTokenByHash: async (tokenHash) =>
+    prisma.passwordResetToken
+      .findUnique({ where: { tokenHash } })
+      .then((token: PrismaPasswordResetToken | null) =>
+        token
+          ? {
+              id: token.id,
+              userId: token.userId,
+              expiresAt: token.expiresAt
+            }
+          : null
+      ),
+  deletePasswordResetTokensByUserId: async (userId) => {
+    await prisma.passwordResetToken.deleteMany({ where: { userId } });
   }
 });

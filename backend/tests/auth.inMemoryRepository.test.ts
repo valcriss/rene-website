@@ -78,4 +78,37 @@ describe("inMemoryAuthRepository", () => {
     const storedUser = await repo.getUserById(user!.id);
     await expect(verifyPassword("secret456", storedUser!.passwordHash)).resolves.toBe(true);
   });
+
+  it("stores and replaces a password reset token", async () => {
+    const repo = createInMemoryAuthRepository();
+    const user = await repo.createEditorUser({
+      name: "Writer",
+      email: "writer@example.com",
+      passwordHash: await hashPassword("secret123")
+    });
+
+    await repo.createPasswordResetToken(user!.id, "hash-1", new Date("2026-05-22T10:00:00.000Z"));
+    await repo.createPasswordResetToken(user!.id, "hash-2", new Date("2026-05-22T11:00:00.000Z"));
+
+    expect(await repo.getPasswordResetTokenByHash("hash-1")).toBeNull();
+    expect(await repo.getPasswordResetTokenByHash("hash-2")).toEqual({
+      id: expect.any(String),
+      userId: user!.id,
+      expiresAt: new Date("2026-05-22T11:00:00.000Z")
+    });
+  });
+
+  it("deletes password reset tokens by user id", async () => {
+    const repo = createInMemoryAuthRepository();
+    const user = await repo.createEditorUser({
+      name: "Writer",
+      email: "writer@example.com",
+      passwordHash: await hashPassword("secret123")
+    });
+
+    await repo.createPasswordResetToken(user!.id, "hash-1", new Date("2026-05-22T10:00:00.000Z"));
+    await repo.deletePasswordResetTokensByUserId(user!.id);
+
+    expect(await repo.getPasswordResetTokenByHash("hash-1")).toBeNull();
+  });
 });

@@ -159,6 +159,55 @@ describe("BackofficeEventCreatePage", () => {
     expect(pushSpy).toHaveBeenCalledWith("/backoffice/events");
   });
 
+  it("redirects after saving from create mode", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) }))
+    );
+
+    const setup = await setupPage();
+    setup.categoriesStore.hasLoaded = true;
+    const saveSpy = vi.spyOn(setup.editorStore, "handleSaveDraft").mockResolvedValue(true);
+    const pushSpy = vi.spyOn(setup.router, "push");
+
+    const wrapper = mount(BackofficeEventCreatePage, {
+      global: {
+        plugins: [setup.pinia, setup.router],
+        stubs: {
+          RichTextEditor: { template: "<div></div>" }
+        }
+      }
+    });
+
+    const setupState = (wrapper.vm as unknown as {
+      $: {
+        setupState: {
+          handleSaveAndRedirect: () => Promise<void>;
+        };
+      };
+    }).$.setupState;
+
+    await setupState.handleSaveAndRedirect();
+
+    expect(saveSpy).toHaveBeenCalledOnce();
+    expect(pushSpy).toHaveBeenCalledWith("/backoffice/events");
+  });
+
+  it("disables save and submit buttons while a persistence action is running", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) }))
+    );
+
+    const setup = await setupPage();
+    setup.categoriesStore.hasLoaded = true;
+    setup.editorStore.isSubmittingForModeration = true;
+    renderPage(setup);
+
+    expect(await screen.findByRole("button", { name: "Enregistrer le brouillon" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Soumettre à modération" })).toBeDisabled();
+  });
+
   it("shows submit button from create mode", async () => {
     vi.stubGlobal(
       "fetch",

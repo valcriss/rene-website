@@ -116,6 +116,7 @@ export const messages = {
       password: "Mot de passe",
       submit: "Se connecter",
       backToSite: "Retour au site",
+      forgotPassword: "Mot de passe oubli\u00e9 ?",
       noAccount: "Vous n'avez pas de compte ?",
       createAccount: "Cr\u00e9er un compte",
       editorModerationAccess: "Acc\u00e8s r\u00e9daction/mod\u00e9ration activ\u00e9.",
@@ -135,6 +136,25 @@ export const messages = {
       backToLogin: "J'ai d\u00e9j\u00e0 un compte",
       alreadyAccount: "Vous avez d\u00e9j\u00e0 un compte ?",
       errorFallback: "Inscription impossible"
+    },
+    forgotPassword: {
+      eyebrow: "R\u00e9initialisation",
+      title: "Mot de passe oubli\u00e9",
+      lead: "Saisissez votre adresse email pour recevoir un lien de r\u00e9initialisation.",
+      submit: "Envoyer le lien",
+      backToLogin: "Retour \u00e0 la connexion",
+      success: "Si un compte existe avec cet email, un lien de r\u00e9initialisation a \u00e9t\u00e9 envoy\u00e9.",
+      errorFallback: "Demande de r\u00e9initialisation impossible"
+    },
+    resetPassword: {
+      eyebrow: "R\u00e9initialisation",
+      title: "Choisir un nouveau mot de passe",
+      lead: "D\u00e9finissez votre nouveau mot de passe pour retrouver l'acc\u00e8s \u00e0 votre compte.",
+      password: "Nouveau mot de passe",
+      passwordConfirmation: "Confirmer le nouveau mot de passe",
+      submit: "R\u00e9initialiser le mot de passe",
+      backToLogin: "Retour \u00e0 la connexion",
+      errorFallback: "R\u00e9initialisation impossible"
     },
     backoffice: {
       title: "Backoffice",
@@ -245,7 +265,7 @@ export const messages = {
       contentEyebrow: "Contenu \u00e9ditorial",
       contentTitle: "Description",
       contentLead:
-        "Prends le temps de raconter l'\u00e9v\u00e9nement. Tu peux structurer le texte avec des intertitres, des listes, des liens et ins\u00e9rer des images directement dans le contenu.",
+        "Prenez le temps de raconter l'\u00e9v\u00e9nement. Vous pouvez structurer le texte avec des intertitres, des listes, des liens et ins\u00e9rer des images directement dans le contenu.",
       previewArticle: "Pr\u00e9visualiser l'article",
       previewBadge: "Aper\u00e7u",
       backToEditor: "Retour \u00e0 l'\u00e9diteur",
@@ -377,7 +397,7 @@ export const messages = {
       removeLink: "Retirer le lien",
       image: "Image",
       linkPrompt: "URL du lien",
-      help: "Mets en avant les informations importantes avec des titres, des listes et des liens.",
+      help: "Mettez en avant les informations importantes avec des titres, des listes et des liens.",
       imageHelp: "Les images ajout\u00e9es ici seront ins\u00e9r\u00e9es dans la description.",
       imageUploadError: "Impossible d'uploader l'image dans la description."
     }
@@ -498,6 +518,7 @@ export const messages = {
       password: "Password",
       submit: "Log in",
       backToSite: "Back to site",
+      forgotPassword: "Forgot your password?",
       noAccount: "Don't have an account?",
       createAccount: "Create one",
       editorModerationAccess: "Editorial/moderation access enabled.",
@@ -517,6 +538,25 @@ export const messages = {
       backToLogin: "I already have an account",
       alreadyAccount: "Already have an account?",
       errorFallback: "Signup failed"
+    },
+    forgotPassword: {
+      eyebrow: "Reset",
+      title: "Forgot password",
+      lead: "Enter your email address to receive a password reset link.",
+      submit: "Send reset link",
+      backToLogin: "Back to login",
+      success: "If an account exists for this email, a reset link has been sent.",
+      errorFallback: "Password reset request failed"
+    },
+    resetPassword: {
+      eyebrow: "Reset",
+      title: "Choose a new password",
+      lead: "Set a new password to regain access to your account.",
+      password: "New password",
+      passwordConfirmation: "Confirm new password",
+      submit: "Reset password",
+      backToLogin: "Back to login",
+      errorFallback: "Password reset failed"
     },
     backoffice: {
       title: "Back office",

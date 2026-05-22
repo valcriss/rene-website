@@ -20,7 +20,10 @@ describe("events routes delete errors", () => {
     getUserById: async () => null,
     listUsersByRole: async () => [],
     createEditorUser: async () => null,
-    updatePasswordHash: async () => undefined
+    updatePasswordHash: async () => undefined,
+    createPasswordResetToken: async () => undefined,
+    getPasswordResetTokenByHash: async () => null,
+    deletePasswordResetTokensByUserId: async () => undefined
   };
 
   it("returns 400 for delete errors", async () => {

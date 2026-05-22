@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { prisma } from "../prisma/client";
 import { AdminRepository } from "./repository";
 import {
@@ -12,7 +11,24 @@ import {
 } from "./types";
 import { slugifyCategoryId } from "./slug";
 
+type PrismaUser = {
+  id: string;
+  name: string;
+  email: string;
+  role: "EDITOR" | "MODERATOR" | "ADMIN";
+  passwordHash: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 type PrismaWithAudience = typeof prisma & {
+  user: {
+    findMany(args: unknown): Promise<PrismaUser[]>;
+    findUnique(args: unknown): Promise<PrismaUser | null>;
+    create(args: unknown): Promise<PrismaUser>;
+    update(args: unknown): Promise<PrismaUser>;
+    delete(args: unknown): Promise<unknown>;
+  };
   audience: {
     findMany(args: unknown): Promise<PrismaAudience[]>;
     findUnique(args: unknown): Promise<PrismaAudience | null>;
@@ -39,6 +55,15 @@ type PrismaAudience = {
   updatedAt: Date;
 };
 
+const toAdminUser = (data: PrismaUser): AdminUser => ({
+  id: data.id,
+  name: data.name,
+  email: data.email,
+  role: data.role,
+  createdAt: data.createdAt.toISOString(),
+  updatedAt: data.updatedAt.toISOString()
+});
+
 const toAdminCategory = (data: PrismaCategory): AdminCategory => ({
   id: data.id,
   name: data.name,
@@ -55,41 +80,55 @@ const toAdminAudience = (data: PrismaAudience): AdminAudience => ({
 
 export const createPrismaAdminRepository = (): AdminRepository => {
   const prismaWithAudience = prisma as PrismaWithAudience;
-  const users = new Map<string, AdminUser>();
   let settings: AdminSettings = {
     contactEmail: "contact@rene-website.test",
     contactPhone: "0102030405",
     homepageIntro: "Plateforme culturelle de Descartes."
   };
 
-  const now = () => new Date().toISOString();
-
-  const seedUser = (input: CreateAdminUserInput) => {
-    const id = randomUUID();
-    const timestamp = now();
-    users.set(id, { id, ...input, createdAt: timestamp, updatedAt: timestamp });
-  };
-
-  seedUser({ name: "Admin", email: "admin@rene-website.test", role: "ADMIN" });
-
   return {
-    listUsers: async () => Array.from(users.values()),
-    getUserById: async (id) => users.get(id) ?? null,
+    listUsers: async () =>
+      prismaWithAudience.user
+        .findMany({ orderBy: { createdAt: "desc" } })
+        .then((items: PrismaUser[]) => items.map(toAdminUser)),
+    getUserById: async (id) =>
+      prismaWithAudience.user
+        .findUnique({ where: { id } })
+        .then((item: PrismaUser | null) => (item ? toAdminUser(item) : null)),
     createUser: async (input) => {
-      const id = randomUUID();
-      const timestamp = now();
-      const user: AdminUser = { id, ...input, createdAt: timestamp, updatedAt: timestamp };
-      users.set(id, user);
-      return user;
+      const created = await prismaWithAudience.user.create({
+        data: {
+          name: input.name,
+          email: input.email,
+          role: input.role,
+          passwordHash: ""
+        }
+      });
+      return toAdminUser(created);
     },
     updateUser: async (id, input) => {
-      const existing = users.get(id);
-      if (!existing) return null;
-      const updated: AdminUser = { ...existing, ...input, updatedAt: now() };
-      users.set(id, updated);
-      return updated;
+      try {
+        const updated = await prismaWithAudience.user.update({
+          where: { id },
+          data: {
+            name: input.name,
+            email: input.email,
+            role: input.role
+          }
+        });
+        return toAdminUser(updated);
+      } catch {
+        return null;
+      }
     },
-    deleteUser: async (id) => users.delete(id),
+    deleteUser: async (id) => {
+      try {
+        await prismaWithAudience.user.delete({ where: { id } });
+        return true;
+      } catch {
+        return false;
+      }
+    },
 
     listCategories: async () =>
       prisma.category

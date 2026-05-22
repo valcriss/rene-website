@@ -1,6 +1,11 @@
 import { computed, ref } from "vue";
 import { defineStore } from "pinia";
-import { login as loginApi, signup as signupApi } from "../api/auth";
+import {
+  login as loginApi,
+  requestPasswordReset as requestPasswordResetApi,
+  resetPassword as resetPasswordApi,
+  signup as signupApi
+} from "../api/auth";
 import { TOKEN_STORAGE_KEY, USER_ID_STORAGE_KEY } from "../api/authHeaders";
 
 export type Role = "VISITOR" | "EDITOR" | "MODERATOR" | "ADMIN";
@@ -35,6 +40,13 @@ export const useAuthStore = defineStore("auth", () => {
   const signupPassword = ref("");
   const signupPasswordConfirmation = ref("");
   const authError = ref<string | null>(null);
+  const passwordResetEmail = ref("");
+  const passwordResetToken = ref("");
+  const passwordResetNewPassword = ref("");
+  const passwordResetPasswordConfirmation = ref("");
+  const passwordResetError = ref<string | null>(null);
+  const passwordResetRequestSent = ref(false);
+  const passwordResetComplete = ref(false);
 
   const isAuthenticated = computed(() => role.value !== "VISITOR");
   const canModerate = computed(() => role.value === "MODERATOR" || role.value === "ADMIN");
@@ -76,6 +88,24 @@ export const useAuthStore = defineStore("auth", () => {
     setSession(result);
   };
 
+  const requestPasswordResetWithEmail = async () => {
+    passwordResetError.value = null;
+    passwordResetRequestSent.value = false;
+    await requestPasswordResetApi(passwordResetEmail.value);
+    passwordResetRequestSent.value = true;
+  };
+
+  const confirmPasswordReset = async () => {
+    passwordResetError.value = null;
+    passwordResetComplete.value = false;
+    await resetPasswordApi({
+      token: passwordResetToken.value,
+      password: passwordResetNewPassword.value,
+      passwordConfirmation: passwordResetPasswordConfirmation.value
+    });
+    passwordResetComplete.value = true;
+  };
+
   const setRole = (nextRole: Role) => {
     login(nextRole);
   };
@@ -105,6 +135,20 @@ export const useAuthStore = defineStore("auth", () => {
     signupPasswordConfirmation.value = "";
   };
 
+  const resetPasswordResetRequestForm = () => {
+    passwordResetEmail.value = "";
+    passwordResetError.value = null;
+    passwordResetRequestSent.value = false;
+  };
+
+  const resetPasswordResetForm = () => {
+    passwordResetToken.value = "";
+    passwordResetNewPassword.value = "";
+    passwordResetPasswordConfirmation.value = "";
+    passwordResetError.value = null;
+    passwordResetComplete.value = false;
+  };
+
   return {
     role,
     token,
@@ -118,6 +162,13 @@ export const useAuthStore = defineStore("auth", () => {
     signupPassword,
     signupPasswordConfirmation,
     authError,
+    passwordResetEmail,
+    passwordResetToken,
+    passwordResetNewPassword,
+    passwordResetPasswordConfirmation,
+    passwordResetError,
+    passwordResetRequestSent,
+    passwordResetComplete,
     isAuthenticated,
     canModerate,
     canEdit,
@@ -125,9 +176,13 @@ export const useAuthStore = defineStore("auth", () => {
     login,
     loginWithPassword,
     signupWithPassword,
+    requestPasswordResetWithEmail,
+    confirmPasswordReset,
     setRole,
     logout,
     resetCredentials,
-    resetSignupForm
+    resetSignupForm,
+    resetPasswordResetRequestForm,
+    resetPasswordResetForm
   };
 });

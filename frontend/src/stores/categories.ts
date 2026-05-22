@@ -8,8 +8,7 @@ export const useCategoriesStore = defineStore("categories", () => {
   const error = ref<string | null>(null);
   const hasLoaded = ref(false);
 
-  const loadCategories = async () => {
-    if (loading.value || hasLoaded.value) return;
+  const fetchAndStoreCategories = async () => {
     loading.value = true;
     error.value = null;
     try {
@@ -22,11 +21,27 @@ export const useCategoriesStore = defineStore("categories", () => {
     }
   };
 
+  const loadCategories = async () => {
+    if (loading.value || hasLoaded.value) return;
+    await fetchAndStoreCategories();
+  };
+
+  const refreshCategories = async () => {
+    if (loading.value) return;
+    await fetchAndStoreCategories();
+  };
+
+  const invalidateCategories = () => {
+    hasLoaded.value = false;
+  };
+
   return {
     categories,
     loading,
     error,
     hasLoaded,
-    loadCategories
+    loadCategories,
+    refreshCategories,
+    invalidateCategories
   };
 });

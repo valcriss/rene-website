@@ -6,6 +6,7 @@ import { sendEmail } from "../src/notifications/mailer";
 import {
   notifyEventDeleted,
   notifyEventPublished,
+  notifyPasswordResetRequested,
   notifyEventRejected,
   notifyEventResubmitted,
   notifyEventSubmitted
@@ -52,7 +53,10 @@ describe("notifications service", () => {
       { id: "a1", name: "Admin", email: "admin@test", role: "ADMIN", passwordHash: "hash" }
     ],
     createEditorUser: async () => null,
-    updatePasswordHash: async () => undefined
+    updatePasswordHash: async () => undefined,
+    createPasswordResetToken: async () => undefined,
+    getPasswordResetTokenByHash: async () => null,
+    deletePasswordResetTokensByUserId: async () => undefined
   };
 
   beforeEach(() => {
@@ -78,7 +82,10 @@ describe("notifications service", () => {
       getUserById: async () => null,
       listUsersByRole: async () => [],
       createEditorUser: async () => null,
-      updatePasswordHash: async () => undefined
+      updatePasswordHash: async () => undefined,
+      createPasswordResetToken: async () => undefined,
+      getPasswordResetTokenByHash: async () => null,
+      deletePasswordResetTokensByUserId: async () => undefined
     };
 
     await notifyEventSubmitted(baseEvent, emptyRepo);
@@ -129,5 +136,16 @@ describe("notifications service", () => {
     await notifyEventDeleted({ ...baseEvent, createdByUserId: null, contactEmail: "contact@test" }, authRepo);
 
     expect(sendEmail).toHaveBeenCalledTimes(1);
+  });
+
+  it("sends a password reset email", async () => {
+    await notifyPasswordResetRequested("user@test", "https://rene.example.com/reset-password?token=abc", 30);
+
+    expect(sendEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: "user@test",
+        subject: "Réinitialisation de votre mot de passe"
+      })
+    );
   });
 });

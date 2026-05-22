@@ -28,7 +28,10 @@ describe("events routes", () => {
     getUserById: async () => null,
     listUsersByRole: async () => [],
     createEditorUser: async () => null,
-    updatePasswordHash: async () => undefined
+    updatePasswordHash: async () => undefined,
+    createPasswordResetToken: async () => undefined,
+    getPasswordResetTokenByHash: async () => null,
+    deletePasswordResetTokensByUserId: async () => undefined
   };
   const originalEnv = process.env.NODE_ENV;
   const fetchMock = jest.fn();

@@ -90,6 +90,34 @@ describe("useAuth", () => {
     expect(auth.signupPasswordConfirmation).toBe("");
   });
 
+  it("requests a password reset", async () => {
+    const fetchMock = vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({}) }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const auth = useAuthStore();
+    auth.passwordResetEmail = "writer@example.com";
+
+    await auth.requestPasswordResetWithEmail();
+
+    expect(auth.passwordResetRequestSent).toBe(true);
+    vi.unstubAllGlobals();
+  });
+
+  it("resetPasswordResetForm clears reset fields", () => {
+    const auth = useAuthStore();
+    auth.passwordResetToken = "token";
+    auth.passwordResetNewPassword = "secret123";
+    auth.passwordResetPasswordConfirmation = "secret123";
+    auth.passwordResetComplete = true;
+
+    auth.resetPasswordResetForm();
+
+    expect(auth.passwordResetToken).toBe("");
+    expect(auth.passwordResetNewPassword).toBe("");
+    expect(auth.passwordResetPasswordConfirmation).toBe("");
+    expect(auth.passwordResetComplete).toBe(false);
+  });
+
   it("useAuth returns the auth store", () => {
     const auth = useAuth();
     auth.login("ADMIN");

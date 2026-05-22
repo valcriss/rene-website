@@ -56,4 +56,13 @@ describe("LoginPage", () => {
 
     expect(pushSpy).toHaveBeenCalledWith("/signup");
   });
+
+  it("navigates to forgot-password", async () => {
+    const { router } = await setup();
+    const pushSpy = vi.spyOn(router, "push");
+
+    await fireEvent.click(screen.getByRole("button", { name: "Mot de passe oublié ?" }));
+
+    expect(pushSpy).toHaveBeenCalledWith("/forgot-password");
+  });
 });

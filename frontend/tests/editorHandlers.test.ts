@@ -134,6 +134,57 @@ describe("editor handlers", () => {
     expect(updateMock).not.toHaveBeenCalled();
   });
 
+  it("prevents duplicate draft creation while save is in progress", async () => {
+    let resolveCreate: ((value: unknown) => void) | null = null;
+    createMock.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveCreate = resolve;
+        })
+    );
+
+    const { wrapper } = await mountWithRouter();
+    await nextTick();
+
+    const vm = wrapper.vm as unknown as Exposed;
+    const editorStore = useEditorStore();
+    editorStore.editorForm.image = "/uploads/test.png";
+    editorStore.editorForm.title = "Concert";
+    editorStore.editorForm.categoryId = "music";
+    editorStore.editorForm.eventStartAt = "2026-01-15T20:00";
+    editorStore.editorForm.eventEndAt = "2026-01-15T22:00";
+    editorStore.editorForm.venueName = "Salle";
+    editorStore.editorForm.city = "Descartes";
+    vm.setRole("EDITOR");
+
+    const firstSave = vm.handleSaveDraft();
+    const secondSave = vm.handleSaveDraft();
+
+    await flushPromises();
+    expect(createMock).toHaveBeenCalledTimes(1);
+    await expect(secondSave).resolves.toBe(false);
+
+    if (!resolveCreate) {
+      throw new Error("Create resolver not set");
+    }
+
+    resolveCreate({
+      id: "created-1",
+      title: "Concert",
+      image: "/uploads/test.png",
+      categoryId: "music",
+      eventStartAt: "2026-01-15T20:00:00.000Z",
+      eventEndAt: "2026-01-15T22:00:00.000Z",
+      venueName: "Salle",
+      city: "Descartes",
+      latitude: 46.97,
+      longitude: 0.7,
+      status: "DRAFT"
+    });
+
+    await expect(firstSave).resolves.toBe(true);
+  });
+
   it("sets unknown editor error on save", async () => {
     createMock.mockRejectedValue("nope");
     const { wrapper } = await mountWithRouter();
@@ -217,6 +268,85 @@ describe("editor handlers", () => {
 
     expect(createMock).toHaveBeenCalledOnce();
     expect(submitMock).toHaveBeenCalledWith("created-1", "EDITOR");
+  });
+
+  it("prevents duplicate save and submit while submission is in progress", async () => {
+    let resolveCreate: ((value: unknown) => void) | null = null;
+    let resolveSubmit: ((value: unknown) => void) | null = null;
+    createMock.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveCreate = resolve;
+        })
+    );
+    submitMock.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveSubmit = resolve;
+        })
+    );
+
+    const { wrapper } = await mountWithRouter();
+    await nextTick();
+
+    const vm = wrapper.vm as unknown as Exposed;
+    const editorStore = useEditorStore();
+    editorStore.editorForm.image = "/uploads/test.png";
+    editorStore.editorForm.title = "Concert";
+    editorStore.editorForm.categoryId = "music";
+    editorStore.editorForm.eventStartAt = "2026-01-15T20:00";
+    editorStore.editorForm.eventEndAt = "2026-01-15T22:00";
+    editorStore.editorForm.venueName = "Salle";
+    editorStore.editorForm.city = "Descartes";
+    vm.setRole("EDITOR");
+
+    const firstSubmit = vm.handleSaveAndSubmit();
+    const secondSubmit = vm.handleSaveAndSubmit();
+
+    await flushPromises();
+    expect(createMock).toHaveBeenCalledTimes(1);
+    await expect(secondSubmit).resolves.toBe(false);
+
+    if (!resolveCreate) {
+      throw new Error("Create resolver not set");
+    }
+
+    resolveCreate({
+      id: "created-1",
+      title: "Concert",
+      image: "/uploads/test.png",
+      categoryId: "music",
+      eventStartAt: "2026-01-15T20:00:00.000Z",
+      eventEndAt: "2026-01-15T22:00:00.000Z",
+      venueName: "Salle",
+      city: "Descartes",
+      latitude: 46.97,
+      longitude: 0.7,
+      status: "DRAFT"
+    });
+
+    await flushPromises();
+    expect(submitMock).toHaveBeenCalledTimes(1);
+
+    if (!resolveSubmit) {
+      throw new Error("Submit resolver not set");
+    }
+
+    resolveSubmit({
+      id: "created-1",
+      title: "Concert",
+      image: "/uploads/test.png",
+      categoryId: "music",
+      eventStartAt: "2026-01-15T20:00:00.000Z",
+      eventEndAt: "2026-01-15T22:00:00.000Z",
+      venueName: "Salle",
+      city: "Descartes",
+      latitude: 46.97,
+      longitude: 0.7,
+      status: "PENDING"
+    });
+
+    await expect(firstSubmit).resolves.toBe(true);
   });
 
   it("does not submit when create step fails in save and submit flow", async () => {

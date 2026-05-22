@@ -62,6 +62,16 @@
         <span v-if="authError" class="text-sm text-rose-600">{{ authError }}</span>
       </div>
 
+      <div class="mt-4">
+        <button
+          type="button"
+          class="text-sm font-medium text-sky-700 underline-offset-4 hover:underline"
+          @click="goToForgotPassword"
+        >
+          {{ t("login.forgotPassword") }}
+        </button>
+      </div>
+
       <div class="mt-8 border-t border-slate-200 pt-6 text-sm text-slate-600">
         <p>{{ t("login.noAccount") }}</p>
         <button
@@ -121,5 +131,9 @@ const goToHome = () => {
 
 const goToSignup = () => {
   router.push("/signup");
+};
+
+const goToForgotPassword = () => {
+  router.push("/forgot-password");
 };
 </script>

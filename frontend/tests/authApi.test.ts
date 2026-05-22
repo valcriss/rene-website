@@ -1,5 +1,5 @@
 import { vi } from "vitest";
-import { login, signup } from "../src/api/auth";
+import { login, requestPasswordReset, resetPassword, signup } from "../src/api/auth";
 
 describe("auth api", () => {
   afterEach(() => {
@@ -78,5 +78,27 @@ describe("auth api", () => {
         passwordConfirmation: "secret123"
       })
     ).rejects.toThrow("Inscription impossible");
+  });
+
+  it("requests a password reset", async () => {
+    const fetchMock = vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({}) }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await requestPasswordReset("u@test");
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/auth/forgot-password", expect.any(Object));
+  });
+
+  it("resets a password", async () => {
+    const fetchMock = vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({}) }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await resetPassword({
+      token: "token",
+      password: "secret123",
+      passwordConfirmation: "secret123"
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/auth/reset-password", expect.any(Object));
   });
 });

@@ -9,6 +9,16 @@ services:
       JWT_SECRET: change-me
       PHOTON_URL: http://photon:2322
       UPLOAD_DIR: /app/uploads
+      # SMTP settings for transactional emails such as password reset.
+      # Required: SMTP_HOST and SENDER_EMAIL.
+      # Optional: SMTP_PORT defaults to 587, SMTP_SECURE defaults to false.
+      # Optional auth: set SMTP_USER and SMTP_PASSWORD together if your SMTP server requires authentication.
+      SMTP_HOST: smtp.example.com
+      SMTP_PORT: 587
+      SMTP_SECURE: "false"
+      SMTP_USER: ""
+      SMTP_PASSWORD: ""
+      SENDER_EMAIL: noreply@example.com
     ports:
       - "3000:3000"
     depends_on:

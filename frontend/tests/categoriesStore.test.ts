@@ -68,4 +68,31 @@ describe("categories store", () => {
 
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it("refreshes categories even after initial load", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve([{ id: "music", name: "Musique" }]) })
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve([{ id: "theatre", name: "Théâtre" }]) });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const store = useCategoriesStore();
+    await store.loadCategories();
+    await store.refreshCategories();
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(store.categories).toEqual([{ id: "theatre", name: "Théâtre" }]);
+    expect(store.hasLoaded).toBe(true);
+  });
+
+  it("invalidates categories without clearing current values", () => {
+    const store = useCategoriesStore();
+
+    store.categories = [{ id: "music", name: "Musique" }];
+    store.hasLoaded = true;
+    store.invalidateCategories();
+
+    expect(store.hasLoaded).toBe(false);
+    expect(store.categories).toEqual([{ id: "music", name: "Musique" }]);
+  });
 });

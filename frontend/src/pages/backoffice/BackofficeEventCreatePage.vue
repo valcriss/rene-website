@@ -175,11 +175,11 @@
               </label>
               <label class="text-sm text-slate-600">
                 {{ t("common.postalCode") }}
-                <input v-model="editorForm.postalCode" type="text" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" placeholder="37000" />
+                <input v-model="editorForm.postalCode" type="text" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" />
               </label>
               <label class="text-sm text-slate-600">
                 {{ t("common.city") }}
-                <input v-model="editorForm.city" type="text" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" :placeholder="t('editor.placeholders.city')" />
+                <input v-model="editorForm.city" type="text" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" />
               </label>
             </div>
           </section>
@@ -254,6 +254,7 @@
             <button
               type="button"
               class="rounded-full bg-white px-5 py-2.5 text-sm font-medium text-slate-950 transition hover:bg-sky-50"
+              :disabled="isPersisting"
               @click="handleSaveAndRedirect"
             >
               {{ primaryActionLabel }}
@@ -261,6 +262,7 @@
             <button
               type="button"
               class="rounded-full border border-slate-700 px-5 py-2.5 text-sm font-medium text-white transition hover:border-slate-500 hover:bg-white/5"
+              :disabled="isPersisting"
               @click="handleSubmitAndRedirect"
             >
               {{ t("editor.submitForModeration") }}
@@ -293,7 +295,7 @@ const editorStore = useEditorStore();
 const { canEdit } = storeToRefs(authStore);
 const { categories, loading: categoriesLoading } = storeToRefs(categoriesStore);
 const { audiences, loading: audiencesLoading } = storeToRefs(audiencesStore);
-const { editorMode, editingPublishedEvent, editingPublishedRevisionStatus, editorError, editorForm } = storeToRefs(editorStore);
+const { editorMode, editingPublishedEvent, editingPublishedRevisionStatus, editorError, editorForm, isPersisting } = storeToRefs(editorStore);
 
 const { resetEditorForm, handleSaveDraft, handleSaveAndSubmit, savePreviewSnapshot, setImageFile } = editorStore;
 
@@ -342,9 +344,8 @@ const handleImageChange = (event: Event) => {
 };
 
 const handleSaveAndRedirect = async () => {
-  const isEdit = editorMode.value === "edit";
   const ok = await handleSaveDraft();
-  if (ok && isEdit) {
+  if (ok) {
     router.push("/backoffice/events");
   }
 };
