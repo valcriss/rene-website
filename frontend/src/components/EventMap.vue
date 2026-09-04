@@ -21,6 +21,13 @@ const markersById = new Map<string, L.Marker>();
 
 const defaultCenter = { lat: 46.972, lng: 0.705 };
 const defaultZoom = 12;
+const markerIcon = L.icon({
+  iconUrl: "/mark.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  tooltipAnchor: [16, -28]
+});
 
 const hasCoordinates = (event: EventItem) =>
   typeof event.latitude === "number" &&
@@ -33,7 +40,7 @@ const updateMarkers = (items: EventItem[]) => {
   markersById.clear();
 
   items.filter(hasCoordinates).forEach((event) => {
-    const marker = L.marker([event.latitude, event.longitude]);
+    const marker = L.marker([event.latitude, event.longitude], { icon: markerIcon });
     marker.bindPopup(`<strong>${event.title}</strong><br/>${getEventLocationLabel(event, event.city)}`);
     marker.bindTooltip(`<strong>${event.title}</strong><br/>${formatDateRange(event.eventStartAt, event.eventEndAt)}`);
     marker.on("click", () => emit("select", event.id));

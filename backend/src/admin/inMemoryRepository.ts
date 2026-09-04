@@ -18,7 +18,8 @@ export const createInMemoryAdminRepository = (): AdminRepository => {
   let settings: AdminSettings = {
     contactEmail: "contact@rene-website.test",
     contactPhone: "0102030405",
-    homepageIntro: "Plateforme culturelle de Descartes."
+    homepageIntro: "Plateforme culturelle de Descartes.",
+    homepageSubtitle: ""
   };
 
   const now = () => new Date().toISOString();

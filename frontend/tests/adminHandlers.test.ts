@@ -96,7 +96,12 @@ describe("admin handlers", () => {
     fetchAdminUsersMock.mockResolvedValue([{ id: "u1", name: "Admin", email: "admin@test", role: "ADMIN" }]);
     fetchAdminCategoriesMock.mockResolvedValue([{ id: "c1", name: "Musique" }]);
     fetchAdminAudiencesMock.mockResolvedValue([{ id: "all", name: "Tous publics" }]);
-    fetchAdminSettingsMock.mockResolvedValue({ contactEmail: "c", contactPhone: "p", homepageIntro: "i" });
+    fetchAdminSettingsMock.mockResolvedValue({
+      contactEmail: "c",
+      contactPhone: "p",
+      homepageIntro: "i",
+      homepageSubtitle: "s"
+    });
     createAdminUserMock.mockReset();
     updateAdminUserMock.mockReset();
     deleteAdminUserMock.mockReset();

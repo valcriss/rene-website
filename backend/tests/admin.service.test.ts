@@ -32,7 +32,7 @@ const baseRepo: AdminRepository = {
   createAudience: async () => ({ id: "aud", name: "Tous publics", createdAt: "", updatedAt: "" }),
   updateAudience: async () => null,
   deleteAudience: async () => false,
-  getSettings: async () => ({ contactEmail: "", contactPhone: "", homepageIntro: "" }),
+  getSettings: async () => ({ contactEmail: "", contactPhone: "", homepageIntro: "", homepageSubtitle: "" }),
   updateSettings: async (input) => ({ ...input })
 };
 
@@ -44,7 +44,8 @@ describe("admin service", () => {
     await expect(getAdminSettings(baseRepo)).resolves.toEqual({
       contactEmail: "",
       contactPhone: "",
-      homepageIntro: ""
+      homepageIntro: "",
+      homepageSubtitle: ""
     });
   });
 
@@ -191,6 +192,25 @@ describe("admin service", () => {
     const result = await updateAdminSettings(baseRepo, {
       contactEmail: " contact@test ",
       contactPhone: " 0102030405 ",
+      homepageIntro: " Bienvenue ",
+      homepageSubtitle: " Sous-titre "
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      value: {
+        contactEmail: "contact@test",
+        contactPhone: "0102030405",
+        homepageIntro: "Bienvenue",
+        homepageSubtitle: "Sous-titre"
+      }
+    });
+  });
+
+  it("keeps homepage subtitle optional in settings", async () => {
+    const result = await updateAdminSettings(baseRepo, {
+      contactEmail: " contact@test ",
+      contactPhone: " 0102030405 ",
       homepageIntro: " Bienvenue "
     });
 
@@ -199,7 +219,8 @@ describe("admin service", () => {
       value: {
         contactEmail: "contact@test",
         contactPhone: "0102030405",
-        homepageIntro: "Bienvenue"
+        homepageIntro: "Bienvenue",
+        homepageSubtitle: ""
       }
     });
   });

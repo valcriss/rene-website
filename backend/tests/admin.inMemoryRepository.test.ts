@@ -93,8 +93,10 @@ describe("admin in-memory repository", () => {
     const updated = await repo.updateSettings({
       contactEmail: "contact@test",
       contactPhone: "0102030405",
-      homepageIntro: "Intro"
+      homepageIntro: "Intro",
+      homepageSubtitle: "Sous-titre"
     });
     expect(updated.homepageIntro).toBe("Intro");
+    expect(updated.homepageSubtitle).toBe("Sous-titre");
   });
 });

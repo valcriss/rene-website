@@ -57,7 +57,7 @@ const validateCategoryInput = (input: unknown): ServiceResult<CreateAdminCategor
   return { ok: true, value: { name: data.name.trim() } };
 };
 
-const validateSettingsInput = (input: unknown): ServiceResult<UpdateAdminSettingsInput> => {
+const validateSettingsInput = (input: unknown): ServiceResult<AdminSettings> => {
   const data = input as Partial<UpdateAdminSettingsInput>;
   const errors: string[] = [];
   if (!isNonEmptyString(data.contactEmail)) errors.push("contactEmail is required");
@@ -71,7 +71,8 @@ const validateSettingsInput = (input: unknown): ServiceResult<UpdateAdminSetting
     value: {
       contactEmail: data.contactEmail!.trim(),
       contactPhone: data.contactPhone!.trim(),
-      homepageIntro: data.homepageIntro!.trim()
+      homepageIntro: data.homepageIntro!.trim(),
+      homepageSubtitle: typeof data.homepageSubtitle === "string" ? data.homepageSubtitle.trim() : ""
     }
   };
 };

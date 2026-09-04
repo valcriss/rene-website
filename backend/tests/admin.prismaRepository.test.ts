@@ -14,6 +14,8 @@ jest.mock("@prisma/client", () => {
   const audienceCreate = jest.fn();
   const audienceUpdate = jest.fn();
   const audienceDelete = jest.fn();
+  const siteSettingFindUnique = jest.fn();
+  const siteSettingUpsert = jest.fn();
   const count = jest.fn();
 
   return {
@@ -41,6 +43,10 @@ jest.mock("@prisma/client", () => {
       },
       event: {
         count
+      },
+      siteSetting: {
+        findUnique: siteSettingFindUnique,
+        upsert: siteSettingUpsert
       }
     })),
     __mocks: {
@@ -59,6 +65,8 @@ jest.mock("@prisma/client", () => {
       audienceCreate,
       audienceUpdate,
       audienceDelete,
+      siteSettingFindUnique,
+      siteSettingUpsert,
       count
     }
   };
@@ -82,6 +90,8 @@ const prismaMocks = jest.requireMock("@prisma/client").__mocks as {
   audienceCreate: jest.Mock;
   audienceUpdate: jest.Mock;
   audienceDelete: jest.Mock;
+  siteSettingFindUnique: jest.Mock;
+  siteSettingUpsert: jest.Mock;
   count: jest.Mock;
 };
 
@@ -102,6 +112,8 @@ describe("createPrismaAdminRepository", () => {
     prismaMocks.audienceCreate.mockReset();
     prismaMocks.audienceUpdate.mockReset();
     prismaMocks.audienceDelete.mockReset();
+    prismaMocks.siteSettingFindUnique.mockReset();
+    prismaMocks.siteSettingUpsert.mockReset();
     prismaMocks.count.mockReset();
   });
 
@@ -321,15 +333,62 @@ describe("createPrismaAdminRepository", () => {
   });
 
   it("handles settings", async () => {
+    prismaMocks.siteSettingFindUnique.mockResolvedValue({
+      id: "default",
+      contactEmail: "contact@rene-website.test",
+      contactPhone: "0102030405",
+      homepageIntro: "Plateforme culturelle de Descartes.",
+      homepageSubtitle: "",
+      createdAt: new Date("2026-05-22T09:00:00.000Z"),
+      updatedAt: new Date("2026-05-22T09:30:00.000Z")
+    });
+    prismaMocks.siteSettingUpsert.mockResolvedValue({
+      id: "default",
+      contactEmail: "a@test",
+      contactPhone: "0101",
+      homepageIntro: "Intro",
+      homepageSubtitle: "Sous-titre",
+      createdAt: new Date("2026-05-22T09:00:00.000Z"),
+      updatedAt: new Date("2026-05-22T09:30:00.000Z")
+    });
     const repo = createPrismaAdminRepository();
     const settings = await repo.getSettings();
     const updated = await repo.updateSettings({
       contactEmail: "a@test",
       contactPhone: "0101",
-      homepageIntro: "Intro"
+      homepageIntro: "Intro",
+      homepageSubtitle: "Sous-titre"
     });
     expect(settings.contactEmail).toBeDefined();
     expect(updated.homepageIntro).toBe("Intro");
+    expect(updated.homepageSubtitle).toBe("Sous-titre");
+    expect(prismaMocks.siteSettingUpsert).toHaveBeenCalledWith({
+      where: { id: "default" },
+      create: {
+        id: "default",
+        contactEmail: "a@test",
+        contactPhone: "0101",
+        homepageIntro: "Intro",
+        homepageSubtitle: "Sous-titre"
+      },
+      update: {
+        contactEmail: "a@test",
+        contactPhone: "0101",
+        homepageIntro: "Intro",
+        homepageSubtitle: "Sous-titre"
+      }
+    });
+  });
+
+  it("returns default settings when the settings row does not exist", async () => {
+    prismaMocks.siteSettingFindUnique.mockResolvedValue(null);
+    const repo = createPrismaAdminRepository();
+    await expect(repo.getSettings()).resolves.toEqual({
+      contactEmail: "contact@rene-website.test",
+      contactPhone: "0102030405",
+      homepageIntro: "Plateforme culturelle de Descartes.",
+      homepageSubtitle: ""
+    });
   });
 
   it("lists audiences", async () => {

@@ -7,7 +7,10 @@ export const createPublicSettingsRouter = (repo: AdminRepository) => {
 
   router.get("/", async (_req, res) => {
     const settings = await getAdminSettings(repo);
-    res.json({ homepageIntro: settings.homepageIntro });
+    res.json({
+      homepageIntro: settings.homepageIntro,
+      homepageSubtitle: settings.homepageSubtitle
+    });
   });
 
   return router;

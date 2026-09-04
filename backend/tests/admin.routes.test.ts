@@ -295,11 +295,13 @@ describe("admin routes", () => {
       .send({
         contactEmail: "contact@rene-website.test",
         contactPhone: "0102030405",
-        homepageIntro: "Bienvenue"
+        homepageIntro: "Bienvenue",
+        homepageSubtitle: "Sous-titre"
       });
 
     expect(updateResponse.status).toBe(200);
     expect(updateResponse.body.homepageIntro).toBe("Bienvenue");
+    expect(updateResponse.body.homepageSubtitle).toBe("Sous-titre");
   });
 
   it("returns 400 for invalid settings", async () => {
@@ -320,12 +322,16 @@ describe("admin routes", () => {
       .send({
         contactEmail: "contact@rene-website.test",
         contactPhone: "0102030405",
-        homepageIntro: "Bienvenue sur R3ne"
+        homepageIntro: "Bienvenue sur R3ne",
+        homepageSubtitle: "Sortir autour de Descartes"
       });
 
     const response = await request(app).get("/api/settings");
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({ homepageIntro: "Bienvenue sur R3ne" });
+    expect(response.body).toEqual({
+      homepageIntro: "Bienvenue sur R3ne",
+      homepageSubtitle: "Sortir autour de Descartes"
+    });
   });
 });

@@ -38,6 +38,10 @@ type PrismaWithAudience = typeof prisma & {
   event: {
     count(args: unknown): Promise<number>;
   };
+  siteSetting: {
+    findUnique(args: unknown): Promise<PrismaSiteSetting | null>;
+    upsert(args: unknown): Promise<PrismaSiteSetting>;
+  };
 };
 
 type PrismaCategory = {
@@ -53,6 +57,25 @@ type PrismaAudience = {
   createdAt: Date;
   updatedAt: Date;
 };
+
+type PrismaSiteSetting = {
+  id: string;
+  contactEmail: string;
+  contactPhone: string;
+  homepageIntro: string;
+  homepageSubtitle: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+const defaultSiteSettings: AdminSettings = {
+  contactEmail: "contact@rene-website.test",
+  contactPhone: "0102030405",
+  homepageIntro: "Plateforme culturelle de Descartes.",
+  homepageSubtitle: ""
+};
+
+const defaultSiteSettingsId = "default";
 
 const toAdminUser = (data: PrismaUser): AdminUser => ({
   id: data.id,
@@ -77,13 +100,15 @@ const toAdminAudience = (data: PrismaAudience): AdminAudience => ({
   updatedAt: data.updatedAt.toISOString()
 });
 
+const toAdminSettings = (data: PrismaSiteSetting): AdminSettings => ({
+  contactEmail: data.contactEmail,
+  contactPhone: data.contactPhone,
+  homepageIntro: data.homepageIntro,
+  homepageSubtitle: data.homepageSubtitle
+});
+
 export const createPrismaAdminRepository = (): AdminRepository => {
   const prismaWithAudience = prisma as PrismaWithAudience;
-  let settings: AdminSettings = {
-    contactEmail: "contact@rene-website.test",
-    contactPhone: "0102030405",
-    homepageIntro: "Plateforme culturelle de Descartes."
-  };
 
   return {
     listUsers: async () =>
@@ -227,10 +252,22 @@ export const createPrismaAdminRepository = (): AdminRepository => {
       }
     },
 
-    getSettings: async () => settings,
+    getSettings: async () => {
+      const settings = await prismaWithAudience.siteSetting.findUnique({
+        where: { id: defaultSiteSettingsId }
+      });
+      return settings ? toAdminSettings(settings) : defaultSiteSettings;
+    },
     updateSettings: async (input) => {
-      settings = { ...input };
-      return settings;
+      const settings = await prismaWithAudience.siteSetting.upsert({
+        where: { id: defaultSiteSettingsId },
+        create: {
+          id: defaultSiteSettingsId,
+          ...input
+        },
+        update: input
+      });
+      return toAdminSettings(settings);
     }
   };
 };

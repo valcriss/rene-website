@@ -1,4 +1,5 @@
 import { render } from "@testing-library/vue";
+import * as L from "leaflet";
 import { vi } from "vitest";
 import EventMap from "../src/components/EventMap.vue";
 
@@ -34,6 +35,7 @@ const markerInstance = {
 };
 
 vi.mock("leaflet", () => ({
+  icon: vi.fn((options) => ({ options })),
   map: vi.fn(() => mapInstance),
   tileLayer: vi.fn(() => ({ addTo: vi.fn() })),
   layerGroup: vi.fn(() => layerGroupInstance),
@@ -69,6 +71,24 @@ describe("EventMap", () => {
 
     expect(layerGroupInstance.addTo).toHaveBeenCalled();
     expect(layerGroupInstance.clearLayers).toHaveBeenCalled();
+    expect(L.icon).toHaveBeenCalledWith({
+      iconUrl: "/mark.png",
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      tooltipAnchor: [16, -28]
+    });
+    expect(L.marker).toHaveBeenCalledWith([46.97, 0.7], {
+      icon: {
+        options: {
+          iconUrl: "/mark.png",
+          iconSize: [25, 41],
+          iconAnchor: [12, 41],
+          popupAnchor: [1, -34],
+          tooltipAnchor: [16, -28]
+        }
+      }
+    });
     expect(markerInstance.bindPopup).toHaveBeenCalled();
     expect(markerInstance.bindTooltip).toHaveBeenCalled();
 

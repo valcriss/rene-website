@@ -18,7 +18,7 @@
       <div class="grid gap-8 xl:grid-cols-[minmax(0,0.92fr)_minmax(480px,1.08fr)] xl:items-stretch">
         <div class="flex flex-col justify-between rounded-[2rem] border border-white/90 bg-white p-6 shadow-[0_32px_120px_-56px_rgba(30,41,59,0.28)] sm:p-8 xl:p-10">
           <div class="space-y-6">
-            <HomeTitle />
+            <HomeTitle :title-lead="homepageSubtitleText" />
             <p class="max-w-2xl text-sm font-semibold uppercase tracking-[0.28em] text-sky-700/65">
               {{ t("home.eyebrow") }}
             </p>
@@ -287,7 +287,7 @@ const eventsStore = useEventsStore();
 const categoriesStore = useCategoriesStore();
 const audiencesStore = useAudiencesStore();
 const settingsStore = useSettingsStore();
-const { homepageIntro } = storeToRefs(settingsStore);
+const { homepageIntro, homepageSubtitle } = storeToRefs(settingsStore);
 const {
   filters,
   filteredEvents,
@@ -301,6 +301,7 @@ const { audiences } = storeToRefs(audiencesStore);
 const { isAuthenticated, role, userName } = storeToRefs(authStore);
 
 const roleLabel = computed(() => t(`backoffice.roleLabels.${role.value}`));
+const homepageSubtitleText = computed(() => homepageSubtitle.value?.trim() || t("home.titleLead"));
 const introText = computed(() => homepageIntro.value?.trim() || t("home.intro"));
 const accountLabel = computed(() => userName.value || t("common.mySpace"));
 

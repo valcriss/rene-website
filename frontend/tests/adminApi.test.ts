@@ -23,14 +23,19 @@ describe("admin api", () => {
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve([]) })
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ contactEmail: "c", contactPhone: "p", homepageIntro: "i" })
+        json: () => Promise.resolve({ contactEmail: "c", contactPhone: "p", homepageIntro: "i", homepageSubtitle: "s" })
       });
 
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(fetchAdminUsers("ADMIN")).resolves.toEqual([]);
     await expect(fetchAdminCategories("ADMIN")).resolves.toEqual([]);
-    await expect(fetchAdminSettings("ADMIN")).resolves.toEqual({ contactEmail: "c", contactPhone: "p", homepageIntro: "i" });
+    await expect(fetchAdminSettings("ADMIN")).resolves.toEqual({
+      contactEmail: "c",
+      contactPhone: "p",
+      homepageIntro: "i",
+      homepageSubtitle: "s"
+    });
   });
 
   it("fails to fetch admin data", async () => {
@@ -100,12 +105,15 @@ describe("admin api", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(() =>
-        Promise.resolve({ ok: true, json: () => Promise.resolve({ contactEmail: "c", contactPhone: "p", homepageIntro: "i" }) })
+        Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ contactEmail: "c", contactPhone: "p", homepageIntro: "i", homepageSubtitle: "s" })
+        })
       )
     );
 
     await expect(
-      updateAdminSettings("ADMIN", { contactEmail: "c", contactPhone: "p", homepageIntro: "i" })
+      updateAdminSettings("ADMIN", { contactEmail: "c", contactPhone: "p", homepageIntro: "i", homepageSubtitle: "s" })
     ).resolves.toMatchObject({ contactEmail: "c" });
   });
 
@@ -116,7 +124,7 @@ describe("admin api", () => {
     );
 
     await expect(
-      updateAdminSettings("ADMIN", { contactEmail: "c", contactPhone: "p", homepageIntro: "i" })
+      updateAdminSettings("ADMIN", { contactEmail: "c", contactPhone: "p", homepageIntro: "i", homepageSubtitle: "s" })
     ).rejects.toThrow("Impossible de mettre à jour les réglages");
   });
 });

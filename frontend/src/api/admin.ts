@@ -23,6 +23,7 @@ export type AdminSettings = {
   contactEmail: string;
   contactPhone: string;
   homepageIntro: string;
+  homepageSubtitle: string;
 };
 
 const jsonHeaders = (role: string) => buildAuthHeaders(role);

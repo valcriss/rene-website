@@ -193,3 +193,13 @@ model PasswordResetToken {
 
   @@index([expiresAt])
 }
+
+model SiteSetting {
+  id               String   @id @default("default")
+  contactEmail     String   @default("contact@rene-website.test")
+  contactPhone     String   @default("0102030405")
+  homepageIntro    String   @default("Plateforme culturelle de Descartes.")
+  homepageSubtitle String   @default("")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}

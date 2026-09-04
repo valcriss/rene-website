@@ -39,6 +39,10 @@
               <input v-model="adminSettingsForm.contactPhone" type="text" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" placeholder="01 02 03 04 05" />
             </label>
             <label class="text-sm text-slate-600 md:col-span-2">
+              {{ t("admin.homepageSubtitle") }}
+              <textarea v-model="adminSettingsForm.homepageSubtitle" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" rows="3"></textarea>
+            </label>
+            <label class="text-sm text-slate-600 md:col-span-2">
               {{ t("admin.homepageIntro") }}
               <textarea v-model="adminSettingsForm.homepageIntro" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" rows="5"></textarea>
             </label>

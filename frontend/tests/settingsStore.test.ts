@@ -14,13 +14,19 @@ describe("settings store", () => {
   it("loads the public homepage intro", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({ homepageIntro: "Bienvenue" }) }))
+      vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ homepageIntro: "Bienvenue", homepageSubtitle: "Sous-titre" })
+        })
+      )
     );
 
     const store = useSettingsStore();
     await store.loadPublicSettings();
 
     expect(store.homepageIntro).toBe("Bienvenue");
+    expect(store.homepageSubtitle).toBe("Sous-titre");
     expect(store.hasLoaded).toBe(true);
   });
 
@@ -31,12 +37,16 @@ describe("settings store", () => {
     await store.loadPublicSettings();
 
     expect(store.homepageIntro).toBeNull();
+    expect(store.homepageSubtitle).toBeNull();
     expect(store.hasLoaded).toBe(false);
   });
 
   it("does not reload when already loaded", async () => {
     const fetchMock = vi.fn(() =>
-      Promise.resolve({ ok: true, json: () => Promise.resolve({ homepageIntro: "Bienvenue" }) })
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ homepageIntro: "Bienvenue", homepageSubtitle: "Sous-titre" })
+      })
     );
     vi.stubGlobal("fetch", fetchMock);
 

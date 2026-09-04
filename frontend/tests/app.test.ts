@@ -1408,7 +1408,8 @@ describe("App", () => {
             Promise.resolve({
               contactEmail: "contact@rene-website.fr",
               contactPhone: "0102030405",
-              homepageIntro: "Intro"
+              homepageIntro: "Intro",
+              homepageSubtitle: "Sous-titre"
             })
         });
       }
@@ -1419,7 +1420,8 @@ describe("App", () => {
             Promise.resolve({
               contactEmail: "contact@rene-website.fr",
               contactPhone: "0102030405",
-              homepageIntro: "Intro"
+              homepageIntro: "Intro",
+              homepageSubtitle: "Sous-titre"
             })
         });
       }
@@ -1433,6 +1435,7 @@ describe("App", () => {
 
     expect(await screen.findAllByText("Réglages du site")).toHaveLength(2);
     const settingsForm = within(await screen.findByTestId("admin-settings-form"));
+    await fireEvent.update(settingsForm.getByLabelText("Sous-titre page d'accueil"), "Sous-titre");
     await fireEvent.update(settingsForm.getByLabelText("Intro page d'accueil"), "Intro");
     await fireEvent.click(settingsForm.getByRole("button", { name: "Enregistrer les réglages" }));
 
@@ -1460,7 +1463,7 @@ describe("App", () => {
       if (url === "/api/admin/settings") {
         return Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({ contactEmail: "c", contactPhone: "p", homepageIntro: "i" })
+          json: () => Promise.resolve({ contactEmail: "c", contactPhone: "p", homepageIntro: "i", homepageSubtitle: "s" })
         });
       }
       if (url === "/api/admin/users/u2" && init?.method === "DELETE") {
@@ -1511,7 +1514,7 @@ describe("App", () => {
       if (url === "/api/admin/settings") {
         return Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({ contactEmail: "c", contactPhone: "p", homepageIntro: "i" })
+          json: () => Promise.resolve({ contactEmail: "c", contactPhone: "p", homepageIntro: "i", homepageSubtitle: "s" })
         });
       }
       return Promise.resolve({ ok: false, json: () => Promise.resolve([]) });
