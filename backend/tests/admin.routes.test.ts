@@ -311,4 +311,21 @@ describe("admin routes", () => {
 
     expect(response.status).toBe(400);
   });
+
+  it("exposes the homepage intro publicly without requiring authentication", async () => {
+    const app = createApp();
+    await request(app)
+      .put("/api/admin/settings")
+      .set("x-user-role", "ADMIN")
+      .send({
+        contactEmail: "contact@rene-website.test",
+        contactPhone: "0102030405",
+        homepageIntro: "Bienvenue sur R3ne"
+      });
+
+    const response = await request(app).get("/api/settings");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ homepageIntro: "Bienvenue sur R3ne" });
+  });
 });

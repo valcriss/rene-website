@@ -1,5 +1,6 @@
 import express from "express";
 import { createAdminRouter } from "./admin/routes";
+import { createPublicSettingsRouter } from "./admin/publicRoutes";
 import { createAdminRepository } from "./admin/repositoryFactory";
 import { authenticateOptional } from "./auth/middleware";
 import { createAudiencesRouter } from "./audiences/routes";
@@ -41,6 +42,7 @@ export const createApp = () => {
   app.use("/api/admin", createAdminRouter(adminRepository));
   app.use("/api/categories", createCategoriesRouter(adminRepository));
   app.use("/api/audiences", createAudiencesRouter(adminRepository));
+  app.use("/api/settings", createPublicSettingsRouter(adminRepository));
 
   app.get("/api/health", (_req, res) => {
     res.json({ status: "ok" });

@@ -5,6 +5,8 @@ import { i18n, setLocale } from "../src/i18n";
 
 config.global.plugins = [...(config.global.plugins ?? []), i18n];
 
+window.scrollTo = () => {};
+
 beforeEach(() => {
   setLocale("fr");
 });

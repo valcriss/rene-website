@@ -23,7 +23,7 @@
               {{ t("home.eyebrow") }}
             </p>
             <p class="max-w-2xl text-base leading-7 text-slate-700 sm:text-lg">
-              {{ t("home.intro") }}
+              {{ introText }}
             </p>
           </div>
 
@@ -269,6 +269,7 @@ import { useAuthStore } from "../stores/auth";
 import { useAudiencesStore } from "../stores/audiences";
 import { useCategoriesStore } from "../stores/categories";
 import { useEventsStore } from "../stores/events";
+import { useSettingsStore } from "../stores/settings";
 import { getEventLocationLabel } from "../utils/eventLocation";
 
 type CategoryTheme = {
@@ -283,6 +284,8 @@ const authStore = useAuthStore();
 const eventsStore = useEventsStore();
 const categoriesStore = useCategoriesStore();
 const audiencesStore = useAudiencesStore();
+const settingsStore = useSettingsStore();
+const { homepageIntro } = storeToRefs(settingsStore);
 const {
   filters,
   filteredEvents,
@@ -296,6 +299,7 @@ const { audiences } = storeToRefs(audiencesStore);
 const { isAuthenticated, role, userName } = storeToRefs(authStore);
 
 const roleLabel = computed(() => t(`backoffice.roleLabels.${role.value}`));
+const introText = computed(() => homepageIntro.value?.trim() || t("home.intro"));
 const accountLabel = computed(() => userName.value || t("common.mySpace"));
 
 const categoryNames = computed(() =>
@@ -363,6 +367,7 @@ const categoryThemeMap: Record<string, CategoryTheme> = {
 onMounted(() => {
   categoriesStore.loadCategories();
   audiencesStore.loadAudiences();
+  settingsStore.loadPublicSettings();
 });
 
 const getCategoryName = (categoryId: string) => categoryNames.value.get(categoryId) ?? "";
