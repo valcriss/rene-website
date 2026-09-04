@@ -81,7 +81,7 @@ describe("App", () => {
   it("renders the headline", async () => {
     vi.stubGlobal("fetch", vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) })));
     await renderWithRouter();
-    expect(screen.getByRole("heading", { level: 1, name: "Rene Website" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "R3ne" })).toBeInTheDocument();
   });
 
   it("shows empty state when no events", async () => {
@@ -126,7 +126,7 @@ describe("App", () => {
     await fireEvent.click(screen.getByRole("button", { name: "Retour au site" }));
 
     await waitFor(() => expect(router.currentRoute.value.path).toBe("/"));
-    expect(screen.getByRole("heading", { level: 1, name: "Rene Website" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "R3ne" })).toBeInTheDocument();
   });
 
   it("redirects authenticated users away from signup", async () => {

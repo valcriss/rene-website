@@ -42,6 +42,6 @@ export const buildDeletedBody = (event: Event) =>
 export const buildPasswordResetSubject = () => "Réinitialisation de votre mot de passe";
 
 export const buildPasswordResetBody = (resetUrl: string, ttlMinutes: number) =>
-  `Une demande de réinitialisation de mot de passe a été reçue pour votre compte Rene Website.\n\n` +
+  `Une demande de réinitialisation de mot de passe a été reçue pour votre compte R3ne.\n\n` +
   `Utilisez ce lien pour définir un nouveau mot de passe :\n${resetUrl}\n\n` +
   `Ce lien expire dans ${ttlMinutes} minutes. Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet email.`;
