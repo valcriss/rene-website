@@ -41,9 +41,19 @@ describe("inMemoryEventRepository", () => {
     const statusUpdated = await repo.updateStatus(created.id, "PUBLISHED", {
       publishedAt: "2026-01-01T00:00:00.000Z",
       rejectionReason: null,
-      publicationEndAt: payload.eventEndAt
+      publicationEndAt: payload.eventEndAt as string
     });
     expect(statusUpdated?.status).toBe("PUBLISHED");
+  });
+
+  it("falls back publicationEndAt when a title-only draft has no eventEndAt", async () => {
+    const repo = createInMemoryEventRepository();
+    const created = await repo.create({ ...payload, eventStartAt: null, eventEndAt: null });
+
+    expect(typeof created.publicationEndAt).toBe("string");
+
+    const updated = await repo.update(created.id, { ...payload, eventEndAt: null });
+    expect(updated?.publicationEndAt).toBe(created.publicationEndAt);
   });
 
   it("updates featured flag on published event", async () => {
@@ -68,7 +78,7 @@ describe("inMemoryEventRepository", () => {
     const statusUpdated = await repo.updateStatus("missing", "REJECTED", {
       publishedAt: null,
       rejectionReason: "Motif",
-      publicationEndAt: payload.eventEndAt
+      publicationEndAt: payload.eventEndAt as string
     });
 
     expect(updated).toBeNull();

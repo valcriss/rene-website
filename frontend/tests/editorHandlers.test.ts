@@ -214,15 +214,36 @@ describe("editor handlers", () => {
     expect(vm.getEditorError()).toBe("Erreur inconnue");
   });
 
-  it("requires image before saving", async () => {
+  it("saves a title-only draft without requiring an image or other fields", async () => {
+    createMock.mockResolvedValue({
+      id: "draft-title-only",
+      title: "Brouillon",
+      content: null,
+      image: null,
+      categoryId: null,
+      audienceId: null,
+      eventStartAt: null,
+      eventEndAt: null,
+      venueName: null,
+      city: null,
+      latitude: null,
+      longitude: null,
+      status: "DRAFT"
+    });
+
     const { wrapper } = await mountWithRouter();
     await nextTick();
 
     const vm = wrapper.vm as unknown as Exposed & { getEditorError: () => string | null };
+    const editorStore = useEditorStore();
+    editorStore.editorForm.title = "Brouillon";
     vm.setRole("EDITOR");
-    await vm.handleSaveDraft();
 
-    expect(vm.getEditorError()).toBe("L'image est requise.");
+    const ok = await vm.handleSaveDraft();
+
+    expect(ok).toBe(true);
+    expect(vm.getEditorError()).toBeNull();
+    expect(createMock).toHaveBeenCalledOnce();
   });
 
   it("creates then submits from create mode", async () => {

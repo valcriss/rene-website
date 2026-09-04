@@ -9,7 +9,8 @@ const formatDateInternal = (value: string) =>
 const formatDateTimeInternal = (value: string) =>
   new Date(value).toLocaleString(getCurrentLocaleTag(), { dateStyle: "medium", timeStyle: "short" });
 
-export const formatDate = (value: string) => formatDateInternal(value);
+export const formatDate = (value?: string | null) =>
+  value ? formatDateInternal(value) : i18n.global.t("common.notProvided");
 
 export const formatUpdatedAtLabel = (value?: string | null) => {
   if (!value) {

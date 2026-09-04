@@ -35,22 +35,22 @@ enum UserRole {
 model Event {
   id               String      @id @default(uuid()) @db.Uuid
   title            String
-  content          String
-  image            String
+  content          String?
+  image            String?
   createdByUserId  String?     @db.Uuid
-  categoryId       String
-  audienceId       String
-  eventStartAt     DateTime
-  eventEndAt       DateTime
-  allDay           Boolean
-  venueName        String
+  categoryId       String?
+  audienceId       String?
+  eventStartAt     DateTime?
+  eventEndAt       DateTime?
+  allDay           Boolean?
+  venueName        String?
   address          String?
-  postalCode       String
-  city             String
+  postalCode       String?
+  city             String?
   latitude         Float?
   longitude        Float?
   geolocationPrecision GeolocationPrecision @default(UNRESOLVED)
-  organizerName    String
+  organizerName    String?
   organizerUrl     String?
   contactEmail     String?
   contactPhone     String?
@@ -66,8 +66,8 @@ model Event {
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
 
-  category         Category    @relation(fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  audience         Audience    @relation(fields: [audienceId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  category         Category?   @relation(fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  audience         Audience?   @relation(fields: [audienceId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   createdByUser    User?       @relation("UserCreatedEvents", fields: [createdByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   pendingRevision  EventRevision?
 
@@ -83,22 +83,22 @@ model EventRevision {
   id              String              @id @default(uuid()) @db.Uuid
   eventId         String              @unique @db.Uuid
   title           String
-  content         String
-  image           String
+  content         String?
+  image           String?
   createdByUserId String?             @db.Uuid
-  categoryId      String
-  audienceId      String
-  eventStartAt    DateTime
-  eventEndAt      DateTime
-  allDay          Boolean
-  venueName       String
+  categoryId      String?
+  audienceId      String?
+  eventStartAt    DateTime?
+  eventEndAt      DateTime?
+  allDay          Boolean?
+  venueName       String?
   address         String?
-  postalCode      String
-  city            String
+  postalCode      String?
+  city            String?
   latitude        Float?
   longitude       Float?
   geolocationPrecision GeolocationPrecision @default(UNRESOLVED)
-  organizerName   String
+  organizerName   String?
   organizerUrl    String?
   contactEmail    String?
   contactPhone    String?
@@ -113,8 +113,8 @@ model EventRevision {
   updatedAt       DateTime            @updatedAt
 
   event           Event               @relation(fields: [eventId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  category        Category            @relation(fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  audience        Audience            @relation(fields: [audienceId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  category        Category?           @relation(fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  audience        Audience?           @relation(fields: [audienceId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   createdByUser   User?               @relation("UserCreatedRevisions", fields: [createdByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
   @@index([status])

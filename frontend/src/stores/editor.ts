@@ -29,7 +29,7 @@ const defaultEditorForm = (): CreateEventPayload => ({
   socialLinks: []
 });
 
-const trimText = (value: string) => value.trim();
+const trimText = (value?: string | null) => (value ?? "").trim();
 
 const defaultSocialLink = (): SocialLink => ({
   type: "FACEBOOK",
@@ -40,7 +40,10 @@ const cloneSocialLinks = (socialLinks?: SocialLink[]) => socialLinks?.map((link)
 
 const PREVIEW_STORAGE_PREFIX = "rene-website-preview";
 
-const extractDateInput = (value: string) => {
+const extractDateInput = (value?: string | null) => {
+  if (!value) {
+    return "";
+  }
   const match = value.match(/^(\d{4}-\d{2}-\d{2})/);
   if (match) {
     return match[1];
@@ -55,7 +58,7 @@ const extractDateInput = (value: string) => {
   return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
 };
 
-const normalizeDateBoundary = (value: string, endOfDay: boolean) => {
+const normalizeDateBoundary = (value: string | null | undefined, endOfDay: boolean) => {
   const date = extractDateInput(value);
   if (!date) {
     return "";
@@ -118,16 +121,16 @@ export const useEditorStore = defineStore("editor", () => {
     imageFile.value = null;
     editorForm.title = source.title;
     editorForm.content = source.content ?? "";
-    editorForm.image = source.image;
-    editorForm.categoryId = source.categoryId;
-    editorForm.audienceId = source.audienceId;
-    editorForm.eventStartAt = formatDateInput(source.eventStartAt);
-    editorForm.eventEndAt = formatDateInput(source.eventEndAt);
+    editorForm.image = source.image ?? "";
+    editorForm.categoryId = source.categoryId ?? "";
+    editorForm.audienceId = source.audienceId ?? "";
+    editorForm.eventStartAt = formatDateInput(source.eventStartAt ?? "");
+    editorForm.eventEndAt = formatDateInput(source.eventEndAt ?? "");
     editorForm.allDay = true;
-    editorForm.venueName = source.venueName;
+    editorForm.venueName = source.venueName ?? "";
     editorForm.address = source.address ?? "";
     editorForm.postalCode = source.postalCode ?? "";
-    editorForm.city = source.city;
+    editorForm.city = source.city ?? "";
     editorForm.organizerName = source.organizerName ?? "";
     editorForm.organizerUrl = source.organizerUrl ?? "";
     editorForm.contactEmail = source.contactEmail ?? "";
@@ -166,10 +169,10 @@ export const useEditorStore = defineStore("editor", () => {
   const buildPreviewEvent = (): EventItem => ({
     id: editingEventId.value ?? "preview-event",
     title: editorForm.title || "Prévisualisation",
-    content: editorForm.content,
-    image: imageFile.value ? URL.createObjectURL(imageFile.value) : editorForm.image,
-    categoryId: editorForm.categoryId,
-    audienceId: editorForm.audienceId,
+    content: editorForm.content ?? null,
+    image: (imageFile.value ? URL.createObjectURL(imageFile.value) : editorForm.image) ?? null,
+    categoryId: editorForm.categoryId ?? null,
+    audienceId: editorForm.audienceId ?? null,
     eventStartAt: normalizeDateBoundary(editorForm.eventStartAt, false) || new Date().toISOString(),
     eventEndAt:
       normalizeDateBoundary(editorForm.eventEndAt || editorForm.eventStartAt, true) || new Date().toISOString(),
@@ -180,13 +183,13 @@ export const useEditorStore = defineStore("editor", () => {
     city: trimText(editorForm.city) || "Descartes",
     latitude: 46.97,
     longitude: 0.7,
-    organizerName: editorForm.organizerName,
-    organizerUrl: editorForm.organizerUrl,
-    contactEmail: editorForm.contactEmail,
-    contactPhone: editorForm.contactPhone,
-    ticketUrl: editorForm.ticketUrl,
-    pricingInfo: editorForm.pricingInfo,
-    websiteUrl: editorForm.websiteUrl,
+    organizerName: editorForm.organizerName ?? null,
+    organizerUrl: editorForm.organizerUrl ?? undefined,
+    contactEmail: editorForm.contactEmail ?? undefined,
+    contactPhone: editorForm.contactPhone ?? undefined,
+    ticketUrl: editorForm.ticketUrl ?? undefined,
+    pricingInfo: editorForm.pricingInfo ?? undefined,
+    websiteUrl: editorForm.websiteUrl ?? undefined,
     socialLinks: cloneSocialLinks(editorForm.socialLinks),
     status: "DRAFT",
     publishedAt: null,
@@ -218,11 +221,6 @@ export const useEditorStore = defineStore("editor", () => {
     const payload = buildEditorPayload();
     const eventsStore = useEventsStore();
     try {
-      if (!payload.image && !imageFile.value) {
-        editorError.value = "L'image est requise.";
-        return null;
-      }
-
       if (imageFile.value) {
         payload.image = await uploadImage(imageFile.value);
       }

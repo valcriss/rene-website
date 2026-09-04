@@ -352,6 +352,37 @@ describe("BackofficeEventCreatePage", () => {
     expect(screen.getByRole("button", { name: "Soumettre à modération" })).toBeDisabled();
   });
 
+  it("disables save and submit buttons while the title is empty", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) }))
+    );
+
+    const setup = await setupPage();
+    setup.categoriesStore.hasLoaded = true;
+    renderPage(setup);
+
+    expect(await screen.findByRole("button", { name: "Enregistrer le brouillon" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Soumettre à modération" })).toBeDisabled();
+  });
+
+  it("enables save and submit buttons once a title is entered", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) }))
+    );
+
+    const setup = await setupPage();
+    setup.categoriesStore.hasLoaded = true;
+    renderPage(setup);
+
+    const titleInput = await screen.findByLabelText("Titre");
+    await fireEvent.update(titleInput, "Brouillon sans détails");
+
+    expect(screen.getByRole("button", { name: "Enregistrer le brouillon" })).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: "Soumettre à modération" })).not.toBeDisabled();
+  });
+
   it("shows submit button from create mode", async () => {
     vi.stubGlobal(
       "fetch",

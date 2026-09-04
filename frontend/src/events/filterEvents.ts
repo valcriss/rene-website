@@ -58,28 +58,28 @@ export const filterEvents = (events: EventItem[], filters: EventFilters): EventI
   const audiences = normalizeList(filters.audiences);
 
   return events.filter((event) => {
-    const eventStart = new Date(event.eventStartAt);
-    const eventEnd = new Date(event.eventEndAt);
+    const eventStart = new Date(event.eventStartAt ?? "");
+    const eventEnd = new Date(event.eventEndAt ?? "");
 
     if (
       search &&
       !normalize(event.title).includes(search) &&
-      !normalize(event.venueName).includes(search) &&
-      !normalize(event.city).includes(search) &&
+      !normalize(event.venueName ?? "").includes(search) &&
+      !normalize(event.city ?? "").includes(search) &&
       !normalize(stripHtml(event.content ?? "")).includes(search)
     ) {
       return false;
     }
 
-    if (cities.length > 0 && !cities.includes(normalize(event.city))) {
+    if (cities.length > 0 && !cities.includes(normalize(event.city ?? ""))) {
       return false;
     }
 
-    if (types.length > 0 && !types.includes(normalize(event.categoryId))) {
+    if (types.length > 0 && !types.includes(normalize(event.categoryId ?? ""))) {
       return false;
     }
 
-    if (audiences.length > 0 && !audiences.includes(normalize(event.audienceId))) {
+    if (audiences.length > 0 && !audiences.includes(normalize(event.audienceId ?? ""))) {
       return false;
     }
 

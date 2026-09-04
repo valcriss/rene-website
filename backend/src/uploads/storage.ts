@@ -25,8 +25,8 @@ export const resolveUploadPath = (value: string) => {
   return path.join(getUploadDir(), filename);
 };
 
-export const deleteUploadIfLocal = async (value: string) => {
-  if (!isLocalUpload(value)) return;
+export const deleteUploadIfLocal = async (value: string | null) => {
+  if (!value || !isLocalUpload(value)) return;
   const filePath = resolveUploadPath(value);
   try {
     await fs.promises.unlink(filePath);

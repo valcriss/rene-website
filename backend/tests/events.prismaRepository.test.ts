@@ -308,6 +308,58 @@ describe("createPrismaEventRepository", () => {
     });
   });
 
+  it("creates a title-only draft without checking category or audience", async () => {
+    const repo = createPrismaEventRepository();
+    const item = buildEvent({
+      id: "3c",
+      content: null,
+      image: null,
+      categoryId: null,
+      audienceId: null,
+      eventStartAt: null,
+      eventEndAt: null,
+      allDay: null,
+      venueName: null,
+      postalCode: null,
+      city: null,
+      organizerName: null,
+      latitude: null,
+      longitude: null,
+      geolocationPrecision: "UNRESOLVED",
+      pendingRevision: null
+    });
+    prismaMocks.create.mockResolvedValue(item);
+
+    const result = await repo.create({
+      title: "Brouillon",
+      content: null,
+      image: null,
+      createdByUserId: null,
+      categoryId: null,
+      audienceId: null,
+      eventStartAt: null,
+      eventEndAt: null,
+      allDay: null,
+      venueName: null,
+      address: null,
+      postalCode: null,
+      city: null,
+      latitude: null,
+      longitude: null,
+      organizerName: null
+    });
+
+    expect(result.id).toBe("3c");
+    expect(prismaMocks.findCategory).not.toHaveBeenCalled();
+    expect(prismaMocks.findAudience).not.toHaveBeenCalled();
+    expect(prismaMocks.create.mock.calls[0][0]).toMatchObject({
+      data: {
+        eventStartAt: null,
+        eventEndAt: null
+      }
+    });
+  });
+
   it("defaults geolocation precision to unresolved when coordinates are missing", async () => {
     const repo = createPrismaEventRepository();
     const item = buildEvent({
@@ -427,6 +479,38 @@ describe("createPrismaEventRepository", () => {
     });
 
     expect(result?.id).toBe("4");
+  });
+
+  it("updates a title-only draft with no eventEndAt", async () => {
+    const repo = createPrismaEventRepository();
+    prismaMocks.update.mockResolvedValue(buildEvent({ id: "4b", eventStartAt: null, eventEndAt: null, allDay: null }));
+
+    await repo.update("4b", {
+      title: "Brouillon",
+      content: null,
+      image: null,
+      createdByUserId: null,
+      categoryId: null,
+      audienceId: null,
+      eventStartAt: null,
+      eventEndAt: null,
+      allDay: null,
+      venueName: null,
+      address: null,
+      postalCode: null,
+      city: null,
+      latitude: null,
+      longitude: null,
+      organizerName: null
+    });
+
+    expect(prismaMocks.update.mock.calls[0][0]).toMatchObject({
+      data: {
+        eventStartAt: null,
+        eventEndAt: null,
+        publicationEndAt: expect.any(Date)
+      }
+    });
   });
 
   it("returns null when update fails", async () => {
@@ -643,6 +727,37 @@ describe("createPrismaEventRepository", () => {
     }, "DRAFT");
 
     expect(result?.pendingRevision?.status).toBe("DRAFT");
+  });
+
+  it("maps a pending revision with unset dates", async () => {
+    const repo = createPrismaEventRepository();
+    prismaMocks.findCategory.mockResolvedValue({ id: "music", name: "Musique", createdAt: new Date(), updatedAt: new Date() });
+    prismaMocks.findAudience.mockResolvedValue({ id: "all", name: "Tous publics", createdAt: new Date(), updatedAt: new Date() });
+    prismaMocks.update.mockResolvedValue(
+      buildEvent({ pendingRevision: buildRevision({ eventStartAt: null, eventEndAt: null, allDay: null }) })
+    );
+
+    const result = await repo.upsertPendingRevision("1", {
+      title: "Concert revise",
+      content: "Soirée",
+      image: "revision.png",
+      createdByUserId: null,
+      categoryId: "music",
+      audienceId: "all",
+      eventStartAt: null,
+      eventEndAt: null,
+      allDay: null,
+      venueName: "Salle",
+      address: "1 rue du centre",
+      postalCode: "37160",
+      city: "Descartes",
+      latitude: 46.97,
+      longitude: 0.7,
+      organizerName: "Association"
+    }, "DRAFT");
+
+    expect(result?.pendingRevision?.eventStartAt).toBeNull();
+    expect(result?.pendingRevision?.eventEndAt).toBeNull();
   });
 
   it("returns null when upsert pending revision fails", async () => {

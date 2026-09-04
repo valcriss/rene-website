@@ -309,7 +309,7 @@
             <button
               type="button"
               class="rounded-full bg-white px-5 py-2.5 text-sm font-medium text-slate-950 transition hover:bg-sky-50"
-              :disabled="isPersisting"
+              :disabled="isPersisting || !hasTitle"
               @click="handleSaveAndRedirect"
             >
               {{ primaryActionLabel }}
@@ -317,7 +317,7 @@
             <button
               type="button"
               class="rounded-full border border-slate-700 px-5 py-2.5 text-sm font-medium text-white transition hover:border-slate-500 hover:bg-white/5"
-              :disabled="isPersisting"
+              :disabled="isPersisting || !hasTitle"
               @click="handleSubmitAndRedirect"
             >
               {{ t("editor.submitForModeration") }}
@@ -393,6 +393,8 @@ const modeDescription = computed(() =>
       ? t("editor.editDescription")
       : t("editor.createDescription")
 );
+
+const hasTitle = computed(() => Boolean(editorForm.value.title?.trim()));
 
 const primaryActionLabel = computed(() => {
   if (editingPublishedEvent.value) {

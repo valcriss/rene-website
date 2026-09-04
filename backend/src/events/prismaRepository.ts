@@ -22,22 +22,22 @@ type PrismaEventsClient = {
 type PrismaEvent = {
   id: string;
   title: string;
-  content: string;
-  image: string;
+  content: string | null;
+  image: string | null;
   createdByUserId?: string | null;
-  categoryId: string;
-  audienceId: string;
-  eventStartAt: Date;
-  eventEndAt: Date;
-  allDay: boolean;
-  venueName: string;
+  categoryId: string | null;
+  audienceId: string | null;
+  eventStartAt: Date | null;
+  eventEndAt: Date | null;
+  allDay: boolean | null;
+  venueName: string | null;
   address: string | null;
-  postalCode: string;
-  city: string;
+  postalCode: string | null;
+  city: string | null;
   latitude: number | null;
   longitude: number | null;
   geolocationPrecision: GeolocationPrecision;
-  organizerName: string;
+  organizerName: string | null;
   organizerUrl: string | null;
   contactEmail: string | null;
   contactPhone: string | null;
@@ -59,22 +59,22 @@ type PrismaEventRevision = {
   id: string;
   eventId: string;
   title: string;
-  content: string;
-  image: string;
+  content: string | null;
+  image: string | null;
   createdByUserId?: string | null;
-  categoryId: string;
-  audienceId: string;
-  eventStartAt: Date;
-  eventEndAt: Date;
-  allDay: boolean;
-  venueName: string;
+  categoryId: string | null;
+  audienceId: string | null;
+  eventStartAt: Date | null;
+  eventEndAt: Date | null;
+  allDay: boolean | null;
+  venueName: string | null;
   address: string | null;
-  postalCode: string;
-  city: string;
+  postalCode: string | null;
+  city: string | null;
   latitude: number | null;
   longitude: number | null;
   geolocationPrecision: GeolocationPrecision;
-  organizerName: string;
+  organizerName: string | null;
   organizerUrl: string | null;
   contactEmail: string | null;
   contactPhone: string | null;
@@ -113,11 +113,11 @@ const toRevision = (data: PrismaEventRevision): EventRevision => ({
   createdByUserId: data.createdByUserId ?? null,
   categoryId: data.categoryId,
   audienceId: data.audienceId,
-  eventStartAt: data.eventStartAt.toISOString(),
-  eventEndAt: data.eventEndAt.toISOString(),
+  eventStartAt: data.eventStartAt ? data.eventStartAt.toISOString() : null,
+  eventEndAt: data.eventEndAt ? data.eventEndAt.toISOString() : null,
   allDay: data.allDay,
   venueName: data.venueName,
-  address: data.address ?? "",
+  address: data.address,
   postalCode: data.postalCode,
   city: data.city,
   latitude: data.latitude,
@@ -146,11 +146,11 @@ const toEvent = (data: PrismaEvent): Event => ({
   createdByUserId: data.createdByUserId ?? null,
   categoryId: data.categoryId,
   audienceId: data.audienceId,
-  eventStartAt: data.eventStartAt.toISOString(),
-  eventEndAt: data.eventEndAt.toISOString(),
+  eventStartAt: data.eventStartAt ? data.eventStartAt.toISOString() : null,
+  eventEndAt: data.eventEndAt ? data.eventEndAt.toISOString() : null,
   allDay: data.allDay,
   venueName: data.venueName,
-  address: data.address ?? "",
+  address: data.address,
   postalCode: data.postalCode,
   city: data.city,
   latitude: data.latitude,
@@ -185,19 +185,27 @@ const resolveGeolocationPrecision = (input: Pick<CreateEventInput, "latitude" | 
     ? "EXACT"
     : "UNRESOLVED");
 
-const ensureCategoryExists = async (categoryId: string) => {
+const ensureCategoryExists = async (categoryId: string | null) => {
+  if (!categoryId) {
+    return;
+  }
   const category = await prismaClient.category.findUnique({ where: { id: categoryId } });
   if (!category) {
     throw new Error("Category not found");
   }
 };
 
-const ensureAudienceExists = async (audienceId: string) => {
+const ensureAudienceExists = async (audienceId: string | null) => {
+  if (!audienceId) {
+    return;
+  }
   const audience = await prismaClient.audience.findUnique({ where: { id: audienceId } });
   if (!audience) {
     throw new Error("Audience not found");
   }
 };
+
+const toDateOrNull = (value: string | null) => (value ? new Date(value) : null);
 
 export const createPrismaEventRepository = (): EventRepository => ({
   list: async () =>
@@ -214,8 +222,8 @@ export const createPrismaEventRepository = (): EventRepository => ({
       createdByUserId: input.createdByUserId ?? null,
       categoryId: input.categoryId,
       audienceId: input.audienceId,
-      eventStartAt: new Date(input.eventStartAt),
-      eventEndAt: new Date(input.eventEndAt),
+      eventStartAt: toDateOrNull(input.eventStartAt),
+      eventEndAt: toDateOrNull(input.eventEndAt),
       allDay: input.allDay,
       venueName: input.venueName,
       address: input.address,
@@ -235,7 +243,7 @@ export const createPrismaEventRepository = (): EventRepository => ({
       status: "DRAFT" as EventStatus,
       featured: false,
       publishedAt: null,
-      publicationEndAt: new Date(input.eventEndAt),
+      publicationEndAt: toDateOrNull(input.eventEndAt) ?? new Date(),
       rejectionReason: null
     };
 
@@ -254,8 +262,8 @@ export const createPrismaEventRepository = (): EventRepository => ({
           image: input.image,
           categoryId: input.categoryId,
           audienceId: input.audienceId,
-          eventStartAt: new Date(input.eventStartAt),
-          eventEndAt: new Date(input.eventEndAt),
+          eventStartAt: toDateOrNull(input.eventStartAt),
+          eventEndAt: toDateOrNull(input.eventEndAt),
           allDay: input.allDay,
           venueName: input.venueName,
           address: input.address,
@@ -272,7 +280,7 @@ export const createPrismaEventRepository = (): EventRepository => ({
           pricingInfo: input.pricingInfo ?? null,
           websiteUrl: input.websiteUrl ?? null,
           socialLinks: input.socialLinks ?? [],
-          publicationEndAt: new Date(input.eventEndAt)
+          publicationEndAt: toDateOrNull(input.eventEndAt) ?? new Date()
         }
       });
       return toEvent(updated);
@@ -297,8 +305,8 @@ export const createPrismaEventRepository = (): EventRepository => ({
                 createdByUserId: input.createdByUserId ?? null,
                 categoryId: input.categoryId,
                 audienceId: input.audienceId,
-                eventStartAt: new Date(input.eventStartAt),
-                eventEndAt: new Date(input.eventEndAt),
+                eventStartAt: toDateOrNull(input.eventStartAt),
+                eventEndAt: toDateOrNull(input.eventEndAt),
                 allDay: input.allDay,
                 venueName: input.venueName,
                 address: input.address,
@@ -326,8 +334,8 @@ export const createPrismaEventRepository = (): EventRepository => ({
                 createdByUserId: input.createdByUserId ?? null,
                 categoryId: input.categoryId,
                 audienceId: input.audienceId,
-                eventStartAt: new Date(input.eventStartAt),
-                eventEndAt: new Date(input.eventEndAt),
+                eventStartAt: toDateOrNull(input.eventStartAt),
+                eventEndAt: toDateOrNull(input.eventEndAt),
                 allDay: input.allDay,
                 venueName: input.venueName,
                 address: input.address,
@@ -441,7 +449,7 @@ export const createPrismaEventRepository = (): EventRepository => ({
             status: "PUBLISHED",
             publishedAt: new Date(publishedAt),
             rejectionReason: null,
-            publicationEndAt: revision.eventEndAt,
+            publicationEndAt: revision.eventEndAt!,
             pendingRevision: {
               delete: true
             }

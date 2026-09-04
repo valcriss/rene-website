@@ -39,7 +39,7 @@ export const createInMemoryEventRepository = (): EventRepository => {
       status: "PUBLISHED",
       featured: false,
       publishedAt,
-      publicationEndAt: revision.eventEndAt,
+      publicationEndAt: revision.eventEndAt!,
       rejectionReason: null,
       pendingRevision: null,
       createdAt: event.createdAt,
@@ -60,7 +60,7 @@ export const createInMemoryEventRepository = (): EventRepository => {
         featured: false,
         status: "DRAFT",
         publishedAt: null,
-        publicationEndAt: input.eventEndAt,
+        publicationEndAt: input.eventEndAt ?? now,
         rejectionReason: null,
         pendingRevision: null,
         createdAt: now,
@@ -80,7 +80,7 @@ export const createInMemoryEventRepository = (): EventRepository => {
         ...input,
         socialLinks: cloneSocialLinks(input.socialLinks),
         createdByUserId: existing.createdByUserId ?? null,
-        publicationEndAt: input.eventEndAt,
+        publicationEndAt: input.eventEndAt ?? existing.publicationEndAt,
         pendingRevision: existing.pendingRevision,
         updatedAt: new Date().toISOString()
       };

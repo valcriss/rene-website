@@ -1,4 +1,4 @@
-import { validateCreateEvent } from "../src/events/validation";
+import { validateCreateEvent, validateEventCompleteness } from "../src/events/validation";
 
 describe("validateCreateEvent", () => {
   const validPayload = {
@@ -40,18 +40,32 @@ describe("validateCreateEvent", () => {
     }
   });
 
-  it("returns errors for missing fields", () => {
+  it("returns an error only for a missing title", () => {
     const result = validateCreateEvent({});
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.errors).toEqual(
-        expect.arrayContaining([
-          "Le titre est requis.",
-          "Le contenu est requis.",
-          "Le public concerné est requis.",
-          "La ville est requise."
-        ])
-      );
+      expect(result.errors).toEqual(["Le titre est requis."]);
+    }
+  });
+
+  it("accepts a draft payload with only a title", () => {
+    const result = validateCreateEvent({ title: "Brouillon sans détails" });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.title).toBe("Brouillon sans détails");
+      expect(result.value.content).toBeNull();
+      expect(result.value.image).toBeNull();
+      expect(result.value.categoryId).toBeNull();
+      expect(result.value.audienceId).toBeNull();
+      expect(result.value.eventStartAt).toBeNull();
+      expect(result.value.eventEndAt).toBeNull();
+      expect(result.value.allDay).toBeNull();
+      expect(result.value.venueName).toBeNull();
+      expect(result.value.address).toBeNull();
+      expect(result.value.postalCode).toBeNull();
+      expect(result.value.city).toBeNull();
+      expect(result.value.organizerName).toBeNull();
     }
   });
 
@@ -64,12 +78,12 @@ describe("validateCreateEvent", () => {
 
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.value.venueName).toBe("");
-      expect(result.value.address).toBe("");
+      expect(result.value.venueName).toBeNull();
+      expect(result.value.address).toBeNull();
     }
   });
 
-  it("normalizes null venue and address to empty strings", () => {
+  it("normalizes null venue and address to null", () => {
     const result = validateCreateEvent({
       ...validPayload,
       venueName: null,
@@ -78,8 +92,8 @@ describe("validateCreateEvent", () => {
 
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.value.venueName).toBe("");
-      expect(result.value.address).toBe("");
+      expect(result.value.venueName).toBeNull();
+      expect(result.value.address).toBeNull();
     }
   });
 
@@ -163,6 +177,48 @@ describe("validateCreateEvent", () => {
     }
   });
 
+  it("returns errors when now-optional fields have the wrong type", () => {
+    const result = validateCreateEvent({
+      title: "Brouillon",
+      content: 1,
+      image: 2,
+      categoryId: 3,
+      audienceId: 4,
+      eventStartAt: 5,
+      eventEndAt: 6,
+      postalCode: 7,
+      city: 8,
+      organizerName: 9
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toEqual(
+        expect.arrayContaining([
+          "Le contenu doit être une chaîne.",
+          "L'image doit être une chaîne.",
+          "La catégorie doit être une chaîne.",
+          "Le public concerné doit être une chaîne.",
+          "La date de début doit être une chaîne.",
+          "La date de fin doit être une chaîne.",
+          "Le code postal doit être une chaîne.",
+          "La ville doit être une chaîne.",
+          "L'organisateur doit être une chaîne."
+        ])
+      );
+    }
+  });
+
+  it("returns an error when allDay is provided but not a boolean", () => {
+    const result = validateCreateEvent({
+      ...validPayload,
+      allDay: "yes"
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContain("Le champ allDay doit être un booléen.");
+    }
+  });
+
   it("returns errors for optional fields types", () => {
     const result = validateCreateEvent({
       ...validPayload,
@@ -219,14 +275,14 @@ describe("validateCreateEvent", () => {
     }
   });
 
-  it("rejects content when sanitized is empty", () => {
+  it("normalizes content that sanitizes to empty to null instead of erroring", () => {
     const result = validateCreateEvent({
       ...validPayload,
       content: "<script>alert(1)</script>"
     });
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.errors).toContain("Le contenu est requis.");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.content).toBeNull();
     }
   });
 
@@ -331,5 +387,58 @@ describe("validateCreateEvent", () => {
     if (!result.ok) {
       expect(result.errors).toContain("L'URL du réseau social #1 doit commencer par http:// ou https://.");
     }
+  });
+});
+
+describe("validateEventCompleteness", () => {
+  const completeEvent = {
+    title: "Concert",
+    content: "Soirée jazz",
+    image: "https://example.com/image.jpg",
+    categoryId: "music",
+    audienceId: "all",
+    eventStartAt: "2026-01-15T00:00:00.000Z",
+    eventEndAt: "2026-01-15T23:59:59.999Z",
+    allDay: true,
+    postalCode: "37160",
+    city: "Descartes",
+    organizerName: "Association"
+  };
+
+  it("returns no errors for a fully filled-in event", () => {
+    expect(validateEventCompleteness(completeEvent)).toEqual([]);
+  });
+
+  it("requires a non-blank title", () => {
+    expect(validateEventCompleteness({ ...completeEvent, title: "   " })).toContain("Le titre est requis.");
+  });
+
+  it("lists every missing field required for submission", () => {
+    const errors = validateEventCompleteness({
+      title: "Brouillon",
+      content: null,
+      image: null,
+      categoryId: null,
+      audienceId: null,
+      eventStartAt: null,
+      eventEndAt: null,
+      allDay: null,
+      postalCode: null,
+      city: null,
+      organizerName: null
+    });
+
+    expect(errors).toEqual([
+      "Le contenu est requis.",
+      "L'image est requise.",
+      "La catégorie est requise.",
+      "Le public concerné est requis.",
+      "La date de début est requise.",
+      "La date de fin est requise.",
+      "Le champ allDay doit être un booléen.",
+      "Le code postal est requis.",
+      "La ville est requise.",
+      "L'organisateur est requis."
+    ]);
   });
 });

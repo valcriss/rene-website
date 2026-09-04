@@ -1,10 +1,10 @@
 import { GeolocationPrecision } from "../events/types";
 
 export type GeocodeInput = {
-  address?: string;
-  venueName: string;
-  postalCode: string;
-  city: string;
+  address?: string | null;
+  venueName: string | null;
+  postalCode: string | null;
+  city: string | null;
 };
 
 export type GeocodeResult = {
@@ -32,7 +32,7 @@ const getPhotonBaseUrl = () => {
 
 const isNonEmptyString = (value: unknown) => typeof value === "string" && value.trim().length > 0;
 
-const buildPhotonQueryFromParts = (parts: Array<string | undefined>) =>
+const buildPhotonQueryFromParts = (parts: Array<string | null | undefined>) =>
   parts
     .filter((value): value is string => isNonEmptyString(value))
     .map((value) => value.trim())

@@ -7,7 +7,13 @@ type ValidationResult =
 
 const isNonEmptyString = (value: unknown) => typeof value === "string" && value.trim().length > 0;
 const isOptionalString = (value: unknown) => value === undefined || value === null || typeof value === "string";
-const normalizeOptionalString = (value: unknown) => (typeof value === "string" ? value.trim() : "");
+const normalizeOptionalString = (value: unknown): string | null => {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
 
 const isValidDate = (value: string) => {
   const date = new Date(value);
@@ -91,16 +97,18 @@ export const validateCreateEvent = (input: unknown): ValidationResult => {
   const errors: string[] = [];
 
   if (!isNonEmptyString(data.title)) errors.push("Le titre est requis.");
-  if (!isNonEmptyString(data.content)) errors.push("Le contenu est requis.");
-  if (!isNonEmptyString(data.image)) errors.push("L'image est requise.");
-  if (!isNonEmptyString(data.categoryId)) errors.push("La catégorie est requise.");
-  if (!isNonEmptyString(data.audienceId)) errors.push("Le public concerné est requis.");
-  if (!isNonEmptyString(data.eventStartAt)) errors.push("La date de début est requise.");
-  if (!isNonEmptyString(data.eventEndAt)) errors.push("La date de fin est requise.");
-  if (typeof data.allDay !== "boolean") errors.push("Le champ allDay doit être un booléen.");
-  if (!isNonEmptyString(data.postalCode)) errors.push("Le code postal est requis.");
-  if (!isNonEmptyString(data.city)) errors.push("La ville est requise.");
-  if (!isNonEmptyString(data.organizerName)) errors.push("L'organisateur est requis.");
+  if (!isOptionalString(data.content)) errors.push("Le contenu doit être une chaîne.");
+  if (!isOptionalString(data.image)) errors.push("L'image doit être une chaîne.");
+  if (!isOptionalString(data.categoryId)) errors.push("La catégorie doit être une chaîne.");
+  if (!isOptionalString(data.audienceId)) errors.push("Le public concerné doit être une chaîne.");
+  if (!isOptionalString(data.eventStartAt)) errors.push("La date de début doit être une chaîne.");
+  if (!isOptionalString(data.eventEndAt)) errors.push("La date de fin doit être une chaîne.");
+  if (data.allDay !== undefined && data.allDay !== null && typeof data.allDay !== "boolean") {
+    errors.push("Le champ allDay doit être un booléen.");
+  }
+  if (!isOptionalString(data.postalCode)) errors.push("Le code postal doit être une chaîne.");
+  if (!isOptionalString(data.city)) errors.push("La ville doit être une chaîne.");
+  if (!isOptionalString(data.organizerName)) errors.push("L'organisateur doit être une chaîne.");
 
   if (!isOptionalString(data.venueName)) errors.push("Le lieu doit être une chaîne.");
   if (!isOptionalString(data.address)) errors.push("L'adresse doit être une chaîne.");
@@ -154,13 +162,11 @@ export const validateCreateEvent = (input: unknown): ValidationResult => {
     }
   }
 
-  const sanitizedContent = typeof data.content === "string" ? sanitizeEventContent(data.content) : "";
+  const rawSanitizedContent = typeof data.content === "string" ? sanitizeEventContent(data.content) : null;
+  const sanitizedContent = rawSanitizedContent && rawSanitizedContent.trim().length > 0 ? rawSanitizedContent : null;
   const sanitizedPricingInfo = typeof data.pricingInfo === "string"
     ? sanitizeEventPricingInfo(data.pricingInfo)
     : undefined;
-  if (typeof data.content === "string" && sanitizedContent.trim().length === 0) {
-    errors.push("Le contenu est requis.");
-  }
 
   if (errors.length > 0) {
     return { ok: false, errors };
@@ -169,21 +175,21 @@ export const validateCreateEvent = (input: unknown): ValidationResult => {
   return {
     ok: true,
     value: {
-      title: data.title as string,
+      title: (data.title as string).trim(),
       content: sanitizedContent,
-      image: data.image as string,
-      categoryId: data.categoryId as string,
-      audienceId: data.audienceId as string,
-      eventStartAt: data.eventStartAt as string,
-      eventEndAt: data.eventEndAt as string,
-      allDay: data.allDay as boolean,
+      image: normalizeOptionalString(data.image),
+      categoryId: normalizeOptionalString(data.categoryId),
+      audienceId: normalizeOptionalString(data.audienceId),
+      eventStartAt: normalizeOptionalString(data.eventStartAt),
+      eventEndAt: normalizeOptionalString(data.eventEndAt),
+      allDay: typeof data.allDay === "boolean" ? data.allDay : null,
       venueName: normalizeOptionalString(data.venueName),
       address: normalizeOptionalString(data.address),
-      postalCode: (data.postalCode as string).trim(),
-      city: (data.city as string).trim(),
+      postalCode: normalizeOptionalString(data.postalCode),
+      city: normalizeOptionalString(data.city),
       latitude,
       longitude,
-      organizerName: data.organizerName as string,
+      organizerName: normalizeOptionalString(data.organizerName),
       organizerUrl: data.organizerUrl as string | undefined,
       contactEmail: data.contactEmail as string | undefined,
       contactPhone: data.contactPhone as string | undefined,
@@ -193,4 +199,36 @@ export const validateCreateEvent = (input: unknown): ValidationResult => {
       socialLinks: socialLinksResult.links
     }
   };
+};
+
+export type SubmittableEventFields = {
+  title: string;
+  content: string | null;
+  image: string | null;
+  categoryId: string | null;
+  audienceId: string | null;
+  eventStartAt: string | null;
+  eventEndAt: string | null;
+  allDay: boolean | null;
+  postalCode: string | null;
+  city: string | null;
+  organizerName: string | null;
+};
+
+export const validateEventCompleteness = (event: SubmittableEventFields): string[] => {
+  const errors: string[] = [];
+
+  if (!isNonEmptyString(event.title)) errors.push("Le titre est requis.");
+  if (!isNonEmptyString(event.content)) errors.push("Le contenu est requis.");
+  if (!isNonEmptyString(event.image)) errors.push("L'image est requise.");
+  if (!isNonEmptyString(event.categoryId)) errors.push("La catégorie est requise.");
+  if (!isNonEmptyString(event.audienceId)) errors.push("Le public concerné est requis.");
+  if (!isNonEmptyString(event.eventStartAt)) errors.push("La date de début est requise.");
+  if (!isNonEmptyString(event.eventEndAt)) errors.push("La date de fin est requise.");
+  if (typeof event.allDay !== "boolean") errors.push("Le champ allDay doit être un booléen.");
+  if (!isNonEmptyString(event.postalCode)) errors.push("Le code postal est requis.");
+  if (!isNonEmptyString(event.city)) errors.push("La ville est requise.");
+  if (!isNonEmptyString(event.organizerName)) errors.push("L'organisateur est requis.");
+
+  return errors;
 };

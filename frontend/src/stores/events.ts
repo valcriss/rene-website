@@ -41,7 +41,9 @@ export const useEventsStore = defineStore("events", () => {
   const rejectionReasons = reactive<Record<string, string>>({});
   const featuredEventIds = reactive<Record<string, boolean>>({});
 
-  const hasResolvedCoordinates = (event: Pick<EventItem, "latitude" | "longitude">) =>
+  const hasResolvedCoordinates = (
+    event: Pick<EventItem, "latitude" | "longitude">
+  ): event is Pick<EventItem, "latitude" | "longitude"> & { latitude: number; longitude: number } =>
     typeof event.latitude === "number" &&
     Number.isFinite(event.latitude) &&
     typeof event.longitude === "number" &&
@@ -73,7 +75,7 @@ export const useEventsStore = defineStore("events", () => {
       createdByUserId: event.createdByUserId,
       status: "PENDING",
       publishedAt: event.publishedAt,
-      publicationEndAt: event.pendingRevision.eventEndAt,
+      publicationEndAt: event.pendingRevision.eventEndAt ?? undefined,
       rejectionReason: event.pendingRevision.rejectionReason,
       pendingRevision: event.pendingRevision,
       createdAt: event.createdAt,
@@ -93,7 +95,7 @@ export const useEventsStore = defineStore("events", () => {
       createdByUserId: event.createdByUserId,
       status: event.pendingRevision.status,
       publishedAt: event.publishedAt,
-      publicationEndAt: event.pendingRevision.eventEndAt,
+      publicationEndAt: event.pendingRevision.eventEndAt ?? undefined,
       rejectionReason: event.pendingRevision.rejectionReason,
       pendingRevision: event.pendingRevision,
       createdAt: event.createdAt,
@@ -174,11 +176,13 @@ export const useEventsStore = defineStore("events", () => {
       return [];
     }
 
-    const referenceStart = new Date(current.eventStartAt).getTime();
+    const referenceStart = new Date(current.eventStartAt ?? "").getTime();
     const distanceScore = (eventItem: EventItem) =>
-      Math.hypot(eventItem.latitude - current.latitude, eventItem.longitude - current.longitude);
+      hasResolvedCoordinates(eventItem)
+        ? Math.hypot(eventItem.latitude - current.latitude, eventItem.longitude - current.longitude)
+        : Number.POSITIVE_INFINITY;
     const timeScore = (eventItem: EventItem) => {
-      const eventStart = new Date(eventItem.eventStartAt).getTime();
+      const eventStart = new Date(eventItem.eventStartAt ?? "").getTime();
       if (Number.isNaN(referenceStart) || Number.isNaN(eventStart)) {
         return Number.POSITIVE_INFINITY;
       }
@@ -367,8 +371,8 @@ export const useEventsStore = defineStore("events", () => {
       "BEGIN:VEVENT",
       `UID:${eventItem.id}@rene-website`,
       `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").split(".")[0]}Z`,
-      `DTSTART;VALUE=DATE:${toIcsDateValue(eventItem.eventStartAt)}`,
-      `DTEND;VALUE=DATE:${toIcsDateValue(addDays(eventItem.eventEndAt, 1))}`,
+      `DTSTART;VALUE=DATE:${toIcsDateValue(eventItem.eventStartAt ?? "")}`,
+      `DTEND;VALUE=DATE:${toIcsDateValue(addDays(eventItem.eventEndAt ?? "", 1))}`,
       `SUMMARY:${eventItem.title}`,
       `LOCATION:${getEventCalendarLocation(eventItem, eventItem.city)}`,
       "END:VEVENT",

@@ -43,7 +43,7 @@ const toRevisionSnapshot = (event: Event): Event => {
     createdByUserId: event.createdByUserId,
     status: revision.status,
     publishedAt: event.publishedAt,
-    publicationEndAt: revision.eventEndAt,
+    publicationEndAt: revision.eventEndAt!,
     rejectionReason: revision.rejectionReason,
     pendingRevision: revision,
     createdAt: event.createdAt,

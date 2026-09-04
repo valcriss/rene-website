@@ -13,21 +13,21 @@ export type SocialLink = {
 
 export type EventDraftInput = {
   title: string;
-  content: string;
-  image: string;
-  categoryId: string;
-  audienceId: string;
-  eventStartAt: string;
-  eventEndAt: string;
-  allDay: boolean;
-  venueName: string;
-  address: string;
-  postalCode: string;
-  city: string;
+  content: string | null;
+  image: string | null;
+  categoryId: string | null;
+  audienceId: string | null;
+  eventStartAt: string | null;
+  eventEndAt: string | null;
+  allDay: boolean | null;
+  venueName: string | null;
+  address: string | null;
+  postalCode: string | null;
+  city: string | null;
   latitude?: number | null;
   longitude?: number | null;
   geolocationPrecision?: GeolocationPrecision;
-  organizerName: string;
+  organizerName: string | null;
   organizerUrl?: string;
   contactEmail?: string;
   contactPhone?: string;

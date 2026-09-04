@@ -1,5 +1,5 @@
 import { EventRepository } from "./repository";
-import { validateCreateEvent } from "./validation";
+import { validateCreateEvent, validateEventCompleteness } from "./validation";
 import { Event, EventDraftInput, GeolocationPrecision } from "./types";
 import { geocodeEventLocation } from "../geocoding/photon";
 import { deleteUploadIfLocal } from "../uploads/storage";
@@ -32,8 +32,14 @@ const extractIsoDate = (value: string) => {
 };
 
 const normalizeEventDates = (input: EventDraftInput): EventDraftInput => {
-  const startDate = extractIsoDate(input.eventStartAt);
-  const endDate = extractIsoDate(input.eventEndAt);
+  const rawStart = input.eventStartAt;
+  const rawEnd = input.eventEndAt || input.eventStartAt;
+  if (!rawStart || !rawEnd) {
+    return { ...input, eventStartAt: null, eventEndAt: null, allDay: null };
+  }
+
+  const startDate = extractIsoDate(rawStart);
+  const endDate = extractIsoDate(rawEnd);
 
   return {
     ...input,
@@ -191,6 +197,10 @@ export const submitEvent = async (
     if (!current.pendingRevision) {
       return { ok: false, errors: ["Révision introuvable."] };
     }
+    const completenessErrors = validateEventCompleteness(current.pendingRevision);
+    if (completenessErrors.length > 0) {
+      return { ok: false, errors: completenessErrors };
+    }
     if (!hasSubmittableGeolocation(current.pendingRevision)) {
       return { ok: false, errors: [missingCoordinatesError] };
     }
@@ -202,6 +212,11 @@ export const submitEvent = async (
       return { ok: false, errors: ["Révision introuvable."] };
     }
     return { ok: true, value: updatedRevision };
+  }
+
+  const completenessErrors = validateEventCompleteness(current);
+  if (completenessErrors.length > 0) {
+    return { ok: false, errors: completenessErrors };
   }
 
   if (!hasSubmittableGeolocation(current)) {

@@ -13,7 +13,7 @@ const joinParts = (parts: Array<string | null | undefined>, separator: string) =
     .filter((part) => part.length > 0)
     .join(separator);
 
-export const getEventLocationLabel = (event: EventLocationLike, fallback = "") => {
+export const getEventLocationLabel = (event: EventLocationLike, fallback?: string | null) => {
   const venueName = normalizePart(event.venueName);
   const city = normalizePart(event.city);
 
@@ -21,10 +21,10 @@ export const getEventLocationLabel = (event: EventLocationLike, fallback = "") =
     return `${venueName} · ${city}`;
   }
 
-  return venueName || city || fallback;
+  return venueName || city || normalizePart(fallback);
 };
 
-export const getEventDirectionsQuery = (event: EventLocationLike, fallback = "") => {
+export const getEventDirectionsQuery = (event: EventLocationLike, fallback?: string | null) => {
   const address = normalizePart(event.address);
   const venueName = normalizePart(event.venueName);
   const postalCode = normalizePart(event.postalCode);
@@ -38,10 +38,10 @@ export const getEventDirectionsQuery = (event: EventLocationLike, fallback = "")
     return joinParts([venueName, postalCode, city], ", ");
   }
 
-  return joinParts([postalCode, city], ", ") || city || venueName || fallback;
+  return joinParts([postalCode, city], ", ") || city || venueName || normalizePart(fallback);
 };
 
-export const getEventAddressLabel = (event: EventLocationLike, fallback = "") => {
+export const getEventAddressLabel = (event: EventLocationLike, fallback?: string | null) => {
   const address = normalizePart(event.address);
 
   if (address.length > 0) {
@@ -51,5 +51,5 @@ export const getEventAddressLabel = (event: EventLocationLike, fallback = "") =>
   return getEventLocationLabel(event, fallback);
 };
 
-export const getEventCalendarLocation = (event: EventLocationLike, fallback = "") =>
+export const getEventCalendarLocation = (event: EventLocationLike, fallback?: string | null) =>
   getEventDirectionsQuery(event, getEventLocationLabel(event, fallback));

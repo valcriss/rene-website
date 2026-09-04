@@ -200,4 +200,37 @@ describe("notification templates", () => {
     const body = buildDeletedBody(event);
     expect(body).toContain("supprimé");
   });
+
+  it("builds deleted body for a title-only draft with unset fields", () => {
+    const event: Event = {
+      id: "1",
+      title: "Brouillon",
+      content: null,
+      image: null,
+      createdByUserId: null,
+      categoryId: null,
+      audienceId: null,
+      eventStartAt: null,
+      eventEndAt: null,
+      allDay: null,
+      venueName: null,
+      address: null,
+      postalCode: null,
+      city: null,
+      latitude: null,
+      longitude: null,
+      organizerName: null,
+      status: "DRAFT",
+      publishedAt: null,
+      publicationEndAt: "2026-01-15T22:00:00.000Z",
+      rejectionReason: null,
+      pendingRevision: null,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z"
+    };
+
+    const body = buildDeletedBody(event);
+    expect(body).toContain("Non renseigné, Non renseignée");
+    expect(body).toContain("Non renseignée → Non renseignée");
+  });
 });

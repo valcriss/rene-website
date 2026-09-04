@@ -454,6 +454,50 @@ describe("event services", () => {
     }
   });
 
+  it("creates a title-only draft without dates or allDay", async () => {
+    const create = jest.fn(async (input) => ({ ...baseEvent, ...input }));
+    const repo = createRepo(baseEvent, { create });
+
+    const result = await createEvent(repo, { title: "Brouillon" });
+
+    expect(result.ok).toBe(true);
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({ eventStartAt: null, eventEndAt: null, allDay: null })
+    );
+  });
+
+  it("submitEvent blocks a draft missing fields required for submission", async () => {
+    const repo = createRepo({ ...baseEvent, content: null, organizerName: null });
+    const result = await submitEvent(repo, "id");
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContain("Le contenu est requis.");
+      expect(result.errors).toContain("L'organisateur est requis.");
+    }
+  });
+
+  it("submitEvent blocks a published revision missing fields required for submission", async () => {
+    const repo = createRepo({
+      ...baseEvent,
+      status: "PUBLISHED",
+      publishedAt: "2026-01-01T00:00:00.000Z",
+      pendingRevision: {
+        ...baseEvent,
+        id: "rev-1",
+        eventId: "id",
+        createdByUserId: null,
+        content: null,
+        status: "DRAFT",
+        rejectionReason: null
+      }
+    });
+    const result = await submitEvent(repo, "id");
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContain("Le contenu est requis.");
+    }
+  });
+
   it("submitEvent allows approximate geolocation", async () => {
     const repo = createRepo({ ...baseEvent, geolocationPrecision: "APPROXIMATE" }, {
       list: async () => [],
