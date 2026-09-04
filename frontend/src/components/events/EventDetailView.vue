@@ -182,7 +182,7 @@
                     </p>
                     <p class="flex items-center gap-3">
                       <font-awesome-icon class="h-4 w-4 text-sky-700" :icon="faPhone" />
-                      <span><span class="font-medium text-slate-700">{{ t("common.phone") }}:</span> {{ formatOptional(detailEvent.contactPhone) }}</span>
+                      <span><span class="font-medium text-slate-700">{{ t("common.phone") }}:</span> {{ formatPhoneNumber(detailEvent.contactPhone) }}</span>
                     </p>
                   </div>
 
@@ -265,6 +265,7 @@ import { useAudiencesStore } from "../../stores/audiences";
 import { useCategoriesStore } from "../../stores/categories";
 import { useEventsStore } from "../../stores/events";
 import { getEventAddressLabel, getEventLocationLabel } from "../../utils/eventLocation";
+import { formatPhoneNumber } from "../../utils/formatters";
 
 type CategoryTheme = {
   backgroundColor: string;
