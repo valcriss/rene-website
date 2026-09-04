@@ -9,8 +9,9 @@
       <div class="rounded-[2rem] border border-white/90 bg-white/72 p-4 shadow-[0_24px_80px_-48px_rgba(30,41,59,0.16)] backdrop-blur sm:p-6">
         <slot name="header" />
 
-        <div v-if="isLoading && !props.event" class="mt-6 rounded-[1.75rem] border border-dashed border-sky-100 bg-sky-50/60 p-6 text-slate-500">
-          {{ t("detail.loading") }}
+        <div v-if="isLoading && !props.event" class="mt-6 flex items-center gap-3 rounded-[1.75rem] border border-dashed border-sky-100 bg-sky-50/60 p-6 text-slate-500">
+          <LoadingSpinner size="sm" />
+          <span>{{ t("detail.loading") }}</span>
         </div>
         <div v-else-if="!detailEvent" class="mt-6 rounded-[1.75rem] border border-dashed border-sky-100 bg-sky-50/60 p-6 text-slate-500">
           {{ t("detail.notFound") }}
@@ -273,6 +274,7 @@ import {
   faUserGroup
 } from "@fortawesome/free-solid-svg-icons";
 import EventMap from "../EventMap.vue";
+import LoadingSpinner from "../LoadingSpinner.vue";
 import RelatedEvents from "./RelatedEvents.vue";
 import type { EventItem, SocialLinkType } from "../../api/events";
 import { useAudiencesStore } from "../../stores/audiences";

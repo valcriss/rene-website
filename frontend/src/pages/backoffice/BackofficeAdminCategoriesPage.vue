@@ -20,8 +20,9 @@
         {{ adminError }}
       </div>
 
-      <div v-if="adminLoading" class="rounded-2xl border border-slate-200 bg-white p-6 text-slate-500">
-        {{ t("admin.loading") }}
+      <div v-if="adminLoading" class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-6 text-slate-500">
+        <LoadingSpinner size="sm" />
+        <span>{{ t("admin.loading") }}</span>
       </div>
 
       <div v-else class="grid gap-6 xl:grid-cols-[minmax(22rem,28rem)_minmax(0,1fr)]">
@@ -97,6 +98,7 @@ import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 import { useAuthStore } from "../../stores/auth";
 import { useAdminStore } from "../../stores/admin";
+import LoadingSpinner from "../../components/LoadingSpinner.vue";
 
 const authStore = useAuthStore();
 const adminStore = useAdminStore();

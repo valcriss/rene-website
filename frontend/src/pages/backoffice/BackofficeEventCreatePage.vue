@@ -308,19 +308,21 @@
             </button>
             <button
               type="button"
-              class="rounded-full bg-white px-5 py-2.5 text-sm font-medium text-slate-950 transition hover:bg-sky-50"
+              class="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-medium text-slate-950 transition hover:bg-sky-50"
               :disabled="isPersisting || !hasTitle"
               @click="handleSaveAndRedirect"
             >
-              {{ primaryActionLabel }}
+              <LoadingSpinner v-if="isSavingDraft" size="sm" />
+              <span>{{ primaryActionLabel }}</span>
             </button>
             <button
               type="button"
-              class="rounded-full border border-slate-700 px-5 py-2.5 text-sm font-medium text-white transition hover:border-slate-500 hover:bg-white/5"
+              class="inline-flex items-center gap-2 rounded-full border border-slate-700 px-5 py-2.5 text-sm font-medium text-white transition hover:border-slate-500 hover:bg-white/5"
               :disabled="isPersisting || !hasTitle"
               @click="handleSubmitAndRedirect"
             >
-              {{ t("editor.submitForModeration") }}
+              <LoadingSpinner v-if="isSubmittingForModeration" size="sm" />
+              <span>{{ t("editor.submitForModeration") }}</span>
             </button>
           </div>
         </div>
@@ -336,6 +338,7 @@ import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import type { SocialLinkType } from "../../api/events";
 import RichTextEditor from "../../components/form/RichTextEditor.vue";
+import LoadingSpinner from "../../components/LoadingSpinner.vue";
 import { useAuthStore } from "../../stores/auth";
 import { useAudiencesStore } from "../../stores/audiences";
 import { useCategoriesStore } from "../../stores/categories";
@@ -351,7 +354,16 @@ const editorStore = useEditorStore();
 const { canEdit } = storeToRefs(authStore);
 const { categories, loading: categoriesLoading } = storeToRefs(categoriesStore);
 const { audiences, loading: audiencesLoading } = storeToRefs(audiencesStore);
-const { editorMode, editingPublishedEvent, editingPublishedRevisionStatus, editorError, editorForm, isPersisting } = storeToRefs(editorStore);
+const {
+  editorMode,
+  editingPublishedEvent,
+  editingPublishedRevisionStatus,
+  editorError,
+  editorForm,
+  isPersisting,
+  isSavingDraft,
+  isSubmittingForModeration
+} = storeToRefs(editorStore);
 
 const { resetEditorForm, saveDraftAndReturn, handleSaveAndSubmit, savePreviewSnapshot, setImageFile, addSocialLink, removeSocialLink, updateSocialLink } = editorStore;
 

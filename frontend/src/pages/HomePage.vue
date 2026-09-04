@@ -160,9 +160,10 @@
         <div class="mt-8">
           <div
             v-if="isLoading"
-            class="rounded-[1.75rem] border border-dashed border-sky-100 bg-sky-50/50 p-6 text-slate-500"
+            class="flex items-center gap-3 rounded-[1.75rem] border border-dashed border-sky-100 bg-sky-50/50 p-6 text-slate-500"
           >
-            {{ t("home.loading") }}
+            <LoadingSpinner size="sm" />
+            <span>{{ t("home.loading") }}</span>
           </div>
           <div v-else-if="error" class="rounded-[1.75rem] bg-rose-50 p-4 text-rose-700">
             {{ error }}
@@ -261,6 +262,7 @@ import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import EventMap from "../components/EventMap.vue";
+import LoadingSpinner from "../components/LoadingSpinner.vue";
 import HomeFilters from "../components/home/Filters.vue";
 import HomeSearch from "../components/home/Search.vue";
 import HomeTitle from "../components/home/Title.vue";

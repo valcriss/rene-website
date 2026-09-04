@@ -339,6 +339,24 @@ describe("BackofficeEventCreatePage", () => {
     });
   });
 
+  it("shows a spinner on the save button while a draft is being saved", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) }))
+    );
+
+    const setup = await setupPage();
+    setup.categoriesStore.hasLoaded = true;
+    setup.editorStore.isSavingDraft = true;
+    renderPage(setup);
+
+    const saveButton = await screen.findByRole("button", { name: "Enregistrer le brouillon" });
+    expect(saveButton.querySelector('svg[role="status"]')).not.toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Soumettre à modération" }).querySelector('svg[role="status"]')
+    ).toBeNull();
+  });
+
   it("disables save and submit buttons while a persistence action is running", async () => {
     vi.stubGlobal(
       "fetch",
@@ -351,6 +369,9 @@ describe("BackofficeEventCreatePage", () => {
     renderPage(setup);
 
     expect(await screen.findByRole("button", { name: "Enregistrer le brouillon" })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Soumettre à modération" }).querySelector('svg[role="status"]')
+    ).not.toBeNull();
     expect(screen.getByRole("button", { name: "Soumettre à modération" })).toBeDisabled();
   });
 
