@@ -451,10 +451,9 @@ const handleSubmitAndRedirect = async () => {
 
 const handlePreview = () => {
   const token = savePreviewSnapshot();
-  const previewRoute = router.resolve({
+  router.push({
     name: "backoffice-events-preview",
     query: { preview: token }
   });
-  window.open(previewRoute.href, "_blank", "noopener");
 };
 </script>

@@ -42,6 +42,6 @@ onMounted(() => {
 });
 
 const goToEditor = () => {
-  router.push("/backoffice/events/new");
+  router.back();
 };
 </script>

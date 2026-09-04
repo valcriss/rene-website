@@ -141,7 +141,6 @@ describe("BackofficeEventCreatePage", () => {
     const submitSpy = vi.spyOn(setup.editorStore, "handleSaveAndSubmit").mockResolvedValue(true);
     const previewSpy = vi.spyOn(setup.editorStore, "savePreviewSnapshot").mockReturnValue("preview-1");
     const pushSpy = vi.spyOn(setup.router, "push");
-    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
 
     const wrapper = mount(BackofficeEventCreatePage, {
       global: {
@@ -173,7 +172,10 @@ describe("BackofficeEventCreatePage", () => {
     expect(saveSpy).toHaveBeenCalled();
     expect(submitSpy).toHaveBeenCalled();
     expect(previewSpy).toHaveBeenCalled();
-    expect(openSpy).toHaveBeenCalled();
+    expect(pushSpy).toHaveBeenCalledWith({
+      name: "backoffice-events-preview",
+      query: { preview: "preview-1" }
+    });
     expect(pushSpy).toHaveBeenCalledWith("/backoffice/events");
   });
 
