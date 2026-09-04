@@ -28,6 +28,28 @@ const renderPage = ({ router, pinia }: { router: ReturnType<typeof createTestRou
   });
 };
 
+const stubCropModal = {
+  props: ["file"],
+  emits: ["confirm", "cancel"],
+  template:
+    '<div v-if="file" data-testid="crop-modal"><button type="button" data-testid="confirm-crop" @click="$emit(\'confirm\', file)">confirm</button><button type="button" data-testid="cancel-crop" @click="$emit(\'cancel\')">cancel</button></div>'
+};
+
+const renderPageWithCropStub = ({
+  router,
+  pinia
+}: {
+  router: ReturnType<typeof createTestRouter>;
+  pinia: ReturnType<typeof createPinia>;
+}) => {
+  render(BackofficeEventCreatePage, {
+    global: {
+      plugins: [pinia, router],
+      stubs: { ImageCropModal: stubCropModal }
+    }
+  });
+};
+
 describe("BackofficeEventCreatePage", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -119,7 +141,7 @@ describe("BackofficeEventCreatePage", () => {
     expect(await screen.findByText("Position non trouvée")).toBeInTheDocument();
   });
 
-  it("uploads image selection", async () => {
+  it("opens the crop modal after selecting an image instead of using it directly", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) }))
@@ -127,7 +149,7 @@ describe("BackofficeEventCreatePage", () => {
 
     const setup = await setupPage();
     const spy = vi.spyOn(setup.editorStore, "setImageFile");
-    renderPage(setup);
+    renderPageWithCropStub(setup);
     const input = document.querySelector("section label input[type='file']") as HTMLInputElement | null;
     if (!input) {
       throw new Error("Main image input not found");
@@ -137,10 +159,11 @@ describe("BackofficeEventCreatePage", () => {
     Object.defineProperty(input, "files", { value: [file], configurable: true });
     await fireEvent.update(input, "photo.png");
 
-    expect(spy).toHaveBeenCalled();
+    expect(await screen.findByTestId("crop-modal")).toBeInTheDocument();
+    expect(spy).not.toHaveBeenCalled();
   });
 
-  it("handles empty image selection", async () => {
+  it("applies the cropped image once the crop modal is confirmed", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) }))
@@ -148,7 +171,53 @@ describe("BackofficeEventCreatePage", () => {
 
     const setup = await setupPage();
     const spy = vi.spyOn(setup.editorStore, "setImageFile");
-    renderPage(setup);
+    renderPageWithCropStub(setup);
+    const input = document.querySelector("section label input[type='file']") as HTMLInputElement | null;
+    if (!input) {
+      throw new Error("Main image input not found");
+    }
+    const file = new File(["image"], "photo.png", { type: "image/png" });
+
+    Object.defineProperty(input, "files", { value: [file], configurable: true });
+    await fireEvent.update(input, "photo.png");
+    await fireEvent.click(await screen.findByTestId("confirm-crop"));
+
+    expect(spy).toHaveBeenCalledWith(file);
+    expect(screen.queryByTestId("crop-modal")).not.toBeInTheDocument();
+  });
+
+  it("discards the selection when the crop modal is cancelled", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) }))
+    );
+
+    const setup = await setupPage();
+    const spy = vi.spyOn(setup.editorStore, "setImageFile");
+    renderPageWithCropStub(setup);
+    const input = document.querySelector("section label input[type='file']") as HTMLInputElement | null;
+    if (!input) {
+      throw new Error("Main image input not found");
+    }
+    const file = new File(["image"], "photo.png", { type: "image/png" });
+
+    Object.defineProperty(input, "files", { value: [file], configurable: true });
+    await fireEvent.update(input, "photo.png");
+    await fireEvent.click(await screen.findByTestId("cancel-crop"));
+
+    expect(spy).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("crop-modal")).not.toBeInTheDocument();
+  });
+
+  it("handles empty image selection without opening the crop modal", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) }))
+    );
+
+    const setup = await setupPage();
+    const spy = vi.spyOn(setup.editorStore, "setImageFile");
+    renderPageWithCropStub(setup);
     const input = document.querySelector("section label input[type='file']") as HTMLInputElement | null;
     if (!input) {
       throw new Error("Main image input not found");
@@ -157,7 +226,8 @@ describe("BackofficeEventCreatePage", () => {
     Object.defineProperty(input, "files", { value: [], configurable: true });
     await fireEvent.update(input, "");
 
-    expect(spy).toHaveBeenCalledWith(null);
+    expect(spy).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("crop-modal")).not.toBeInTheDocument();
   });
 
   it("invokes editor actions directly", async () => {

@@ -121,6 +121,7 @@
               <label class="text-sm text-slate-600">
                 {{ t("common.image") }}
                 <input
+                  ref="imageInputRef"
                   type="file"
                   accept="image/*"
                   class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm"
@@ -361,15 +362,18 @@
       </div>
     </div>
   </section>
+
+  <ImageCropModal :file="pendingCropFile" @confirm="handleCropConfirm" @cancel="handleCropCancel" />
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import type { SocialLinkType } from "../../api/events";
 import RichTextEditor from "../../components/form/RichTextEditor.vue";
+import ImageCropModal from "../../components/form/ImageCropModal.vue";
 import LoadingSpinner from "../../components/LoadingSpinner.vue";
 import { useAuthStore } from "../../stores/auth";
 import { useAudiencesStore } from "../../stores/audiences";
@@ -512,10 +516,28 @@ const goToEvents = () => {
   router.push("/backoffice/events");
 };
 
+const imageInputRef = ref<HTMLInputElement | null>(null);
+const pendingCropFile = ref<File | null>(null);
+
 const handleImageChange = (event: Event) => {
   const target = event.target as HTMLInputElement | null;
   const file = target?.files?.[0] ?? null;
+  pendingCropFile.value = file;
+};
+
+const handleCropConfirm = (file: File) => {
   setImageFile(file);
+  pendingCropFile.value = null;
+  if (imageInputRef.value) {
+    imageInputRef.value.value = "";
+  }
+};
+
+const handleCropCancel = () => {
+  pendingCropFile.value = null;
+  if (imageInputRef.value) {
+    imageInputRef.value.value = "";
+  }
 };
 
 const handleSaveAndRedirect = async () => {

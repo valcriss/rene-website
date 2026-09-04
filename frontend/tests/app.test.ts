@@ -17,6 +17,20 @@ vi.mock("../src/components/EventMap.vue", () => ({
   }
 }));
 
+const cropGetCroppedCanvasMock = vi.fn(() => ({
+  toBlob: (callback: (blob: Blob | null) => void) => callback(new Blob(["cropped"], { type: "image/png" }))
+}));
+
+vi.mock("cropperjs", () => ({
+  default: class MockCropper {
+    destroy = vi.fn();
+    getCroppedCanvas = cropGetCroppedCanvasMock;
+    constructor() {
+      // no-op: the real constructor wires up DOM/canvas behavior jsdom doesn't support
+    }
+  }
+}));
+
 describe("App", () => {
   const renderWithRouter = async (path = "/") => {
     const router = createTestRouter(path);
@@ -1082,6 +1096,7 @@ describe("App", () => {
     const imageFile = new File(["image"], "photo.png", { type: "image/png" });
     Object.defineProperty(imageInput, "files", { value: [imageFile], configurable: true });
     await fireEvent.update(imageInput, "photo.png");
+    await fireEvent.click(await screen.findByRole("button", { name: "Valider le recadrage" }));
     await fireEvent.update(editorForm.getByLabelText("Organisateur"), "Asso");
     await fireEvent.update(editorForm.getByLabelText("Début"), "2026-01-15T20:00");
     await fireEvent.update(editorForm.getByLabelText("Fin"), "2026-01-15T22:00");
@@ -1353,6 +1368,7 @@ describe("App", () => {
     const imageFile = new File(["image"], "photo.png", { type: "image/png" });
     Object.defineProperty(imageInput, "files", { value: [imageFile], configurable: true });
     await fireEvent.update(imageInput, "photo.png");
+    await fireEvent.click(await screen.findByRole("button", { name: "Valider le recadrage" }));
     await fireEvent.update(editorForm.getByLabelText("Organisateur"), "Asso");
     await fireEvent.update(editorForm.getByLabelText("Début"), "2026-01-15T20:00");
     await fireEvent.update(editorForm.getByLabelText("Fin"), "2026-01-15T22:00");
