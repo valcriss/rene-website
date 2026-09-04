@@ -50,5 +50,8 @@ const routes = [
 export const createAppRouter = (history: RouterHistory = createWebHistory()) =>
   createRouter({
     history,
-    routes
+    routes,
+    scrollBehavior(_to, _from, savedPosition) {
+      return savedPosition ?? { top: 0 };
+    }
   });
