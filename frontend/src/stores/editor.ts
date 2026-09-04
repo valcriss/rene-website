@@ -1,6 +1,6 @@
 import { computed, reactive, ref } from "vue";
 import { defineStore } from "pinia";
-import type { EventRevisionStatus } from "../api/events";
+import type { EventRevisionStatus, GeolocationPrecision } from "../api/events";
 import { CreateEventPayload, EventItem, SocialLink, SocialLinkType, createEvent, submitEvent, updateEvent } from "../api/events";
 import { uploadImage } from "../api/uploads";
 import { useAuthStore } from "./auth";
@@ -19,6 +19,8 @@ const defaultEditorForm = (): CreateEventPayload => ({
   address: "",
   postalCode: "",
   city: "",
+  latitude: null,
+  longitude: null,
   organizerName: "",
   organizerUrl: "",
   contactEmail: "",
@@ -102,6 +104,8 @@ export const useEditorStore = defineStore("editor", () => {
   const isSavingDraft = ref(false);
   const isSubmittingForModeration = ref(false);
   const isPersisting = computed(() => isSavingDraft.value || isSubmittingForModeration.value);
+  const useManualLocation = ref(false);
+  const lastGeolocationPrecision = ref<GeolocationPrecision | null>(null);
 
   const resetEditorForm = () => {
     editorMode.value = "create";
@@ -109,7 +113,13 @@ export const useEditorStore = defineStore("editor", () => {
     editingPublishedEvent.value = false;
     editingPublishedRevisionStatus.value = null;
     imageFile.value = null;
+    useManualLocation.value = false;
+    lastGeolocationPrecision.value = null;
     Object.assign(editorForm, defaultEditorForm());
+  };
+
+  const setManualLocation = (value: boolean) => {
+    useManualLocation.value = value;
   };
 
   const startEdit = (eventItem: EventItem) => {
@@ -131,6 +141,10 @@ export const useEditorStore = defineStore("editor", () => {
     editorForm.address = source.address ?? "";
     editorForm.postalCode = source.postalCode ?? "";
     editorForm.city = source.city ?? "";
+    editorForm.latitude = source.latitude ?? null;
+    editorForm.longitude = source.longitude ?? null;
+    lastGeolocationPrecision.value = source.geolocationPrecision ?? null;
+    useManualLocation.value = false;
     editorForm.organizerName = source.organizerName ?? "";
     editorForm.organizerUrl = source.organizerUrl ?? "";
     editorForm.contactEmail = source.contactEmail ?? "";
@@ -145,6 +159,13 @@ export const useEditorStore = defineStore("editor", () => {
     imageFile.value = file;
   };
 
+  const hasManualCoordinates = () =>
+    useManualLocation.value &&
+    typeof editorForm.latitude === "number" &&
+    Number.isFinite(editorForm.latitude) &&
+    typeof editorForm.longitude === "number" &&
+    Number.isFinite(editorForm.longitude);
+
   const buildEditorPayload = (): CreateEventPayload => ({
     ...editorForm,
     eventStartAt: normalizeDateBoundary(editorForm.eventStartAt, false),
@@ -154,6 +175,8 @@ export const useEditorStore = defineStore("editor", () => {
     address: trimText(editorForm.address),
     postalCode: trimText(editorForm.postalCode),
     city: trimText(editorForm.city),
+    latitude: hasManualCoordinates() ? editorForm.latitude : undefined,
+    longitude: hasManualCoordinates() ? editorForm.longitude : undefined,
     organizerUrl: editorForm.organizerUrl || undefined,
     contactEmail: editorForm.contactEmail || undefined,
     contactPhone: editorForm.contactPhone || undefined,
@@ -236,6 +259,10 @@ export const useEditorStore = defineStore("editor", () => {
       editingPublishedEvent.value = updated.status === "PUBLISHED";
       editingPublishedRevisionStatus.value = updated.pendingRevision?.status ?? null;
       editorForm.image = updated.image;
+      const resolvedLocation = updated.pendingRevision ?? updated;
+      editorForm.latitude = resolvedLocation.latitude ?? null;
+      editorForm.longitude = resolvedLocation.longitude ?? null;
+      lastGeolocationPrecision.value = resolvedLocation.geolocationPrecision ?? null;
       return updated;
     } catch (err) {
       editorError.value = err instanceof Error ? err.message : "Erreur inconnue";
@@ -347,6 +374,9 @@ export const useEditorStore = defineStore("editor", () => {
     isSavingDraft,
     isSubmittingForModeration,
     isPersisting,
+    useManualLocation,
+    lastGeolocationPrecision,
+    setManualLocation,
     resetEditorForm,
     startEdit,
     setImageFile,

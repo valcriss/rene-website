@@ -63,7 +63,13 @@ const hasSubmittableGeolocation = (
   event: Pick<Event, "latitude" | "longitude" | "geolocationPrecision">
 ) => getGeolocationPrecision(event) !== "UNRESOLVED" && hasResolvedCoordinates(event);
 
-const resolveCoordinates = async (
+const hasManualCoordinates = (input: EventDraftInput) =>
+  typeof input.latitude === "number" &&
+  Number.isFinite(input.latitude) &&
+  typeof input.longitude === "number" &&
+  Number.isFinite(input.longitude);
+
+const geocodeCoordinates = async (
   input: EventDraftInput
 ): Promise<{ latitude: number; longitude: number; geolocationPrecision: GeolocationPrecision } | null> => {
   try {
@@ -77,6 +83,18 @@ const resolveCoordinates = async (
   } catch {
     return null;
   }
+};
+
+// A request that supplies both latitude and longitude is a manual correction — it takes precedence
+// over automatic geocoding and is trusted as-is (EXACT), instead of being silently overwritten by it.
+const resolveCoordinates = async (
+  input: EventDraftInput
+): Promise<{ latitude: number; longitude: number; geolocationPrecision: GeolocationPrecision } | null> => {
+  if (hasManualCoordinates(input)) {
+    return { latitude: input.latitude as number, longitude: input.longitude as number, geolocationPrecision: "EXACT" };
+  }
+
+  return geocodeCoordinates(input);
 };
 
 export const listEvents = (repo: EventRepository): Promise<Event[]> => repo.list();

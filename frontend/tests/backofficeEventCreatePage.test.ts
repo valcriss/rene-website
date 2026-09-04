@@ -69,6 +69,56 @@ describe("BackofficeEventCreatePage", () => {
     expect(await screen.findByText("Aucune catégorie disponible.")).toBeInTheDocument();
   });
 
+  it("shows the editor error as an always-visible floating alert", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) }))
+    );
+
+    const setup = await setupPage();
+    setup.categoriesStore.hasLoaded = true;
+    setup.editorStore.editorError = "Le titre est requis.";
+    renderPage(setup);
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Le titre est requis.");
+    expect(alert.className).toContain("fixed");
+  });
+
+  it("reveals manual coordinate inputs only when the toggle is checked", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) }))
+    );
+
+    const setup = await setupPage();
+    setup.categoriesStore.hasLoaded = true;
+    renderPage(setup);
+
+    expect(screen.queryByLabelText("Latitude")).not.toBeInTheDocument();
+
+    const toggle = await screen.findByRole("checkbox", { name: "Définir les coordonnées manuellement" });
+    await fireEvent.click(toggle);
+
+    expect(screen.getByLabelText("Latitude")).toBeInTheDocument();
+    expect(screen.getByLabelText("Longitude")).toBeInTheDocument();
+    expect(setup.editorStore.useManualLocation).toBe(true);
+  });
+
+  it("shows the geolocation status badge for the loaded event", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) }))
+    );
+
+    const setup = await setupPage();
+    setup.categoriesStore.hasLoaded = true;
+    setup.editorStore.lastGeolocationPrecision = "UNRESOLVED";
+    renderPage(setup);
+
+    expect(await screen.findByText("Position non trouvée")).toBeInTheDocument();
+  });
+
   it("uploads image selection", async () => {
     vi.stubGlobal(
       "fetch",

@@ -125,15 +125,19 @@ export const validateCreateEvent = (input: unknown): ValidationResult => {
   const latitude = data.latitude === undefined ? undefined : asNumber(data.latitude);
   const longitude = data.longitude === undefined ? undefined : asNumber(data.longitude);
 
-  if (data.latitude !== undefined && !Number.isFinite(latitude)) errors.push("La latitude doit être un nombre.");
-  if (data.longitude !== undefined && !Number.isFinite(longitude)) errors.push("La longitude doit être un nombre.");
+  if (data.latitude !== undefined && !Number.isFinite(latitude)) {
+    errors.push("La latitude saisie manuellement doit être un nombre.");
+  }
+  if (data.longitude !== undefined && !Number.isFinite(longitude)) {
+    errors.push("La longitude saisie manuellement doit être un nombre.");
+  }
 
   if (typeof latitude === "number" && Number.isFinite(latitude) && (latitude < -90 || latitude > 90)) {
-    errors.push("La latitude doit être comprise entre -90 et 90.");
+    errors.push("La latitude saisie manuellement doit être comprise entre -90 et 90.");
   }
 
   if (typeof longitude === "number" && Number.isFinite(longitude) && (longitude < -180 || longitude > 180)) {
-    errors.push("La longitude doit être comprise entre -180 et 180.");
+    errors.push("La longitude saisie manuellement doit être comprise entre -180 et 180.");
   }
 
   const eventStartAt = typeof data.eventStartAt === "string" ? data.eventStartAt : null;
@@ -226,7 +230,6 @@ export const validateEventCompleteness = (event: SubmittableEventFields): string
   if (!isNonEmptyString(event.eventStartAt)) errors.push("La date de début est requise.");
   if (!isNonEmptyString(event.eventEndAt)) errors.push("La date de fin est requise.");
   if (typeof event.allDay !== "boolean") errors.push("Le champ allDay doit être un booléen.");
-  if (!isNonEmptyString(event.postalCode)) errors.push("Le code postal est requis.");
   if (!isNonEmptyString(event.city)) errors.push("La ville est requise.");
   if (!isNonEmptyString(event.organizerName)) errors.push("L'organisateur est requis.");
 

@@ -214,7 +214,7 @@ describe("event services", () => {
     const repo = createRepo(baseEvent, {
       update: async (_id, input) => ({ ...baseEvent, ...input })
     });
-    const result = await updateEvent(repo, "id", baseEvent);
+    const result = await updateEvent(repo, "id", { ...baseEvent, latitude: undefined, longitude: undefined });
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.value.latitude).toBeNull();
@@ -431,7 +431,7 @@ describe("event services", () => {
     const repo = createRepo(baseEvent, {
       create: async (input) => ({ ...fallbackEvent, ...input, id: "created" })
     });
-    const result = await createEvent(repo, baseEvent);
+    const result = await createEvent(repo, { ...baseEvent, latitude: undefined, longitude: undefined });
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.value.latitude).toBeNull();
@@ -445,12 +445,59 @@ describe("event services", () => {
     const repo = createRepo(baseEvent, {
       create: async (input) => ({ ...fallbackEvent, ...input, id: "created" })
     });
-    const result = await createEvent(repo, baseEvent);
+    const result = await createEvent(repo, { ...baseEvent, latitude: undefined, longitude: undefined });
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.value.latitude).toBeNull();
       expect(result.value.longitude).toBeNull();
       expect(result.value.geolocationPrecision).toBe("UNRESOLVED");
+    }
+  });
+
+  it("createEvent trusts manually supplied coordinates and skips geocoding", async () => {
+    const repo = createRepo(baseEvent, {
+      create: async (input) => ({ ...fallbackEvent, ...input, id: "created" })
+    });
+
+    const result = await createEvent(repo, { ...baseEvent, latitude: 48.8566, longitude: 2.3522 });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.latitude).toBe(48.8566);
+      expect(result.value.longitude).toBe(2.3522);
+      expect(result.value.geolocationPrecision).toBe("EXACT");
+    }
+  });
+
+  it("updateEvent trusts manually supplied coordinates and skips geocoding", async () => {
+    const repo = createRepo(baseEvent, {
+      update: async (_id, input) => ({ ...baseEvent, ...input })
+    });
+
+    const result = await updateEvent(repo, "id", { ...baseEvent, latitude: 48.8566, longitude: 2.3522 });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.latitude).toBe(48.8566);
+      expect(result.value.longitude).toBe(2.3522);
+      expect(result.value.geolocationPrecision).toBe("EXACT");
+    }
+  });
+
+  it("ignores a partial manual coordinate and falls back to geocoding", async () => {
+    const repo = createRepo(baseEvent, {
+      create: async (input) => ({ ...fallbackEvent, ...input, id: "created" })
+    });
+
+    const result = await createEvent(repo, { ...baseEvent, latitude: 48.8566, longitude: undefined });
+
+    expect(fetchMock).toHaveBeenCalled();
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.latitude).toBe(46.97);
+      expect(result.value.longitude).toBe(0.7);
     }
   });
 
@@ -726,7 +773,11 @@ describe("event services", () => {
       })
     });
 
-    const result = await updateEvent(repo, publishedEvent.id, baseEvent);
+    const result = await updateEvent(repo, publishedEvent.id, {
+      ...baseEvent,
+      latitude: undefined,
+      longitude: undefined
+    });
 
     expect(result.ok).toBe(true);
     if (result.ok) {

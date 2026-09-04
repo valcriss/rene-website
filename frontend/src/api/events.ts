@@ -96,6 +96,8 @@ export type CreateEventPayload = {
   address?: string | null;
   postalCode?: string | null;
   city?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   organizerName?: string | null;
   organizerUrl?: string;
   contactEmail?: string;

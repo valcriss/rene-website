@@ -765,4 +765,92 @@ describe("editor handlers", () => {
     expect(values.address).toBe("");
     expect(values.postalCode).toBe("");
   });
+
+  it("startEdit prefills coordinates and geolocation status from the loaded event", async () => {
+    const { wrapper } = await mountWithRouter();
+    await nextTick();
+
+    const vm = wrapper.vm as unknown as Exposed;
+    const editorStore = useEditorStore();
+    vm.setRole("EDITOR");
+    vm.startEdit({
+      id: "1",
+      title: "Concert",
+      image: "img",
+      categoryId: "music",
+      eventStartAt: "2026-01-15T00:00:00.000Z",
+      eventEndAt: "2026-01-15T23:59:59.999Z",
+      venueName: "Salle",
+      city: "Descartes",
+      latitude: 47.1,
+      longitude: 0.68,
+      geolocationPrecision: "APPROXIMATE",
+      status: "DRAFT"
+    });
+
+    expect(vm.getEditorFormValues().latitude).toBe(47.1);
+    expect(vm.getEditorFormValues().longitude).toBe(0.68);
+    expect(editorStore.lastGeolocationPrecision).toBe("APPROXIMATE");
+    expect(editorStore.useManualLocation).toBe(false);
+  });
+
+  it("only sends manual coordinates to the API when manual location is enabled", async () => {
+    createMock.mockResolvedValue({
+      id: "created-manual",
+      title: "Concert",
+      image: "/uploads/test.png",
+      categoryId: "music",
+      eventStartAt: "2026-01-15T00:00:00.000Z",
+      eventEndAt: "2026-01-15T23:59:59.999Z",
+      venueName: "Salle",
+      city: "Descartes",
+      latitude: 46.97,
+      longitude: 0.7,
+      geolocationPrecision: "APPROXIMATE",
+      status: "DRAFT"
+    });
+    updateMock.mockResolvedValue({
+      id: "created-manual",
+      title: "Concert",
+      image: "/uploads/test.png",
+      categoryId: "music",
+      eventStartAt: "2026-01-15T00:00:00.000Z",
+      eventEndAt: "2026-01-15T23:59:59.999Z",
+      venueName: "Salle",
+      city: "Descartes",
+      latitude: 48.8566,
+      longitude: 2.3522,
+      geolocationPrecision: "EXACT",
+      status: "DRAFT"
+    });
+
+    const { wrapper } = await mountWithRouter();
+    await nextTick();
+
+    const vm = wrapper.vm as unknown as Exposed;
+    const editorStore = useEditorStore();
+    vm.setRole("EDITOR");
+    editorStore.editorForm.title = "Concert";
+    editorStore.editorForm.latitude = 48.8566;
+    editorStore.editorForm.longitude = 2.3522;
+
+    await vm.handleSaveDraft();
+    expect(createMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ latitude: undefined, longitude: undefined }),
+      "EDITOR"
+    );
+    expect(editorStore.lastGeolocationPrecision).toBe("APPROXIMATE");
+
+    editorStore.setManualLocation(true);
+    editorStore.editorForm.latitude = 48.8566;
+    editorStore.editorForm.longitude = 2.3522;
+    await vm.handleSaveDraft();
+    expect(updateMock).toHaveBeenLastCalledWith(
+      "created-manual",
+      expect.objectContaining({ latitude: 48.8566, longitude: 2.3522 }),
+      "EDITOR"
+    );
+
+    expect(editorStore.lastGeolocationPrecision).toBe("EXACT");
+  });
 });

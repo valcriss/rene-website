@@ -56,9 +56,15 @@
         {{ publishedEditLead }}
       </div>
 
-      <div v-if="editorError" class="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-sm text-rose-700">
-        {{ editorError }}
-      </div>
+      <Teleport to="body">
+        <div
+          v-if="editorError"
+          class="fixed inset-x-4 bottom-6 z-50 mx-auto max-w-xl rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 shadow-[0_20px_45px_-20px_rgba(190,18,60,0.45)] sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2"
+          role="alert"
+        >
+          {{ editorError }}
+        </div>
+      </Teleport>
 
       <div class="grid gap-6">
           <section class="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-[0_24px_60px_-40px_rgba(15,23,42,0.22)]">
@@ -178,6 +184,32 @@
                 {{ t("common.city") }}
                 <input v-model="editorForm.city" type="text" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" />
               </label>
+            </div>
+
+            <div class="mt-5 rounded-2xl border border-slate-100 bg-slate-50/60 p-4">
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">{{ t("editor.geolocationStatus") }}</p>
+                  <span class="mt-1 inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold" :class="geolocationStatusClass">
+                    {{ geolocationStatusLabel }}
+                  </span>
+                </div>
+                <label class="inline-flex items-center gap-2 text-sm text-slate-600">
+                  <input type="checkbox" :checked="useManualLocation" @change="onManualLocationToggle" />
+                  {{ t("editor.manualLocationToggle") }}
+                </label>
+              </div>
+              <p class="mt-2 text-xs text-slate-400">{{ t("editor.manualLocationHint") }}</p>
+              <div v-if="useManualLocation" class="mt-4 grid gap-4 sm:grid-cols-2">
+                <label class="text-sm text-slate-600">
+                  {{ t("common.latitude") }}
+                  <input v-model.number="editorForm.latitude" type="number" step="any" min="-90" max="90" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" />
+                </label>
+                <label class="text-sm text-slate-600">
+                  {{ t("common.longitude") }}
+                  <input v-model.number="editorForm.longitude" type="number" step="any" min="-180" max="180" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" />
+                </label>
+              </div>
             </div>
           </section>
 
@@ -362,10 +394,52 @@ const {
   editorForm,
   isPersisting,
   isSavingDraft,
-  isSubmittingForModeration
+  isSubmittingForModeration,
+  useManualLocation,
+  lastGeolocationPrecision
 } = storeToRefs(editorStore);
 
-const { resetEditorForm, saveDraftAndReturn, handleSaveAndSubmit, savePreviewSnapshot, setImageFile, addSocialLink, removeSocialLink, updateSocialLink } = editorStore;
+const {
+  resetEditorForm,
+  saveDraftAndReturn,
+  handleSaveAndSubmit,
+  savePreviewSnapshot,
+  setImageFile,
+  addSocialLink,
+  removeSocialLink,
+  updateSocialLink,
+  setManualLocation
+} = editorStore;
+
+const geolocationStatusLabel = computed(() => {
+  switch (lastGeolocationPrecision.value) {
+    case "EXACT":
+      return t("editor.geolocationExact");
+    case "APPROXIMATE":
+      return t("editor.geolocationApproximate");
+    case "UNRESOLVED":
+      return t("editor.geolocationUnresolved");
+    default:
+      return t("editor.geolocationPending");
+  }
+});
+
+const geolocationStatusClass = computed(() => {
+  switch (lastGeolocationPrecision.value) {
+    case "EXACT":
+      return "bg-emerald-50 text-emerald-700";
+    case "APPROXIMATE":
+      return "bg-amber-50 text-amber-700";
+    case "UNRESOLVED":
+      return "bg-rose-50 text-rose-700";
+    default:
+      return "bg-slate-100 text-slate-500";
+  }
+});
+
+const onManualLocationToggle = (event: Event) => {
+  setManualLocation((event.target as HTMLInputElement).checked);
+};
 
 const socialLinkTypes: SocialLinkType[] = ["FACEBOOK", "INSTAGRAM", "YOUTUBE", "LINKEDIN", "X", "TIKTOK"];
 

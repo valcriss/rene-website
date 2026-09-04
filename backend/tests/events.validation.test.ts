@@ -156,8 +156,8 @@ describe("validateCreateEvent", () => {
     if (!result.ok) {
       expect(result.errors).toEqual(
         expect.arrayContaining([
-          "La latitude doit être comprise entre -90 et 90.",
-          "La longitude doit être comprise entre -180 et 180."
+          "La latitude saisie manuellement doit être comprise entre -90 et 90.",
+          "La longitude saisie manuellement doit être comprise entre -180 et 180."
         ])
       );
     }
@@ -172,7 +172,10 @@ describe("validateCreateEvent", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.errors).toEqual(
-        expect.arrayContaining(["La latitude doit être un nombre.", "La longitude doit être un nombre."])
+        expect.arrayContaining([
+          "La latitude saisie manuellement doit être un nombre.",
+          "La longitude saisie manuellement doit être un nombre."
+        ])
       );
     }
   });
@@ -436,9 +439,12 @@ describe("validateEventCompleteness", () => {
       "La date de début est requise.",
       "La date de fin est requise.",
       "Le champ allDay doit être un booléen.",
-      "Le code postal est requis.",
       "La ville est requise.",
       "L'organisateur est requis."
     ]);
+  });
+
+  it("accepts a submission with only a city and no postal code", () => {
+    expect(validateEventCompleteness({ ...completeEvent, postalCode: null })).toEqual([]);
   });
 });
