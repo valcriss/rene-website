@@ -55,6 +55,11 @@ const prismaMocks = jest.requireMock("@prisma/client").__mocks as {
   transaction: jest.Mock;
 };
 
+const includeOccurrencesAndRevision = {
+  occurrences: true,
+  pendingRevision: { include: { occurrences: true } }
+};
+
 describe("createPrismaEventRepository", () => {
   beforeEach(() => {
     prismaMocks.findMany.mockReset();
@@ -67,6 +72,34 @@ describe("createPrismaEventRepository", () => {
     prismaMocks.transaction.mockClear();
   });
 
+  const baseOccurrence = {
+    id: "occ-1",
+    venueName: "Salle",
+    address: null,
+    postalCode: "37160",
+    city: "Descartes",
+    latitude: 46.97,
+    longitude: 0.7,
+    geolocationPrecision: "EXACT" as const,
+    eventStartAt: new Date("2026-01-15T20:00:00.000Z"),
+    eventEndAt: new Date("2026-01-15T22:00:00.000Z"),
+    allDay: false,
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-01-02T00:00:00.000Z")
+  };
+
+  const occurrenceInput = {
+    venueName: "Salle",
+    address: "1 rue du centre",
+    postalCode: "37160",
+    city: "Descartes",
+    latitude: 46.97,
+    longitude: 0.7,
+    eventStartAt: "2026-01-15T20:00:00.000Z",
+    eventEndAt: "2026-01-15T22:00:00.000Z",
+    allDay: false
+  };
+
   const buildRevision = (overrides: Record<string, unknown> = {}) => ({
     id: "rev-1",
     eventId: "1",
@@ -76,15 +109,7 @@ describe("createPrismaEventRepository", () => {
     createdByUserId: null,
     categoryId: "music",
     audienceId: "all",
-    eventStartAt: new Date("2026-01-15T20:00:00.000Z"),
-    eventEndAt: new Date("2026-01-15T22:00:00.000Z"),
-    allDay: false,
-    venueName: "Salle",
-    address: null,
-    postalCode: "37160",
-    city: "Descartes",
-    latitude: 46.97,
-    longitude: 0.7,
+    occurrences: [baseOccurrence],
     organizerName: "Association",
     organizerUrl: null,
     contactEmail: null,
@@ -109,15 +134,7 @@ describe("createPrismaEventRepository", () => {
     createdByUserId: null,
     categoryId: "music",
     audienceId: "all",
-    eventStartAt: new Date("2026-01-15T20:00:00.000Z"),
-    eventEndAt: new Date("2026-01-15T22:00:00.000Z"),
-    allDay: false,
-    venueName: "Salle",
-    address: null,
-    postalCode: "37160",
-    city: "Descartes",
-    latitude: 46.97,
-    longitude: 0.7,
+    occurrences: [baseOccurrence],
     organizerName: "Association",
     organizerUrl: null,
     contactEmail: null,
@@ -139,47 +156,25 @@ describe("createPrismaEventRepository", () => {
 
   it("maps list events", async () => {
     const repo = createPrismaEventRepository();
-    const item = {
-      id: "1",
-      title: "Concert",
-      content: "Soirée",
-      image: "img",
-      createdByUserId: null,
-      categoryId: "music",
-      audienceId: "all",
-      eventStartAt: new Date("2026-01-15T20:00:00.000Z"),
-      eventEndAt: new Date("2026-01-15T22:00:00.000Z"),
-      allDay: false,
-      venueName: "Salle",
-      address: null,
-      postalCode: "37160",
-      city: "Descartes",
-      latitude: 46.97,
-      longitude: 0.7,
-      organizerName: "Association",
-      organizerUrl: null,
-      contactEmail: null,
-      contactPhone: null,
-      ticketUrl: null,
-      pricingInfo: null,
-      websiteUrl: null,
-      socialLinks: [{ type: "FACEBOOK", url: "https://facebook.com/rene" }],
-      featured: false,
-      status: "DRAFT" as const,
-      publishedAt: null,
-      publicationEndAt: new Date("2026-01-15T22:00:00.000Z"),
-      rejectionReason: null,
-      pendingRevision: null,
-      createdAt: new Date("2026-01-01T00:00:00.000Z"),
-      updatedAt: new Date("2026-01-02T00:00:00.000Z")
-    };
+    const item = buildEvent({
+      socialLinks: [{ type: "FACEBOOK", url: "https://facebook.com/rene" }]
+    });
     prismaMocks.findMany.mockResolvedValue([item]);
 
     const result = await repo.list();
 
-    expect(result[0].eventStartAt).toBe("2026-01-15T20:00:00.000Z");
+    expect(result[0].occurrences[0].eventStartAt).toBe("2026-01-15T20:00:00.000Z");
     expect(result[0].socialLinks).toEqual([{ type: "FACEBOOK", url: "https://facebook.com/rene" }]);
-    expect(prismaMocks.findMany).toHaveBeenCalledWith({ include: { pendingRevision: true }, orderBy: { eventStartAt: "asc" } });
+    expect(prismaMocks.findMany).toHaveBeenCalledWith({ include: includeOccurrencesAndRevision, orderBy: { createdAt: "asc" } });
+  });
+
+  it("treats a non-array social links value as empty", async () => {
+    const repo = createPrismaEventRepository();
+    prismaMocks.findMany.mockResolvedValue([buildEvent({ socialLinks: null })]);
+
+    const result = await repo.list();
+
+    expect(result[0]?.socialLinks).toEqual([]);
   });
 
   it("filters invalid social links when mapping prisma events", async () => {
@@ -195,85 +190,47 @@ describe("createPrismaEventRepository", () => {
     expect(result[0]?.socialLinks).toEqual([{ type: "INSTAGRAM", url: "https://instagram.com/rene" }]);
   });
 
+  it("sorts events by earliest occurrence, undated drafts last", async () => {
+    const repo = createPrismaEventRepository();
+    const undated = buildEvent({ id: "undated", occurrences: [] });
+    const later = buildEvent({
+      id: "later",
+      occurrences: [{ ...baseOccurrence, eventStartAt: new Date("2026-03-01T00:00:00.000Z"), eventEndAt: new Date("2026-03-01T01:00:00.000Z") }]
+    });
+    const earlier = buildEvent({
+      id: "earlier",
+      occurrences: [{ ...baseOccurrence, eventStartAt: new Date("2026-01-01T00:00:00.000Z"), eventEndAt: new Date("2026-01-01T01:00:00.000Z") }]
+    });
+    prismaMocks.findMany.mockResolvedValue([undated, later, earlier]);
+
+    const result = await repo.list();
+
+    expect(result.map((event) => event.id)).toEqual(["earlier", "later", "undated"]);
+  });
+
   it("maps single event", async () => {
     const repo = createPrismaEventRepository();
-    const item = {
+    const item = buildEvent({
       id: "2",
       title: "Expo",
       content: "Art",
-      image: "img",
-      createdByUserId: null,
       categoryId: "art",
-      audienceId: "all",
-      eventStartAt: new Date("2026-02-01T10:00:00.000Z"),
-      eventEndAt: new Date("2026-02-01T12:00:00.000Z"),
-      allDay: false,
-      venueName: "Galerie",
-      address: "Rue",
-      postalCode: "37000",
-      city: "Tours",
-      latitude: 47,
-      longitude: 0.69,
       organizerName: "Musee",
-      organizerUrl: null,
-      contactEmail: null,
-      contactPhone: null,
-      ticketUrl: null,
-      pricingInfo: null,
-      websiteUrl: null,
-      socialLinks: [],
-      featured: false,
-      status: "DRAFT" as const,
       publishedAt: new Date("2026-02-01T09:00:00.000Z"),
-      publicationEndAt: new Date("2026-02-01T12:00:00.000Z"),
-      rejectionReason: null,
-      pendingRevision: null,
-      createdAt: new Date("2026-01-01T00:00:00.000Z"),
-      updatedAt: new Date("2026-01-02T00:00:00.000Z")
-    };
+      occurrences: [{ ...baseOccurrence, address: "Rue", city: "Tours", postalCode: "37000", latitude: 47, longitude: 0.69 }]
+    });
     prismaMocks.findUnique.mockResolvedValue(item);
 
     const result = await repo.getById("2");
 
     expect(result?.id).toBe("2");
-    expect(result?.address).toBe("Rue");
+    expect(result?.occurrences[0].address).toBe("Rue");
     expect(result?.publishedAt).toBe("2026-02-01T09:00:00.000Z");
   });
 
   it("creates event", async () => {
     const repo = createPrismaEventRepository();
-    const item = {
-      id: "3",
-      title: "Lecture",
-      content: "Livre",
-      image: "img",
-      createdByUserId: null,
-      categoryId: "book",
-      audienceId: "all",
-      eventStartAt: new Date("2026-03-01T10:00:00.000Z"),
-      eventEndAt: new Date("2026-03-01T12:00:00.000Z"),
-      allDay: true,
-      venueName: "Bibliothèque",
-      address: null,
-      postalCode: "37000",
-      city: "Tours",
-      latitude: 47,
-      longitude: 0.69,
-      organizerName: "Mairie",
-      organizerUrl: null,
-      contactEmail: null,
-      contactPhone: null,
-      ticketUrl: null,
-      websiteUrl: null,
-      featured: false,
-      status: "DRAFT" as const,
-      publishedAt: null,
-      publicationEndAt: new Date("2026-03-01T12:00:00.000Z"),
-      rejectionReason: null,
-      pendingRevision: null,
-      createdAt: new Date("2026-01-01T00:00:00.000Z"),
-      updatedAt: new Date("2026-01-02T00:00:00.000Z")
-    };
+    const item = buildEvent({ id: "3", title: "Lecture", content: "Livre", categoryId: "book", organizerName: "Mairie" });
     prismaMocks.create.mockResolvedValue(item);
     prismaMocks.findCategory.mockResolvedValue({ id: "book", name: "Lecture", createdAt: new Date(), updatedAt: new Date() });
     prismaMocks.findAudience.mockResolvedValue({ id: "all", name: "Tous publics", createdAt: new Date(), updatedAt: new Date() });
@@ -285,25 +242,17 @@ describe("createPrismaEventRepository", () => {
       createdByUserId: null,
       categoryId: "book",
       audienceId: "all",
-      eventStartAt: "2026-03-01T10:00:00.000Z",
-      eventEndAt: "2026-03-01T12:00:00.000Z",
-      allDay: true,
-      venueName: "Bibliothèque",
-      address: "1 rue du centre",
-      postalCode: "37000",
-      city: "Tours",
-      latitude: 47,
-      longitude: 0.69,
-      organizerName: "Mairie"
-      ,socialLinks: [{ type: "INSTAGRAM", url: "https://instagram.com/rene" }]
+      occurrences: [occurrenceInput],
+      organizerName: "Mairie",
+      socialLinks: [{ type: "INSTAGRAM", url: "https://instagram.com/rene" }]
     });
 
     expect(result.id).toBe("3");
     expect(prismaMocks.create).toHaveBeenCalled();
     expect(prismaMocks.create.mock.calls[0][0]).toMatchObject({
       data: {
-        geolocationPrecision: "EXACT",
-        socialLinks: [{ type: "INSTAGRAM", url: "https://instagram.com/rene" }]
+        socialLinks: [{ type: "INSTAGRAM", url: "https://instagram.com/rene" }],
+        occurrences: { create: [expect.objectContaining({ geolocationPrecision: "EXACT" })] }
       }
     });
   });
@@ -316,16 +265,8 @@ describe("createPrismaEventRepository", () => {
       image: null,
       categoryId: null,
       audienceId: null,
-      eventStartAt: null,
-      eventEndAt: null,
-      allDay: null,
-      venueName: null,
-      postalCode: null,
-      city: null,
       organizerName: null,
-      latitude: null,
-      longitude: null,
-      geolocationPrecision: "UNRESOLVED",
+      occurrences: [],
       pendingRevision: null
     });
     prismaMocks.create.mockResolvedValue(item);
@@ -337,15 +278,7 @@ describe("createPrismaEventRepository", () => {
       createdByUserId: null,
       categoryId: null,
       audienceId: null,
-      eventStartAt: null,
-      eventEndAt: null,
-      allDay: null,
-      venueName: null,
-      address: null,
-      postalCode: null,
-      city: null,
-      latitude: null,
-      longitude: null,
+      occurrences: [],
       organizerName: null
     });
 
@@ -354,8 +287,7 @@ describe("createPrismaEventRepository", () => {
     expect(prismaMocks.findAudience).not.toHaveBeenCalled();
     expect(prismaMocks.create.mock.calls[0][0]).toMatchObject({
       data: {
-        eventStartAt: null,
-        eventEndAt: null
+        occurrences: { create: [] }
       }
     });
   });
@@ -364,9 +296,7 @@ describe("createPrismaEventRepository", () => {
     const repo = createPrismaEventRepository();
     const item = buildEvent({
       id: "3b",
-      latitude: null,
-      longitude: null,
-      geolocationPrecision: "UNRESOLVED"
+      occurrences: [{ ...baseOccurrence, latitude: null, longitude: null, geolocationPrecision: "UNRESOLVED" }]
     });
     prismaMocks.create.mockResolvedValue(item);
     prismaMocks.findCategory.mockResolvedValue({ id: "book", name: "Lecture", createdAt: new Date(), updatedAt: new Date() });
@@ -379,20 +309,12 @@ describe("createPrismaEventRepository", () => {
       createdByUserId: null,
       categoryId: "book",
       audienceId: "all",
-      eventStartAt: "2026-03-01T10:00:00.000Z",
-      eventEndAt: "2026-03-01T12:00:00.000Z",
-      allDay: true,
-      venueName: "Bibliothèque",
-      address: "1 rue du centre",
-      postalCode: "37000",
-      city: "Tours",
-      latitude: null,
-      longitude: null,
+      occurrences: [{ ...occurrenceInput, latitude: null, longitude: null }],
       organizerName: "Mairie"
     });
 
     expect(prismaMocks.create.mock.calls.at(-1)?.[0]).toMatchObject({
-      data: { geolocationPrecision: "UNRESOLVED" }
+      data: { occurrences: { create: [expect.objectContaining({ geolocationPrecision: "UNRESOLVED" })] } }
     });
   });
 
@@ -408,15 +330,7 @@ describe("createPrismaEventRepository", () => {
         image: "img",
         categoryId: "book",
         audienceId: "all",
-        eventStartAt: "2026-03-01T10:00:00.000Z",
-        eventEndAt: "2026-03-01T12:00:00.000Z",
-        allDay: true,
-        venueName: "Bibliothèque",
-        address: "1 rue du centre",
-        postalCode: "37000",
-        city: "Tours",
-        latitude: 47,
-        longitude: 0.69,
+        occurrences: [occurrenceInput],
         organizerName: "Mairie"
       })
     ).rejects.toThrow("Category not found");
@@ -424,37 +338,7 @@ describe("createPrismaEventRepository", () => {
 
   it("updates event", async () => {
     const repo = createPrismaEventRepository();
-    const item = {
-      id: "4",
-      title: "Expo",
-      content: "Art",
-      image: "img",
-      createdByUserId: null,
-      categoryId: "art",
-      audienceId: "all",
-      eventStartAt: new Date("2026-02-01T10:00:00.000Z"),
-      eventEndAt: new Date("2026-02-01T12:00:00.000Z"),
-      allDay: false,
-      venueName: "Galerie",
-      address: null,
-      postalCode: "37000",
-      city: "Tours",
-      latitude: 47,
-      longitude: 0.69,
-      organizerName: "Musee",
-      organizerUrl: null,
-      contactEmail: null,
-      contactPhone: null,
-      ticketUrl: null,
-      websiteUrl: null,
-      status: "DRAFT" as const,
-      publishedAt: null,
-      publicationEndAt: new Date("2026-02-01T12:00:00.000Z"),
-      rejectionReason: null,
-      pendingRevision: null,
-      createdAt: new Date("2026-01-01T00:00:00.000Z"),
-      updatedAt: new Date("2026-01-02T00:00:00.000Z")
-    };
+    const item = buildEvent({ id: "4", title: "Expo", content: "Art", categoryId: "art", organizerName: "Musee" });
     prismaMocks.update.mockResolvedValue(item);
     prismaMocks.findCategory.mockResolvedValue({ id: "art", name: "Art", createdAt: new Date(), updatedAt: new Date() });
     prismaMocks.findAudience.mockResolvedValue({ id: "all", name: "Tous publics", createdAt: new Date(), updatedAt: new Date() });
@@ -466,24 +350,19 @@ describe("createPrismaEventRepository", () => {
       createdByUserId: null,
       categoryId: "art",
       audienceId: "all",
-      eventStartAt: "2026-02-01T10:00:00.000Z",
-      eventEndAt: "2026-02-01T12:00:00.000Z",
-      allDay: false,
-      venueName: "Galerie",
-      address: "1 rue du centre",
-      postalCode: "37000",
-      city: "Tours",
-      latitude: 47,
-      longitude: 0.69,
+      occurrences: [occurrenceInput],
       organizerName: "Musee"
     });
 
     expect(result?.id).toBe("4");
+    expect(prismaMocks.update.mock.calls[0][0]).toMatchObject({
+      data: { occurrences: { deleteMany: {}, create: [expect.objectContaining({ city: "Descartes" })] } }
+    });
   });
 
-  it("updates a title-only draft with no eventEndAt", async () => {
+  it("updates a title-only draft with no occurrences", async () => {
     const repo = createPrismaEventRepository();
-    prismaMocks.update.mockResolvedValue(buildEvent({ id: "4b", eventStartAt: null, eventEndAt: null, allDay: null }));
+    prismaMocks.update.mockResolvedValue(buildEvent({ id: "4b", occurrences: [] }));
 
     await repo.update("4b", {
       title: "Brouillon",
@@ -492,22 +371,13 @@ describe("createPrismaEventRepository", () => {
       createdByUserId: null,
       categoryId: null,
       audienceId: null,
-      eventStartAt: null,
-      eventEndAt: null,
-      allDay: null,
-      venueName: null,
-      address: null,
-      postalCode: null,
-      city: null,
-      latitude: null,
-      longitude: null,
+      occurrences: [],
       organizerName: null
     });
 
     expect(prismaMocks.update.mock.calls[0][0]).toMatchObject({
       data: {
-        eventStartAt: null,
-        eventEndAt: null,
+        occurrences: { deleteMany: {}, create: [] },
         publicationEndAt: expect.any(Date)
       }
     });
@@ -525,15 +395,7 @@ describe("createPrismaEventRepository", () => {
       image: "img",
       categoryId: "art",
       audienceId: "all",
-      eventStartAt: "2026-02-01T10:00:00.000Z",
-      eventEndAt: "2026-02-01T12:00:00.000Z",
-      allDay: false,
-      venueName: "Galerie",
-      address: "1 rue du centre",
-      postalCode: "37000",
-      city: "Tours",
-      latitude: 47,
-      longitude: 0.69,
+      occurrences: [occurrenceInput],
       organizerName: "Musee"
     });
 
@@ -561,36 +423,15 @@ describe("createPrismaEventRepository", () => {
 
   it("updates status", async () => {
     const repo = createPrismaEventRepository();
-    const item = {
+    const item = buildEvent({
       id: "5",
       title: "Expo",
       content: "Art",
-      image: "img",
       categoryId: "art",
-      audienceId: "all",
-      eventStartAt: new Date("2026-02-01T10:00:00.000Z"),
-      eventEndAt: new Date("2026-02-01T12:00:00.000Z"),
-      allDay: false,
-      venueName: "Galerie",
-      address: null,
-      postalCode: "37000",
-      city: "Tours",
-      latitude: 47,
-      longitude: 0.69,
       organizerName: "Musee",
-      organizerUrl: null,
-      contactEmail: null,
-      contactPhone: null,
-      ticketUrl: null,
-      websiteUrl: null,
-      status: "PUBLISHED" as const,
-      publishedAt: new Date("2026-01-01T10:00:00.000Z"),
-      publicationEndAt: new Date("2026-02-01T12:00:00.000Z"),
-      rejectionReason: null,
-      pendingRevision: null,
-      createdAt: new Date("2026-01-01T00:00:00.000Z"),
-      updatedAt: new Date("2026-01-02T00:00:00.000Z")
-    };
+      status: "PUBLISHED",
+      publishedAt: new Date("2026-01-01T10:00:00.000Z")
+    });
     prismaMocks.update.mockResolvedValue(item);
 
     const result = await repo.updateStatus("5", "PUBLISHED", {
@@ -636,15 +477,7 @@ describe("createPrismaEventRepository", () => {
         image: "img",
         categoryId: "book",
         audienceId: "all",
-        eventStartAt: "2026-03-01T10:00:00.000Z",
-        eventEndAt: "2026-03-01T12:00:00.000Z",
-        allDay: true,
-        venueName: "Bibliothèque",
-        address: "1 rue du centre",
-        postalCode: "37000",
-        city: "Tours",
-        latitude: 47,
-        longitude: 0.69,
+        occurrences: [occurrenceInput],
         organizerName: "Mairie"
       })
     ).rejects.toThrow("Audience not found");
@@ -661,15 +494,7 @@ describe("createPrismaEventRepository", () => {
         image: "img",
         categoryId: "art",
         audienceId: "all",
-        eventStartAt: "2026-02-01T10:00:00.000Z",
-        eventEndAt: "2026-02-01T12:00:00.000Z",
-        allDay: false,
-        venueName: "Galerie",
-        address: "1 rue du centre",
-        postalCode: "37000",
-        city: "Tours",
-        latitude: 47,
-        longitude: 0.69,
+        occurrences: [occurrenceInput],
         organizerName: "Musee"
       })
     ).rejects.toThrow("Category not found");
@@ -687,15 +512,7 @@ describe("createPrismaEventRepository", () => {
         image: "img",
         categoryId: "art",
         audienceId: "all",
-        eventStartAt: "2026-02-01T10:00:00.000Z",
-        eventEndAt: "2026-02-01T12:00:00.000Z",
-        allDay: false,
-        venueName: "Galerie",
-        address: "1 rue du centre",
-        postalCode: "37000",
-        city: "Tours",
-        latitude: 47,
-        longitude: 0.69,
+        occurrences: [occurrenceInput],
         organizerName: "Musee"
       })
     ).rejects.toThrow("Audience not found");
@@ -714,15 +531,7 @@ describe("createPrismaEventRepository", () => {
       createdByUserId: null,
       categoryId: "music",
       audienceId: "all",
-      eventStartAt: "2026-01-15T20:00:00.000Z",
-      eventEndAt: "2026-01-15T22:00:00.000Z",
-      allDay: false,
-      venueName: "Salle",
-      address: "1 rue du centre",
-      postalCode: "37160",
-      city: "Descartes",
-      latitude: 46.97,
-      longitude: 0.7,
+      occurrences: [occurrenceInput],
       organizerName: "Association"
     }, "DRAFT");
 
@@ -734,7 +543,7 @@ describe("createPrismaEventRepository", () => {
     prismaMocks.findCategory.mockResolvedValue({ id: "music", name: "Musique", createdAt: new Date(), updatedAt: new Date() });
     prismaMocks.findAudience.mockResolvedValue({ id: "all", name: "Tous publics", createdAt: new Date(), updatedAt: new Date() });
     prismaMocks.update.mockResolvedValue(
-      buildEvent({ pendingRevision: buildRevision({ eventStartAt: null, eventEndAt: null, allDay: null }) })
+      buildEvent({ pendingRevision: buildRevision({ occurrences: [{ ...baseOccurrence, eventStartAt: null, eventEndAt: null, allDay: null }] }) })
     );
 
     const result = await repo.upsertPendingRevision("1", {
@@ -744,20 +553,12 @@ describe("createPrismaEventRepository", () => {
       createdByUserId: null,
       categoryId: "music",
       audienceId: "all",
-      eventStartAt: null,
-      eventEndAt: null,
-      allDay: null,
-      venueName: "Salle",
-      address: "1 rue du centre",
-      postalCode: "37160",
-      city: "Descartes",
-      latitude: 46.97,
-      longitude: 0.7,
+      occurrences: [{ ...occurrenceInput, eventStartAt: null, eventEndAt: null, allDay: null }],
       organizerName: "Association"
     }, "DRAFT");
 
-    expect(result?.pendingRevision?.eventStartAt).toBeNull();
-    expect(result?.pendingRevision?.eventEndAt).toBeNull();
+    expect(result?.pendingRevision?.occurrences[0].eventStartAt).toBeNull();
+    expect(result?.pendingRevision?.occurrences[0].eventEndAt).toBeNull();
   });
 
   it("returns null when upsert pending revision fails", async () => {
@@ -773,15 +574,7 @@ describe("createPrismaEventRepository", () => {
       createdByUserId: null,
       categoryId: "music",
       audienceId: "all",
-      eventStartAt: "2026-01-15T20:00:00.000Z",
-      eventEndAt: "2026-01-15T22:00:00.000Z",
-      allDay: false,
-      venueName: "Salle",
-      address: "1 rue du centre",
-      postalCode: "37160",
-      city: "Descartes",
-      latitude: 46.97,
-      longitude: 0.7,
+      occurrences: [occurrenceInput],
       organizerName: "Association"
     }, "DRAFT");
 
@@ -878,6 +671,30 @@ describe("createPrismaEventRepository", () => {
     expect(result?.pendingRevision).toBeNull();
   });
 
+  it("publishes a pending revision with an occurrence that has no dates", async () => {
+    const repo = createPrismaEventRepository();
+    const revisionWithUndatedOccurrence = buildRevision({
+      status: "PENDING",
+      occurrences: [{ ...baseOccurrence, eventStartAt: null, eventEndAt: null, allDay: null }]
+    });
+    prismaMocks.findUnique
+      .mockResolvedValueOnce(buildEvent({ pendingRevision: revisionWithUndatedOccurrence }))
+      .mockResolvedValueOnce(buildEvent({
+        status: "PUBLISHED",
+        publishedAt: new Date("2026-01-20T00:00:00.000Z"),
+        pendingRevision: null
+      }));
+    prismaMocks.update.mockResolvedValue(buildEvent({
+      status: "PUBLISHED",
+      publishedAt: new Date("2026-01-20T00:00:00.000Z"),
+      pendingRevision: null
+    }));
+
+    const result = await repo.publishPendingRevision("1", "2026-01-20T00:00:00.000Z");
+
+    expect(result?.status).toBe("PUBLISHED");
+  });
+
   it("updates featured flag", async () => {
     const repo = createPrismaEventRepository();
     prismaMocks.update.mockResolvedValue(buildEvent({ status: "PUBLISHED", featured: true }));
@@ -886,7 +703,7 @@ describe("createPrismaEventRepository", () => {
 
     expect(prismaMocks.update).toHaveBeenCalledWith({
       where: { id: "1" },
-      include: { pendingRevision: true },
+      include: includeOccurrencesAndRevision,
       data: { featured: true }
     });
     expect(result?.featured).toBe(true);

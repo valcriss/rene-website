@@ -1,27 +1,31 @@
 import { validateCreateEvent, validateEventCompleteness } from "../src/events/validation";
 
 describe("validateCreateEvent", () => {
-  const validPayload = {
-    title: "Concert",
-    content: "Soirée jazz",
-    image: "https://example.com/image.jpg",
-    categoryId: "music",
-    audienceId: "all",
+  const validOccurrence = {
     eventStartAt: "2026-01-15T00:00:00.000Z",
     eventEndAt: "2026-01-15T23:59:59.999Z",
     allDay: true,
     venueName: "Salle des fêtes",
     postalCode: "37160",
     city: "Descartes",
+    address: "1 rue du centre"
+  };
+
+  const validPayload = {
+    title: "Concert",
+    content: "Soirée jazz",
+    image: "https://example.com/image.jpg",
+    categoryId: "music",
+    audienceId: "all",
     organizerName: "Association",
-    address: "1 rue du centre",
     organizerUrl: "https://example.com",
     contactEmail: "contact@example.com",
     contactPhone: "0102030405",
     ticketUrl: "https://tickets.example.com",
     pricingInfo: "<p>Plein tarif : 12 €</p>",
     websiteUrl: "https://example.com/site",
-    socialLinks: [{ type: "FACEBOOK", url: "https://facebook.com/rene" }]
+    socialLinks: [{ type: "FACEBOOK", url: "https://facebook.com/rene" }],
+    occurrences: [validOccurrence]
   };
 
   it("returns ok for valid payload", () => {
@@ -29,6 +33,7 @@ describe("validateCreateEvent", () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.value.title).toBe("Concert");
+      expect(result.value.occurrences).toHaveLength(1);
     }
   });
 
@@ -58,139 +63,147 @@ describe("validateCreateEvent", () => {
       expect(result.value.image).toBeNull();
       expect(result.value.categoryId).toBeNull();
       expect(result.value.audienceId).toBeNull();
-      expect(result.value.eventStartAt).toBeNull();
-      expect(result.value.eventEndAt).toBeNull();
-      expect(result.value.allDay).toBeNull();
-      expect(result.value.venueName).toBeNull();
-      expect(result.value.address).toBeNull();
-      expect(result.value.postalCode).toBeNull();
-      expect(result.value.city).toBeNull();
       expect(result.value.organizerName).toBeNull();
+      expect(result.value.occurrences).toEqual([]);
     }
   });
 
-  it("accepts citywide payloads without venue and address", () => {
+  it("accepts citywide occurrences without venue and address", () => {
     const result = validateCreateEvent({
       ...validPayload,
-      venueName: "",
-      address: ""
+      occurrences: [{ ...validOccurrence, venueName: "", address: "" }]
     });
 
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.value.venueName).toBeNull();
-      expect(result.value.address).toBeNull();
+      expect(result.value.occurrences[0].venueName).toBeNull();
+      expect(result.value.occurrences[0].address).toBeNull();
     }
   });
 
   it("normalizes null venue and address to null", () => {
     const result = validateCreateEvent({
       ...validPayload,
-      venueName: null,
-      address: null
+      occurrences: [{ ...validOccurrence, venueName: null, address: null }]
     });
 
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.value.venueName).toBeNull();
-      expect(result.value.address).toBeNull();
+      expect(result.value.occurrences[0].venueName).toBeNull();
+      expect(result.value.occurrences[0].address).toBeNull();
     }
   });
 
-  it("accepts payload without coordinates", () => {
-    const result = validateCreateEvent(validPayload);
+  it("accepts several occurrences, including the same venue at different dates", () => {
+    const result = validateCreateEvent({
+      ...validPayload,
+      occurrences: [
+        validOccurrence,
+        { ...validOccurrence, eventStartAt: "2026-01-16T00:00:00.000Z", eventEndAt: "2026-01-16T23:59:59.999Z" },
+        { ...validOccurrence, venueName: "Autre salle", city: "Tours" }
+      ]
+    });
+
     expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.occurrences).toHaveLength(3);
+    }
   });
 
   it("returns errors for invalid start date", () => {
     const result = validateCreateEvent({
       ...validPayload,
-      eventStartAt: "not-a-date"
+      occurrences: [{ ...validOccurrence, eventStartAt: "not-a-date" }]
     });
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.errors).toContain("La date de début est invalide.");
+      expect(result.errors).toContain("Occurrence #1 : la date de début est invalide.");
     }
   });
 
   it("returns errors for invalid end date", () => {
     const result = validateCreateEvent({
       ...validPayload,
-      eventEndAt: "not-a-date"
+      occurrences: [{ ...validOccurrence, eventEndAt: "not-a-date" }]
     });
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.errors).toContain("La date de fin est invalide.");
+      expect(result.errors).toContain("Occurrence #1 : la date de fin est invalide.");
     }
   });
 
   it("returns errors when end is before start", () => {
     const result = validateCreateEvent({
       ...validPayload,
-      eventStartAt: "2026-01-15T00:00:00.000Z",
-      eventEndAt: "2026-01-14T23:59:59.999Z"
+      occurrences: [
+        { ...validOccurrence, eventStartAt: "2026-01-15T00:00:00.000Z", eventEndAt: "2026-01-14T23:59:59.999Z" }
+      ]
     });
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.errors).toContain("La date de fin doit être après la date de début.");
+      expect(result.errors).toContain("Occurrence #1 : la date de fin doit être après la date de début.");
     }
   });
 
-  it("accepts date-only payloads", () => {
+  it("normalizes an omitted allDay field to null", () => {
+    const { allDay, ...occurrenceWithoutAllDay } = validOccurrence;
+    void allDay;
+    const result = validateCreateEvent({ ...validPayload, occurrences: [occurrenceWithoutAllDay] });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.occurrences[0].allDay).toBeNull();
+    }
+  });
+
+  it("accepts date-only occurrences", () => {
     const result = validateCreateEvent({
       ...validPayload,
-      eventStartAt: "2026-01-15",
-      eventEndAt: "2026-01-16"
+      occurrences: [{ ...validOccurrence, eventStartAt: "2026-01-15", eventEndAt: "2026-01-16" }]
     });
 
     expect(result.ok).toBe(true);
   });
 
-  it("returns errors for coordinates", () => {
+  it("returns errors for out-of-range manual coordinates", () => {
     const result = validateCreateEvent({
       ...validPayload,
-      latitude: 120,
-      longitude: -200
+      occurrences: [{ ...validOccurrence, latitude: 120, longitude: -200 }]
     });
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.errors).toEqual(
         expect.arrayContaining([
-          "La latitude saisie manuellement doit être comprise entre -90 et 90.",
-          "La longitude saisie manuellement doit être comprise entre -180 et 180."
+          "Occurrence #1 : la latitude saisie manuellement doit être comprise entre -90 et 90.",
+          "Occurrence #1 : la longitude saisie manuellement doit être comprise entre -180 et 180."
         ])
       );
     }
   });
 
-  it("returns errors for non-numeric coordinates", () => {
+  it("returns errors for non-numeric manual coordinates", () => {
     const result = validateCreateEvent({
       ...validPayload,
-      latitude: "nope",
-      longitude: "nope"
+      occurrences: [{ ...validOccurrence, latitude: "nope", longitude: "nope" }]
     });
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.errors).toEqual(
         expect.arrayContaining([
-          "La latitude saisie manuellement doit être un nombre.",
-          "La longitude saisie manuellement doit être un nombre."
+          "Occurrence #1 : la latitude saisie manuellement doit être un nombre.",
+          "Occurrence #1 : la longitude saisie manuellement doit être un nombre."
         ])
       );
     }
   });
 
-  it("returns errors when now-optional fields have the wrong type", () => {
+  it("returns errors when top-level fields have the wrong type", () => {
     const result = validateCreateEvent({
       title: "Brouillon",
       content: 1,
       image: 2,
       categoryId: 3,
       audienceId: 4,
-      eventStartAt: 5,
-      eventEndAt: 6,
-      postalCode: 7,
-      city: 8,
       organizerName: 9
     });
     expect(result.ok).toBe(false);
@@ -201,32 +214,71 @@ describe("validateCreateEvent", () => {
           "L'image doit être une chaîne.",
           "La catégorie doit être une chaîne.",
           "Le public concerné doit être une chaîne.",
-          "La date de début doit être une chaîne.",
-          "La date de fin doit être une chaîne.",
-          "Le code postal doit être une chaîne.",
-          "La ville doit être une chaîne.",
           "L'organisateur doit être une chaîne."
         ])
       );
     }
   });
 
-  it("returns an error when allDay is provided but not a boolean", () => {
+  it("returns errors when occurrence fields have the wrong type", () => {
     const result = validateCreateEvent({
       ...validPayload,
-      allDay: "yes"
+      occurrences: [
+        {
+          eventStartAt: 5,
+          eventEndAt: 6,
+          postalCode: 7,
+          city: 8,
+          venueName: 9,
+          address: 10
+        }
+      ]
     });
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.errors).toContain("Le champ allDay doit être un booléen.");
+      expect(result.errors).toEqual(
+        expect.arrayContaining([
+          "Occurrence #1 : la date de début doit être une chaîne.",
+          "Occurrence #1 : la date de fin doit être une chaîne.",
+          "Occurrence #1 : le code postal doit être une chaîne.",
+          "Occurrence #1 : la ville doit être une chaîne.",
+          "Occurrence #1 : le lieu doit être une chaîne.",
+          "Occurrence #1 : l'adresse doit être une chaîne."
+        ])
+      );
     }
   });
 
-  it("returns errors for optional fields types", () => {
+  it("rejects an occurrences payload that is not an array", () => {
+    const result = validateCreateEvent({ ...validPayload, occurrences: "not-an-array" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContain("Les occurrences doivent être une liste.");
+    }
+  });
+
+  it("rejects a non-object occurrence", () => {
+    const result = validateCreateEvent({ ...validPayload, occurrences: ["not-an-object"] });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContain("Occurrence #1 est invalide.");
+    }
+  });
+
+  it("returns an error when occurrence allDay is provided but not a boolean", () => {
     const result = validateCreateEvent({
       ...validPayload,
-      venueName: 12,
-      address: 123,
+      occurrences: [{ ...validOccurrence, allDay: "yes" }]
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContain("Occurrence #1 : le champ allDay doit être un booléen.");
+    }
+  });
+
+  it("returns errors for optional top-level fields types", () => {
+    const result = validateCreateEvent({
+      ...validPayload,
       organizerUrl: 456,
       contactEmail: 789,
       contactPhone: 101,
@@ -238,8 +290,6 @@ describe("validateCreateEvent", () => {
     if (!result.ok) {
       expect(result.errors).toEqual(
         expect.arrayContaining([
-          "Le lieu doit être une chaîne.",
-          "L'adresse doit être une chaîne.",
           "Le site de l'organisateur doit être une chaîne.",
           "L'email de contact doit être une chaîne.",
           "Le téléphone de contact doit être une chaîne.",
@@ -400,12 +450,15 @@ describe("validateEventCompleteness", () => {
     image: "https://example.com/image.jpg",
     categoryId: "music",
     audienceId: "all",
-    eventStartAt: "2026-01-15T00:00:00.000Z",
-    eventEndAt: "2026-01-15T23:59:59.999Z",
-    allDay: true,
-    postalCode: "37160",
-    city: "Descartes",
-    organizerName: "Association"
+    organizerName: "Association",
+    occurrences: [
+      {
+        city: "Descartes",
+        eventStartAt: "2026-01-15T00:00:00.000Z",
+        eventEndAt: "2026-01-15T23:59:59.999Z",
+        allDay: true
+      }
+    ]
   };
 
   it("returns no errors for a fully filled-in event", () => {
@@ -416,19 +469,15 @@ describe("validateEventCompleteness", () => {
     expect(validateEventCompleteness({ ...completeEvent, title: "   " })).toContain("Le titre est requis.");
   });
 
-  it("lists every missing field required for submission", () => {
+  it("lists every missing top-level field and requires at least one occurrence", () => {
     const errors = validateEventCompleteness({
       title: "Brouillon",
       content: null,
       image: null,
       categoryId: null,
       audienceId: null,
-      eventStartAt: null,
-      eventEndAt: null,
-      allDay: null,
-      postalCode: null,
-      city: null,
-      organizerName: null
+      organizerName: null,
+      occurrences: []
     });
 
     expect(errors).toEqual([
@@ -436,15 +485,29 @@ describe("validateEventCompleteness", () => {
       "L'image est requise.",
       "La catégorie est requise.",
       "Le public concerné est requis.",
-      "La date de début est requise.",
-      "La date de fin est requise.",
-      "Le champ allDay doit être un booléen.",
-      "La ville est requise.",
-      "L'organisateur est requis."
+      "L'organisateur est requis.",
+      "Au moins une date et un lieu (ville) sont requis."
     ]);
   });
 
-  it("accepts a submission with only a city and no postal code", () => {
-    expect(validateEventCompleteness({ ...completeEvent, postalCode: null })).toEqual([]);
+  it("requires at least one complete occurrence even when some are incomplete", () => {
+    const errors = validateEventCompleteness({
+      ...completeEvent,
+      occurrences: [{ city: null, eventStartAt: null, eventEndAt: null, allDay: null }]
+    });
+
+    expect(errors).toEqual(["Au moins une date et un lieu (ville) sont requis."]);
+  });
+
+  it("accepts a submission where only one of several occurrences is complete", () => {
+    const errors = validateEventCompleteness({
+      ...completeEvent,
+      occurrences: [
+        { city: null, eventStartAt: null, eventEndAt: null, allDay: null },
+        completeEvent.occurrences[0]
+      ]
+    });
+
+    expect(errors).toEqual([]);
   });
 });

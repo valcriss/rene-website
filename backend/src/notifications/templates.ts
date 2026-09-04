@@ -1,30 +1,35 @@
-import { Event } from "../events/types";
+import { Event, EventOccurrence } from "../events/types";
 
 const formatDate = (value: string | null) => (value ? new Date(value).toLocaleDateString("fr-FR") : "Non renseignée");
-const formatLocation = (event: Event) => `${event.venueName ?? "Non renseigné"}, ${event.city ?? "Non renseignée"}`;
+
+const formatOccurrence = (occurrence: EventOccurrence) =>
+  `${occurrence.venueName ?? "Non renseigné"}, ${occurrence.city ?? "Non renseignée"} — ` +
+  `${formatDate(occurrence.eventStartAt)} → ${formatDate(occurrence.eventEndAt)}`;
+
+const formatOccurrences = (event: Event) =>
+  event.occurrences.length > 0
+    ? event.occurrences.map((occurrence, index) => `  ${index + 1}. ${formatOccurrence(occurrence)}`).join("\n")
+    : "  Aucune date renseignée pour le moment.";
 
 export const buildSubmittedSubject = (event: Event) => `Nouvelle soumission : ${event.title}`;
 
 export const buildSubmittedBody = (event: Event) =>
   `Un événement est en attente de modération.\n\nTitre : ${event.title}\n` +
-  `Lieu : ${formatLocation(event)}\n` +
-  `Dates : ${formatDate(event.eventStartAt)} → ${formatDate(event.eventEndAt)}\n\n` +
+  `Dates et lieux :\n${formatOccurrences(event)}\n\n` +
   `Connectez-vous au backoffice pour valider ou refuser.`;
 
 export const buildResubmittedSubject = (event: Event) => `Resoumission : ${event.title}`;
 
 export const buildResubmittedBody = (event: Event) =>
   `Un événement précédemment refusé a été resoumis.\n\nTitre : ${event.title}\n` +
-  `Lieu : ${formatLocation(event)}\n` +
-  `Dates : ${formatDate(event.eventStartAt)} → ${formatDate(event.eventEndAt)}\n\n` +
+  `Dates et lieux :\n${formatOccurrences(event)}\n\n` +
   `Merci de le revoir dans le backoffice.`;
 
 export const buildPublishedSubject = (event: Event) => `Événement publié : ${event.title}`;
 
 export const buildPublishedBody = (event: Event) =>
   `Votre événement a été publié.\n\nTitre : ${event.title}\n` +
-  `Lieu : ${formatLocation(event)}\n` +
-  `Dates : ${formatDate(event.eventStartAt)} → ${formatDate(event.eventEndAt)}\n`;
+  `Dates et lieux :\n${formatOccurrences(event)}\n`;
 
 export const buildRejectedSubject = (event: Event) => `Événement refusé : ${event.title}`;
 
@@ -37,8 +42,7 @@ export const buildDeletedSubject = (event: Event) => `Événement supprimé : ${
 
 export const buildDeletedBody = (event: Event) =>
   `Votre événement a été supprimé.\n\nTitre : ${event.title}\n` +
-  `Lieu : ${formatLocation(event)}\n` +
-  `Dates : ${formatDate(event.eventStartAt)} → ${formatDate(event.eventEndAt)}\n`;
+  `Dates et lieux :\n${formatOccurrences(event)}\n`;
 
 export const buildPasswordResetSubject = () => "Réinitialisation de votre mot de passe";
 

@@ -1,6 +1,6 @@
 import { EventRepository } from "./repository";
 import { validateCreateEvent, validateEventCompleteness } from "./validation";
-import { Event, EventDraftInput, GeolocationPrecision } from "./types";
+import { Event, EventOccurrenceInput, GeolocationPrecision } from "./types";
 import { geocodeEventLocation } from "../geocoding/photon";
 import { deleteUploadIfLocal } from "../uploads/storage";
 import { UserRole } from "../auth/roles";
@@ -31,71 +31,92 @@ const extractIsoDate = (value: string) => {
   return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
 };
 
-const normalizeEventDates = (input: EventDraftInput): EventDraftInput => {
-  const rawStart = input.eventStartAt;
-  const rawEnd = input.eventEndAt || input.eventStartAt;
+const normalizeOccurrenceDates = (occurrence: EventOccurrenceInput): EventOccurrenceInput => {
+  const rawStart = occurrence.eventStartAt;
+  const rawEnd = occurrence.eventEndAt || occurrence.eventStartAt;
   if (!rawStart || !rawEnd) {
-    return { ...input, eventStartAt: null, eventEndAt: null, allDay: null };
+    return { ...occurrence, eventStartAt: null, eventEndAt: null, allDay: null };
   }
 
   const startDate = extractIsoDate(rawStart);
   const endDate = extractIsoDate(rawEnd);
 
   return {
-    ...input,
+    ...occurrence,
     eventStartAt: `${startDate}T00:00:00.000Z`,
     eventEndAt: `${endDate}T23:59:59.999Z`,
     allDay: true
   };
 };
 
-const hasResolvedCoordinates = (event: Pick<Event, "latitude" | "longitude">) =>
-  typeof event.latitude === "number" &&
-  Number.isFinite(event.latitude) &&
-  typeof event.longitude === "number" &&
-  Number.isFinite(event.longitude);
+const hasResolvedCoordinates = (occurrence: Pick<EventOccurrenceInput, "latitude" | "longitude">) =>
+  typeof occurrence.latitude === "number" &&
+  Number.isFinite(occurrence.latitude) &&
+  typeof occurrence.longitude === "number" &&
+  Number.isFinite(occurrence.longitude);
 
 const getGeolocationPrecision = (
-  event: Pick<Event, "latitude" | "longitude" | "geolocationPrecision">
-): GeolocationPrecision => event.geolocationPrecision ?? (hasResolvedCoordinates(event) ? "EXACT" : "UNRESOLVED");
+  occurrence: Pick<EventOccurrenceInput, "latitude" | "longitude" | "geolocationPrecision">
+): GeolocationPrecision =>
+  occurrence.geolocationPrecision ?? (hasResolvedCoordinates(occurrence) ? "EXACT" : "UNRESOLVED");
 
-const hasSubmittableGeolocation = (
-  event: Pick<Event, "latitude" | "longitude" | "geolocationPrecision">
-) => getGeolocationPrecision(event) !== "UNRESOLVED" && hasResolvedCoordinates(event);
+const isOccurrenceGeolocated = (
+  occurrence: Pick<EventOccurrenceInput, "latitude" | "longitude" | "geolocationPrecision">
+) => getGeolocationPrecision(occurrence) !== "UNRESOLVED" && hasResolvedCoordinates(occurrence);
 
-const hasManualCoordinates = (input: EventDraftInput) =>
-  typeof input.latitude === "number" &&
-  Number.isFinite(input.latitude) &&
-  typeof input.longitude === "number" &&
-  Number.isFinite(input.longitude);
+const isCompleteOccurrence = (occurrence: Pick<EventOccurrenceInput, "city" | "eventStartAt" | "eventEndAt" | "allDay">) =>
+  Boolean(occurrence.city?.trim()) &&
+  Boolean(occurrence.eventStartAt?.trim()) &&
+  Boolean(occurrence.eventEndAt?.trim()) &&
+  typeof occurrence.allDay === "boolean";
+
+// Every occurrence the editor actually filled in (has a city) must be geolocated before the event
+// can move to moderation — occurrences left entirely blank don't count against this.
+const hasSubmittableGeolocation = (occurrences: EventOccurrenceInput[]) => {
+  const complete = occurrences.filter(isCompleteOccurrence);
+  return complete.length > 0 && complete.every(isOccurrenceGeolocated);
+};
+
+const hasManualCoordinates = (occurrence: EventOccurrenceInput) =>
+  typeof occurrence.latitude === "number" &&
+  Number.isFinite(occurrence.latitude) &&
+  typeof occurrence.longitude === "number" &&
+  Number.isFinite(occurrence.longitude);
 
 const geocodeCoordinates = async (
-  input: EventDraftInput
+  occurrence: EventOccurrenceInput
 ): Promise<{ latitude: number; longitude: number; geolocationPrecision: GeolocationPrecision } | null> => {
   try {
-    const result = await geocodeEventLocation({
-      address: input.address,
-      venueName: input.venueName,
-      postalCode: input.postalCode,
-      city: input.city
+    return await geocodeEventLocation({
+      address: occurrence.address,
+      venueName: occurrence.venueName,
+      postalCode: occurrence.postalCode,
+      city: occurrence.city
     });
-    return result;
   } catch {
     return null;
   }
 };
 
-// A request that supplies both latitude and longitude is a manual correction — it takes precedence
-// over automatic geocoding and is trusted as-is (EXACT), instead of being silently overwritten by it.
-const resolveCoordinates = async (
-  input: EventDraftInput
-): Promise<{ latitude: number; longitude: number; geolocationPrecision: GeolocationPrecision } | null> => {
-  if (hasManualCoordinates(input)) {
-    return { latitude: input.latitude as number, longitude: input.longitude as number, geolocationPrecision: "EXACT" };
+// An occurrence that supplies both latitude and longitude is a manual correction — it takes
+// precedence over automatic geocoding and is trusted as-is (EXACT), instead of being silently
+// overwritten by it.
+const resolveOccurrenceCoordinates = async (occurrence: EventOccurrenceInput): Promise<EventOccurrenceInput> => {
+  if (hasManualCoordinates(occurrence)) {
+    return { ...occurrence, geolocationPrecision: "EXACT" };
   }
 
-  return geocodeCoordinates(input);
+  const geocoded = await geocodeCoordinates(occurrence);
+  return {
+    ...occurrence,
+    latitude: geocoded?.latitude ?? null,
+    longitude: geocoded?.longitude ?? null,
+    geolocationPrecision: geocoded?.geolocationPrecision ?? "UNRESOLVED"
+  };
 };
+
+const prepareOccurrences = async (occurrences: EventOccurrenceInput[]): Promise<EventOccurrenceInput[]> =>
+  Promise.all(occurrences.map(normalizeOccurrenceDates).map(resolveOccurrenceCoordinates));
 
 export const listEvents = (repo: EventRepository): Promise<Event[]> => repo.list();
 
@@ -122,17 +143,12 @@ export const createEvent = async (
     return { ok: false, errors: validation.errors };
   }
 
-  const normalizedInput = normalizeEventDates(validation.value);
-
-  const coordinates = await resolveCoordinates(normalizedInput);
+  const occurrences = await prepareOccurrences(validation.value.occurrences);
 
   try {
     const created = await repo.create({
       ...validation.value,
-      ...normalizedInput,
-      latitude: coordinates?.latitude ?? null,
-      longitude: coordinates?.longitude ?? null,
-      geolocationPrecision: coordinates?.geolocationPrecision ?? "UNRESOLVED",
+      occurrences,
       createdByUserId: createdByUserId ?? null
     });
     return { ok: true, value: created };
@@ -160,17 +176,13 @@ export const updateEvent = async (
     return { ok: false, errors: validation.errors };
   }
 
-  const normalizedInput = normalizeEventDates(validation.value);
-
-  const coordinates = await resolveCoordinates(normalizedInput);
+  const occurrences = await prepareOccurrences(validation.value.occurrences);
 
   try {
     if (current.status === "PUBLISHED") {
       const updated = await repo.upsertPendingRevision(id, {
-        ...normalizedInput,
-        latitude: coordinates?.latitude ?? null,
-        longitude: coordinates?.longitude ?? null,
-        geolocationPrecision: coordinates?.geolocationPrecision ?? "UNRESOLVED",
+        ...validation.value,
+        occurrences,
         featured: current.pendingRevision?.featured ?? false,
         createdByUserId: current.createdByUserId
       }, "DRAFT");
@@ -184,10 +196,8 @@ export const updateEvent = async (
     }
 
     const updated = await repo.update(id, {
-      ...normalizedInput,
-      latitude: coordinates?.latitude ?? null,
-      longitude: coordinates?.longitude ?? null,
-      geolocationPrecision: coordinates?.geolocationPrecision ?? "UNRESOLVED",
+      ...validation.value,
+      occurrences,
       featured: current.featured
     });
     if (!updated) {
@@ -219,7 +229,7 @@ export const submitEvent = async (
     if (completenessErrors.length > 0) {
       return { ok: false, errors: completenessErrors };
     }
-    if (!hasSubmittableGeolocation(current.pendingRevision)) {
+    if (!hasSubmittableGeolocation(current.pendingRevision.occurrences)) {
       return { ok: false, errors: [missingCoordinatesError] };
     }
     if (current.pendingRevision.status === "PENDING") {
@@ -237,7 +247,7 @@ export const submitEvent = async (
     return { ok: false, errors: completenessErrors };
   }
 
-  if (!hasSubmittableGeolocation(current)) {
+  if (!hasSubmittableGeolocation(current.occurrences)) {
     return { ok: false, errors: [missingCoordinatesError] };
   }
 

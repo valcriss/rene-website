@@ -11,6 +11,7 @@ import {
   notifyEventResubmitted
 } from "../notifications/service";
 import { Event } from "./types";
+import { computePublicationEndAt } from "./occurrences";
 
 type AsyncHandler = (req: Request, res: Response) => Promise<void>;
 
@@ -43,7 +44,7 @@ const toRevisionSnapshot = (event: Event): Event => {
     createdByUserId: event.createdByUserId,
     status: revision.status,
     publishedAt: event.publishedAt,
-    publicationEndAt: revision.eventEndAt!,
+    publicationEndAt: computePublicationEndAt(revision.occurrences).toISOString(),
     rejectionReason: revision.rejectionReason,
     pendingRevision: revision,
     createdAt: event.createdAt,

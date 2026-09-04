@@ -1,20 +1,22 @@
 import { createEvent, deleteEvent, getEvent, listEvents, publishEvent, rejectEvent, submitEvent, updateEvent, updateEventFeatured } from "../src/events/service";
 import { EventRepository } from "../src/events/repository";
-import { Event } from "../src/events/types";
+import { Event, EventOccurrence, EventOccurrenceInput } from "../src/events/types";
 import { deleteUploadIfLocal } from "../src/uploads/storage";
+
+const toStoredOccurrences = (occurrences: EventOccurrenceInput[]): EventOccurrence[] =>
+  occurrences.map((occurrence, index) => ({
+    ...occurrence,
+    id: `occ-${index}`,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z"
+  }));
 
 jest.mock("../src/uploads/storage", () => ({
   deleteUploadIfLocal: jest.fn()
 }));
 
-const fallbackEvent: Event = {
-  id: "fallback",
-  title: "Fallback",
-  content: "Fallback",
-  image: "img",
-  createdByUserId: null,
-  categoryId: "music",
-  audienceId: "all",
+const baseOccurrence: EventOccurrence = {
+  id: "occ-1",
   eventStartAt: "2026-01-15T00:00:00.000Z",
   eventEndAt: "2026-01-15T23:59:59.999Z",
   allDay: true,
@@ -25,6 +27,19 @@ const fallbackEvent: Event = {
   latitude: 46.97,
   longitude: 0.7,
   geolocationPrecision: "EXACT",
+  createdAt: "2026-01-01T00:00:00.000Z",
+  updatedAt: "2026-01-01T00:00:00.000Z"
+};
+
+const fallbackEvent: Event = {
+  id: "fallback",
+  title: "Fallback",
+  content: "Fallback",
+  image: "img",
+  createdByUserId: null,
+  categoryId: "music",
+  audienceId: "all",
+  occurrences: [baseOccurrence],
   organizerName: "Association",
   featured: false,
   status: "DRAFT",
@@ -85,16 +100,7 @@ describe("event services", () => {
     createdByUserId: null,
     categoryId: "music",
     audienceId: "all",
-    eventStartAt: "2026-01-15T00:00:00.000Z",
-    eventEndAt: "2026-01-15T23:59:59.999Z",
-    allDay: true,
-    venueName: "Salle",
-    address: "1 rue du centre",
-    postalCode: "37160",
-    city: "Descartes",
-    latitude: 46.97,
-    longitude: 0.7,
-    geolocationPrecision: "EXACT",
+    occurrences: [baseOccurrence],
     organizerName: "Association",
     featured: false,
     status: "DRAFT",
@@ -134,16 +140,20 @@ describe("event services", () => {
 
     await createEvent(repo, {
       ...baseEvent,
-      eventStartAt: "2026-01-15T14:30:00.000Z",
-      eventEndAt: "2026-01-16T09:15:00.000Z",
-      allDay: false
+      occurrences: [
+        { ...baseOccurrence, eventStartAt: "2026-01-15T14:30:00.000Z", eventEndAt: "2026-01-16T09:15:00.000Z", allDay: false }
+      ]
     });
 
     expect(create).toHaveBeenCalledWith(
       expect.objectContaining({
-        eventStartAt: "2026-01-15T00:00:00.000Z",
-        eventEndAt: "2026-01-16T23:59:59.999Z",
-        allDay: true
+        occurrences: [
+          expect.objectContaining({
+            eventStartAt: "2026-01-15T00:00:00.000Z",
+            eventEndAt: "2026-01-16T23:59:59.999Z",
+            allDay: true
+          })
+        ]
       })
     );
   });
@@ -157,17 +167,21 @@ describe("event services", () => {
 
     await updateEvent(repo, "id", {
       ...baseEvent,
-      eventStartAt: "2026-01-15T14:30:00.000Z",
-      eventEndAt: "2026-01-16T09:15:00.000Z",
-      allDay: false
+      occurrences: [
+        { ...baseOccurrence, eventStartAt: "2026-01-15T14:30:00.000Z", eventEndAt: "2026-01-16T09:15:00.000Z", allDay: false }
+      ]
     });
 
     expect(update).toHaveBeenCalledWith(
       "id",
       expect.objectContaining({
-        eventStartAt: "2026-01-15T00:00:00.000Z",
-        eventEndAt: "2026-01-16T23:59:59.999Z",
-        allDay: true
+        occurrences: [
+          expect.objectContaining({
+            eventStartAt: "2026-01-15T00:00:00.000Z",
+            eventEndAt: "2026-01-16T23:59:59.999Z",
+            allDay: true
+          })
+        ]
       })
     );
   });
@@ -178,16 +192,57 @@ describe("event services", () => {
 
     await createEvent(repo, {
       ...baseEvent,
-      eventStartAt: "Thu, 15 Jan 2026 14:30:00 GMT",
-      eventEndAt: "Fri, 16 Jan 2026 09:15:00 GMT",
-      allDay: false
+      occurrences: [
+        {
+          ...baseOccurrence,
+          eventStartAt: "Thu, 15 Jan 2026 14:30:00 GMT",
+          eventEndAt: "Fri, 16 Jan 2026 09:15:00 GMT",
+          allDay: false
+        }
+      ]
     });
 
     expect(create).toHaveBeenCalledWith(
       expect.objectContaining({
-        eventStartAt: "2026-01-15T00:00:00.000Z",
-        eventEndAt: "2026-01-16T23:59:59.999Z",
-        allDay: true
+        occurrences: [
+          expect.objectContaining({
+            eventStartAt: "2026-01-15T00:00:00.000Z",
+            eventEndAt: "2026-01-16T23:59:59.999Z",
+            allDay: true
+          })
+        ]
+      })
+    );
+  });
+
+  it("normalizes an occurrence with no start date to null dates", async () => {
+    const create = jest.fn(async (input) => ({ ...baseEvent, ...input, occurrences: toStoredOccurrences(input.occurrences) }));
+    const repo = createRepo(baseEvent, { create });
+
+    await createEvent(repo, {
+      ...baseEvent,
+      occurrences: [{ ...baseOccurrence, eventStartAt: null }]
+    });
+
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        occurrences: [expect.objectContaining({ eventStartAt: null, eventEndAt: null, allDay: null })]
+      })
+    );
+  });
+
+  it("falls back to the start date when no end date is provided", async () => {
+    const create = jest.fn(async (input) => ({ ...baseEvent, ...input, occurrences: toStoredOccurrences(input.occurrences) }));
+    const repo = createRepo(baseEvent, { create });
+
+    await createEvent(repo, {
+      ...baseEvent,
+      occurrences: [{ ...baseOccurrence, eventStartAt: "2026-01-15T14:30:00.000Z", eventEndAt: null }]
+    });
+
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        occurrences: [expect.objectContaining({ eventStartAt: "2026-01-15T00:00:00.000Z", eventEndAt: "2026-01-15T23:59:59.999Z", allDay: true })]
       })
     );
   });
@@ -212,14 +267,17 @@ describe("event services", () => {
   it("updateEvent returns errors when geocoding fails", async () => {
     mockPhotonNotFound();
     const repo = createRepo(baseEvent, {
-      update: async (_id, input) => ({ ...baseEvent, ...input })
+      update: async (_id, input) => ({ ...baseEvent, ...input, occurrences: toStoredOccurrences(input.occurrences) })
     });
-    const result = await updateEvent(repo, "id", { ...baseEvent, latitude: undefined, longitude: undefined });
+    const result = await updateEvent(repo, "id", {
+      ...baseEvent,
+      occurrences: [{ ...baseOccurrence, latitude: undefined, longitude: undefined }]
+    });
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.value.latitude).toBeNull();
-      expect(result.value.longitude).toBeNull();
-      expect(result.value.geolocationPrecision).toBe("UNRESOLVED");
+      expect(result.value.occurrences[0].latitude).toBeNull();
+      expect(result.value.occurrences[0].longitude).toBeNull();
+      expect(result.value.occurrences[0].geolocationPrecision).toBe("UNRESOLVED");
     }
   });
 
@@ -429,88 +487,101 @@ describe("event services", () => {
   it("createEvent returns errors when geocoding fails", async () => {
     mockPhotonNotFound();
     const repo = createRepo(baseEvent, {
-      create: async (input) => ({ ...fallbackEvent, ...input, id: "created" })
+      create: async (input) => ({ ...fallbackEvent, ...input, occurrences: toStoredOccurrences(input.occurrences), id: "created" })
     });
-    const result = await createEvent(repo, { ...baseEvent, latitude: undefined, longitude: undefined });
+    const result = await createEvent(repo, {
+      ...baseEvent,
+      occurrences: [{ ...baseOccurrence, latitude: undefined, longitude: undefined }]
+    });
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.value.latitude).toBeNull();
-      expect(result.value.longitude).toBeNull();
-      expect(result.value.geolocationPrecision).toBe("UNRESOLVED");
+      expect(result.value.occurrences[0].latitude).toBeNull();
+      expect(result.value.occurrences[0].longitude).toBeNull();
+      expect(result.value.occurrences[0].geolocationPrecision).toBe("UNRESOLVED");
     }
   });
 
   it("createEvent returns errors when geocoding throws", async () => {
     fetchMock.mockRejectedValueOnce(new Error("boom"));
     const repo = createRepo(baseEvent, {
-      create: async (input) => ({ ...fallbackEvent, ...input, id: "created" })
+      create: async (input) => ({ ...fallbackEvent, ...input, occurrences: toStoredOccurrences(input.occurrences), id: "created" })
     });
-    const result = await createEvent(repo, { ...baseEvent, latitude: undefined, longitude: undefined });
+    const result = await createEvent(repo, {
+      ...baseEvent,
+      occurrences: [{ ...baseOccurrence, latitude: undefined, longitude: undefined }]
+    });
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.value.latitude).toBeNull();
-      expect(result.value.longitude).toBeNull();
-      expect(result.value.geolocationPrecision).toBe("UNRESOLVED");
+      expect(result.value.occurrences[0].latitude).toBeNull();
+      expect(result.value.occurrences[0].longitude).toBeNull();
+      expect(result.value.occurrences[0].geolocationPrecision).toBe("UNRESOLVED");
     }
   });
 
   it("createEvent trusts manually supplied coordinates and skips geocoding", async () => {
     const repo = createRepo(baseEvent, {
-      create: async (input) => ({ ...fallbackEvent, ...input, id: "created" })
+      create: async (input) => ({ ...fallbackEvent, ...input, occurrences: toStoredOccurrences(input.occurrences), id: "created" })
     });
 
-    const result = await createEvent(repo, { ...baseEvent, latitude: 48.8566, longitude: 2.3522 });
+    const result = await createEvent(repo, {
+      ...baseEvent,
+      occurrences: [{ ...baseOccurrence, latitude: 48.8566, longitude: 2.3522 }]
+    });
 
     expect(fetchMock).not.toHaveBeenCalled();
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.value.latitude).toBe(48.8566);
-      expect(result.value.longitude).toBe(2.3522);
-      expect(result.value.geolocationPrecision).toBe("EXACT");
+      expect(result.value.occurrences[0].latitude).toBe(48.8566);
+      expect(result.value.occurrences[0].longitude).toBe(2.3522);
+      expect(result.value.occurrences[0].geolocationPrecision).toBe("EXACT");
     }
   });
 
   it("updateEvent trusts manually supplied coordinates and skips geocoding", async () => {
     const repo = createRepo(baseEvent, {
-      update: async (_id, input) => ({ ...baseEvent, ...input })
+      update: async (_id, input) => ({ ...baseEvent, ...input, occurrences: toStoredOccurrences(input.occurrences) })
     });
 
-    const result = await updateEvent(repo, "id", { ...baseEvent, latitude: 48.8566, longitude: 2.3522 });
+    const result = await updateEvent(repo, "id", {
+      ...baseEvent,
+      occurrences: [{ ...baseOccurrence, latitude: 48.8566, longitude: 2.3522 }]
+    });
 
     expect(fetchMock).not.toHaveBeenCalled();
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.value.latitude).toBe(48.8566);
-      expect(result.value.longitude).toBe(2.3522);
-      expect(result.value.geolocationPrecision).toBe("EXACT");
+      expect(result.value.occurrences[0].latitude).toBe(48.8566);
+      expect(result.value.occurrences[0].longitude).toBe(2.3522);
+      expect(result.value.occurrences[0].geolocationPrecision).toBe("EXACT");
     }
   });
 
   it("ignores a partial manual coordinate and falls back to geocoding", async () => {
     const repo = createRepo(baseEvent, {
-      create: async (input) => ({ ...fallbackEvent, ...input, id: "created" })
+      create: async (input) => ({ ...fallbackEvent, ...input, occurrences: toStoredOccurrences(input.occurrences), id: "created" })
     });
 
-    const result = await createEvent(repo, { ...baseEvent, latitude: 48.8566, longitude: undefined });
+    const result = await createEvent(repo, {
+      ...baseEvent,
+      occurrences: [{ ...baseOccurrence, latitude: 48.8566, longitude: undefined }]
+    });
 
     expect(fetchMock).toHaveBeenCalled();
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.value.latitude).toBe(46.97);
-      expect(result.value.longitude).toBe(0.7);
+      expect(result.value.occurrences[0].latitude).toBe(46.97);
+      expect(result.value.occurrences[0].longitude).toBe(0.7);
     }
   });
 
-  it("creates a title-only draft without dates or allDay", async () => {
+  it("creates a title-only draft without dates or occurrences", async () => {
     const create = jest.fn(async (input) => ({ ...baseEvent, ...input }));
     const repo = createRepo(baseEvent, { create });
 
     const result = await createEvent(repo, { title: "Brouillon" });
 
     expect(result.ok).toBe(true);
-    expect(create).toHaveBeenCalledWith(
-      expect.objectContaining({ eventStartAt: null, eventEndAt: null, allDay: null })
-    );
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({ occurrences: [] }));
   });
 
   it("submitEvent blocks a draft missing fields required for submission", async () => {
@@ -546,18 +617,7 @@ describe("event services", () => {
   });
 
   it("submitEvent allows approximate geolocation", async () => {
-    const repo = createRepo({ ...baseEvent, geolocationPrecision: "APPROXIMATE" }, {
-      list: async () => [],
-      updateStatus: async () => ({ ...baseEvent, geolocationPrecision: "APPROXIMATE", status: "PENDING" })
-    });
-    const result = await submitEvent(repo, "id");
-    expect(result.ok).toBe(true);
-  });
-
-  it("submitEvent treats legacy geolocated events without explicit precision as exact", async () => {
-    const legacyEvent = { ...baseEvent };
-    delete legacyEvent.geolocationPrecision;
-    const repo = createRepo(legacyEvent, {
+    const repo = createRepo({ ...baseEvent, occurrences: [{ ...baseOccurrence, geolocationPrecision: "APPROXIMATE" }] }, {
       list: async () => [],
       updateStatus: async () => ({ ...baseEvent, status: "PENDING" })
     });
@@ -565,10 +625,21 @@ describe("event services", () => {
     expect(result.ok).toBe(true);
   });
 
-  it("submitEvent blocks legacy unresolved events without explicit precision", async () => {
-    const legacyEvent = { ...baseEvent, latitude: null, longitude: null };
-    delete legacyEvent.geolocationPrecision;
-    const repo = createRepo(legacyEvent);
+  it("submitEvent treats legacy geolocated occurrences without explicit precision as exact", async () => {
+    const legacyOccurrence: Partial<EventOccurrence> = { ...baseOccurrence };
+    delete legacyOccurrence.geolocationPrecision;
+    const repo = createRepo({ ...baseEvent, occurrences: [legacyOccurrence as EventOccurrence] }, {
+      list: async () => [],
+      updateStatus: async () => ({ ...baseEvent, status: "PENDING" })
+    });
+    const result = await submitEvent(repo, "id");
+    expect(result.ok).toBe(true);
+  });
+
+  it("submitEvent blocks legacy unresolved occurrences without explicit precision", async () => {
+    const legacyOccurrence: Partial<EventOccurrence> = { ...baseOccurrence, latitude: null, longitude: null };
+    delete legacyOccurrence.geolocationPrecision;
+    const repo = createRepo({ ...baseEvent, occurrences: [legacyOccurrence as EventOccurrence] });
     const result = await submitEvent(repo, "id");
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -577,7 +648,7 @@ describe("event services", () => {
   });
 
   it("submitEvent blocks draft without resolved location", async () => {
-    const repo = createRepo({ ...baseEvent, latitude: null, longitude: null });
+    const repo = createRepo({ ...baseEvent, occurrences: [{ ...baseOccurrence, latitude: null, longitude: null }] });
     const result = await submitEvent(repo, "id");
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -595,8 +666,7 @@ describe("event services", () => {
         id: "rev-1",
         eventId: "id",
         createdByUserId: null,
-        latitude: null,
-        longitude: null,
+        occurrences: [{ ...baseOccurrence, latitude: null, longitude: null }],
         status: "DRAFT",
         rejectionReason: null
       }
@@ -764,6 +834,7 @@ describe("event services", () => {
         pendingRevision: {
           ...baseEvent,
           ...input,
+          occurrences: toStoredOccurrences(input.occurrences),
           id: "revision-1",
           eventId: publishedEvent.id,
           createdByUserId: null,
@@ -775,14 +846,13 @@ describe("event services", () => {
 
     const result = await updateEvent(repo, publishedEvent.id, {
       ...baseEvent,
-      latitude: undefined,
-      longitude: undefined
+      occurrences: [{ ...baseOccurrence, latitude: undefined, longitude: undefined }]
     });
 
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.value.pendingRevision?.latitude).toBeNull();
-      expect(result.value.pendingRevision?.longitude).toBeNull();
+      expect(result.value.pendingRevision?.occurrences[0].latitude).toBeNull();
+      expect(result.value.pendingRevision?.occurrences[0].longitude).toBeNull();
     }
   });
 

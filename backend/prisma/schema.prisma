@@ -40,16 +40,6 @@ model Event {
   createdByUserId  String?     @db.Uuid
   categoryId       String?
   audienceId       String?
-  eventStartAt     DateTime?
-  eventEndAt       DateTime?
-  allDay           Boolean?
-  venueName        String?
-  address          String?
-  postalCode       String?
-  city             String?
-  latitude         Float?
-  longitude        Float?
-  geolocationPrecision GeolocationPrecision @default(UNRESOLVED)
   organizerName    String?
   organizerUrl     String?
   contactEmail     String?
@@ -70,13 +60,35 @@ model Event {
   audience         Audience?   @relation(fields: [audienceId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   createdByUser    User?       @relation("UserCreatedEvents", fields: [createdByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   pendingRevision  EventRevision?
+  occurrences      EventOccurrence[]
 
-  @@index([eventStartAt])
   @@index([status])
   @@index([featured])
   @@index([categoryId])
   @@index([audienceId])
   @@index([createdByUserId])
+}
+
+model EventOccurrence {
+  id                   String               @id @default(uuid()) @db.Uuid
+  eventId              String               @db.Uuid
+  venueName            String?
+  address              String?
+  postalCode           String?
+  city                 String?
+  latitude             Float?
+  longitude            Float?
+  geolocationPrecision GeolocationPrecision @default(UNRESOLVED)
+  eventStartAt         DateTime?
+  eventEndAt           DateTime?
+  allDay               Boolean?
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+
+  event                Event                @relation(fields: [eventId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([eventId])
+  @@index([eventStartAt])
 }
 
 model EventRevision {
@@ -88,16 +100,6 @@ model EventRevision {
   createdByUserId String?             @db.Uuid
   categoryId      String?
   audienceId      String?
-  eventStartAt    DateTime?
-  eventEndAt      DateTime?
-  allDay          Boolean?
-  venueName       String?
-  address         String?
-  postalCode      String?
-  city            String?
-  latitude        Float?
-  longitude       Float?
-  geolocationPrecision GeolocationPrecision @default(UNRESOLVED)
   organizerName   String?
   organizerUrl    String?
   contactEmail    String?
@@ -116,11 +118,34 @@ model EventRevision {
   category        Category?           @relation(fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   audience        Audience?           @relation(fields: [audienceId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   createdByUser   User?               @relation("UserCreatedRevisions", fields: [createdByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  occurrences     EventRevisionOccurrence[]
 
   @@index([status])
   @@index([categoryId])
   @@index([audienceId])
   @@index([createdByUserId])
+}
+
+model EventRevisionOccurrence {
+  id                   String               @id @default(uuid()) @db.Uuid
+  eventRevisionId      String               @db.Uuid
+  venueName            String?
+  address              String?
+  postalCode           String?
+  city                 String?
+  latitude             Float?
+  longitude            Float?
+  geolocationPrecision GeolocationPrecision @default(UNRESOLVED)
+  eventStartAt         DateTime?
+  eventEndAt           DateTime?
+  allDay               Boolean?
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+
+  eventRevision        EventRevision        @relation(fields: [eventRevisionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([eventRevisionId])
+  @@index([eventStartAt])
 }
 
 model Category {

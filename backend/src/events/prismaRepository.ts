@@ -1,6 +1,7 @@
 import { prisma } from "../prisma/client";
 import { EventRepository } from "./repository";
-import { CreateEventInput, Event, EventRevision, EventStatus, GeolocationPrecision, SocialLink } from "./types";
+import { CreateEventInput, Event, EventOccurrence, EventOccurrenceInput, EventRevision, EventStatus, GeolocationPrecision, SocialLink } from "./types";
+import { computePublicationEndAt, sortEventsByEarliestOccurrence } from "./occurrences";
 
 type PrismaEventsClient = {
   category: {
@@ -19,6 +20,22 @@ type PrismaEventsClient = {
   $transaction<T>(handler: (transaction: PrismaEventsClient) => Promise<T>): Promise<T>;
 };
 
+type PrismaEventOccurrence = {
+  id: string;
+  venueName: string | null;
+  address: string | null;
+  postalCode: string | null;
+  city: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  geolocationPrecision: GeolocationPrecision;
+  eventStartAt: Date | null;
+  eventEndAt: Date | null;
+  allDay: boolean | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 type PrismaEvent = {
   id: string;
   title: string;
@@ -27,16 +44,6 @@ type PrismaEvent = {
   createdByUserId?: string | null;
   categoryId: string | null;
   audienceId: string | null;
-  eventStartAt: Date | null;
-  eventEndAt: Date | null;
-  allDay: boolean | null;
-  venueName: string | null;
-  address: string | null;
-  postalCode: string | null;
-  city: string | null;
-  latitude: number | null;
-  longitude: number | null;
-  geolocationPrecision: GeolocationPrecision;
   organizerName: string | null;
   organizerUrl: string | null;
   contactEmail: string | null;
@@ -52,6 +59,7 @@ type PrismaEvent = {
   rejectionReason: string | null;
   createdAt: Date;
   updatedAt: Date;
+  occurrences: PrismaEventOccurrence[];
   pendingRevision: PrismaEventRevision | null;
 };
 
@@ -64,16 +72,6 @@ type PrismaEventRevision = {
   createdByUserId?: string | null;
   categoryId: string | null;
   audienceId: string | null;
-  eventStartAt: Date | null;
-  eventEndAt: Date | null;
-  allDay: boolean | null;
-  venueName: string | null;
-  address: string | null;
-  postalCode: string | null;
-  city: string | null;
-  latitude: number | null;
-  longitude: number | null;
-  geolocationPrecision: GeolocationPrecision;
   organizerName: string | null;
   organizerUrl: string | null;
   contactEmail: string | null;
@@ -87,6 +85,7 @@ type PrismaEventRevision = {
   rejectionReason: string | null;
   createdAt: Date;
   updatedAt: Date;
+  occurrences: PrismaEventOccurrence[];
 };
 
 const asSocialLinks = (value: unknown): SocialLink[] => {
@@ -104,6 +103,22 @@ const asSocialLinks = (value: unknown): SocialLink[] => {
   });
 };
 
+const toOccurrence = (data: PrismaEventOccurrence): EventOccurrence => ({
+  id: data.id,
+  venueName: data.venueName,
+  address: data.address,
+  postalCode: data.postalCode,
+  city: data.city,
+  latitude: data.latitude,
+  longitude: data.longitude,
+  geolocationPrecision: data.geolocationPrecision,
+  eventStartAt: data.eventStartAt ? data.eventStartAt.toISOString() : null,
+  eventEndAt: data.eventEndAt ? data.eventEndAt.toISOString() : null,
+  allDay: data.allDay,
+  createdAt: data.createdAt.toISOString(),
+  updatedAt: data.updatedAt.toISOString()
+});
+
 const toRevision = (data: PrismaEventRevision): EventRevision => ({
   id: data.id,
   eventId: data.eventId,
@@ -113,16 +128,7 @@ const toRevision = (data: PrismaEventRevision): EventRevision => ({
   createdByUserId: data.createdByUserId ?? null,
   categoryId: data.categoryId,
   audienceId: data.audienceId,
-  eventStartAt: data.eventStartAt ? data.eventStartAt.toISOString() : null,
-  eventEndAt: data.eventEndAt ? data.eventEndAt.toISOString() : null,
-  allDay: data.allDay,
-  venueName: data.venueName,
-  address: data.address,
-  postalCode: data.postalCode,
-  city: data.city,
-  latitude: data.latitude,
-  longitude: data.longitude,
-  geolocationPrecision: data.geolocationPrecision,
+  occurrences: data.occurrences.map(toOccurrence),
   organizerName: data.organizerName,
   organizerUrl: data.organizerUrl ?? undefined,
   contactEmail: data.contactEmail ?? undefined,
@@ -146,16 +152,7 @@ const toEvent = (data: PrismaEvent): Event => ({
   createdByUserId: data.createdByUserId ?? null,
   categoryId: data.categoryId,
   audienceId: data.audienceId,
-  eventStartAt: data.eventStartAt ? data.eventStartAt.toISOString() : null,
-  eventEndAt: data.eventEndAt ? data.eventEndAt.toISOString() : null,
-  allDay: data.allDay,
-  venueName: data.venueName,
-  address: data.address,
-  postalCode: data.postalCode,
-  city: data.city,
-  latitude: data.latitude,
-  longitude: data.longitude,
-  geolocationPrecision: data.geolocationPrecision,
+  occurrences: data.occurrences.map(toOccurrence),
   organizerName: data.organizerName,
   organizerUrl: data.organizerUrl ?? undefined,
   contactEmail: data.contactEmail ?? undefined,
@@ -176,12 +173,19 @@ const toEvent = (data: PrismaEvent): Event => ({
 
 const prismaClient = prisma as unknown as PrismaEventsClient;
 
-const resolveGeolocationPrecision = (input: Pick<CreateEventInput, "latitude" | "longitude" | "geolocationPrecision">) =>
-  input.geolocationPrecision ??
-  (typeof input.latitude === "number" &&
-  Number.isFinite(input.latitude) &&
-  typeof input.longitude === "number" &&
-  Number.isFinite(input.longitude)
+const includeOccurrencesAndRevision = {
+  occurrences: true,
+  pendingRevision: { include: { occurrences: true } }
+};
+
+const resolveGeolocationPrecision = (
+  occurrence: Pick<EventOccurrenceInput, "latitude" | "longitude" | "geolocationPrecision">
+) =>
+  occurrence.geolocationPrecision ??
+  (typeof occurrence.latitude === "number" &&
+  Number.isFinite(occurrence.latitude) &&
+  typeof occurrence.longitude === "number" &&
+  Number.isFinite(occurrence.longitude)
     ? "EXACT"
     : "UNRESOLVED");
 
@@ -207,47 +211,57 @@ const ensureAudienceExists = async (audienceId: string | null) => {
 
 const toDateOrNull = (value: string | null) => (value ? new Date(value) : null);
 
+const toOccurrenceCreateData = (occurrence: EventOccurrenceInput) => ({
+  venueName: occurrence.venueName,
+  address: occurrence.address,
+  postalCode: occurrence.postalCode,
+  city: occurrence.city,
+  latitude: occurrence.latitude,
+  longitude: occurrence.longitude,
+  geolocationPrecision: resolveGeolocationPrecision(occurrence),
+  eventStartAt: toDateOrNull(occurrence.eventStartAt),
+  eventEndAt: toDateOrNull(occurrence.eventEndAt),
+  allDay: occurrence.allDay
+});
+
+const eventFieldsData = (input: CreateEventInput) => ({
+  title: input.title,
+  content: input.content,
+  image: input.image,
+  categoryId: input.categoryId,
+  audienceId: input.audienceId,
+  organizerName: input.organizerName,
+  organizerUrl: input.organizerUrl ?? null,
+  contactEmail: input.contactEmail ?? null,
+  contactPhone: input.contactPhone ?? null,
+  ticketUrl: input.ticketUrl ?? null,
+  pricingInfo: input.pricingInfo ?? null,
+  websiteUrl: input.websiteUrl ?? null,
+  socialLinks: input.socialLinks ?? []
+});
+
 export const createPrismaEventRepository = (): EventRepository => ({
   list: async () =>
-    prismaClient.event.findMany({ include: { pendingRevision: true }, orderBy: { eventStartAt: "asc" } }).then((items) => items.map(toEvent)),
+    prismaClient.event
+      .findMany({ include: includeOccurrencesAndRevision, orderBy: { createdAt: "asc" } })
+      .then((items) => sortEventsByEarliestOccurrence(items.map(toEvent))),
   getById: async (id: string) =>
-    prismaClient.event.findUnique({ where: { id }, include: { pendingRevision: true } }).then((item) => (item ? toEvent(item) : null)),
+    prismaClient.event.findUnique({ where: { id }, include: includeOccurrencesAndRevision }).then((item) => (item ? toEvent(item) : null)),
   create: async (input: CreateEventInput) => {
     await ensureCategoryExists(input.categoryId);
     await ensureAudienceExists(input.audienceId);
     const data = {
-      title: input.title,
-      content: input.content,
-      image: input.image,
+      ...eventFieldsData(input),
       createdByUserId: input.createdByUserId ?? null,
-      categoryId: input.categoryId,
-      audienceId: input.audienceId,
-      eventStartAt: toDateOrNull(input.eventStartAt),
-      eventEndAt: toDateOrNull(input.eventEndAt),
-      allDay: input.allDay,
-      venueName: input.venueName,
-      address: input.address,
-      postalCode: input.postalCode,
-      city: input.city,
-      latitude: input.latitude,
-      longitude: input.longitude,
-      geolocationPrecision: resolveGeolocationPrecision(input),
-      organizerName: input.organizerName,
-      organizerUrl: input.organizerUrl ?? null,
-      contactEmail: input.contactEmail ?? null,
-      contactPhone: input.contactPhone ?? null,
-      ticketUrl: input.ticketUrl ?? null,
-      pricingInfo: input.pricingInfo ?? null,
-      websiteUrl: input.websiteUrl ?? null,
-      socialLinks: input.socialLinks ?? [],
       status: "DRAFT" as EventStatus,
       featured: false,
       publishedAt: null,
-      publicationEndAt: toDateOrNull(input.eventEndAt) ?? new Date(),
-      rejectionReason: null
+      publicationEndAt: computePublicationEndAt(input.occurrences),
+      rejectionReason: null,
+      occurrences: { create: input.occurrences.map(toOccurrenceCreateData) }
     };
 
-    return prismaClient.event.create({ data, include: { pendingRevision: true } }).then(toEvent);
+    return prismaClient.event.create({ data, include: includeOccurrencesAndRevision }).then(toEvent);
   },
   update: async (id: string, input: CreateEventInput) => {
     await ensureCategoryExists(input.categoryId);
@@ -255,32 +269,14 @@ export const createPrismaEventRepository = (): EventRepository => ({
     try {
       const updated = await prismaClient.event.update({
         where: { id },
-        include: { pendingRevision: true },
+        include: includeOccurrencesAndRevision,
         data: {
-          title: input.title,
-          content: input.content,
-          image: input.image,
-          categoryId: input.categoryId,
-          audienceId: input.audienceId,
-          eventStartAt: toDateOrNull(input.eventStartAt),
-          eventEndAt: toDateOrNull(input.eventEndAt),
-          allDay: input.allDay,
-          venueName: input.venueName,
-          address: input.address,
-          postalCode: input.postalCode,
-          city: input.city,
-          latitude: input.latitude,
-          longitude: input.longitude,
-          geolocationPrecision: resolveGeolocationPrecision(input),
-          organizerName: input.organizerName,
-          organizerUrl: input.organizerUrl ?? null,
-          contactEmail: input.contactEmail ?? null,
-          contactPhone: input.contactPhone ?? null,
-          ticketUrl: input.ticketUrl ?? null,
-          pricingInfo: input.pricingInfo ?? null,
-          websiteUrl: input.websiteUrl ?? null,
-          socialLinks: input.socialLinks ?? [],
-          publicationEndAt: toDateOrNull(input.eventEndAt) ?? new Date()
+          ...eventFieldsData(input),
+          publicationEndAt: computePublicationEndAt(input.occurrences),
+          occurrences: {
+            deleteMany: {},
+            create: input.occurrences.map(toOccurrenceCreateData)
+          }
         }
       });
       return toEvent(updated);
@@ -292,69 +288,29 @@ export const createPrismaEventRepository = (): EventRepository => ({
     await ensureCategoryExists(input.categoryId);
     await ensureAudienceExists(input.audienceId);
     try {
+      const revisionFields = {
+        ...eventFieldsData(input),
+        createdByUserId: input.createdByUserId ?? null,
+        featured: input.featured ?? false,
+        status: status as never,
+        rejectionReason: null
+      };
       const updated = await prismaClient.event.update({
         where: { id },
-        include: { pendingRevision: true },
+        include: includeOccurrencesAndRevision,
         data: {
           pendingRevision: {
             upsert: {
               create: {
-                title: input.title,
-                content: input.content,
-                image: input.image,
-                createdByUserId: input.createdByUserId ?? null,
-                categoryId: input.categoryId,
-                audienceId: input.audienceId,
-                eventStartAt: toDateOrNull(input.eventStartAt),
-                eventEndAt: toDateOrNull(input.eventEndAt),
-                allDay: input.allDay,
-                venueName: input.venueName,
-                address: input.address,
-                postalCode: input.postalCode,
-                city: input.city,
-                latitude: input.latitude,
-                longitude: input.longitude,
-                geolocationPrecision: resolveGeolocationPrecision(input),
-                organizerName: input.organizerName,
-                organizerUrl: input.organizerUrl ?? null,
-                contactEmail: input.contactEmail ?? null,
-                contactPhone: input.contactPhone ?? null,
-                ticketUrl: input.ticketUrl ?? null,
-                pricingInfo: input.pricingInfo ?? null,
-                websiteUrl: input.websiteUrl ?? null,
-                socialLinks: input.socialLinks ?? [],
-                featured: input.featured ?? false,
-                status: status as never,
-                rejectionReason: null
+                ...revisionFields,
+                occurrences: { create: input.occurrences.map(toOccurrenceCreateData) }
               },
               update: {
-                title: input.title,
-                content: input.content,
-                image: input.image,
-                createdByUserId: input.createdByUserId ?? null,
-                categoryId: input.categoryId,
-                audienceId: input.audienceId,
-                eventStartAt: toDateOrNull(input.eventStartAt),
-                eventEndAt: toDateOrNull(input.eventEndAt),
-                allDay: input.allDay,
-                venueName: input.venueName,
-                address: input.address,
-                postalCode: input.postalCode,
-                city: input.city,
-                latitude: input.latitude,
-                longitude: input.longitude,
-                geolocationPrecision: resolveGeolocationPrecision(input),
-                organizerName: input.organizerName,
-                organizerUrl: input.organizerUrl ?? null,
-                contactEmail: input.contactEmail ?? null,
-                contactPhone: input.contactPhone ?? null,
-                ticketUrl: input.ticketUrl ?? null,
-                pricingInfo: input.pricingInfo ?? null,
-                websiteUrl: input.websiteUrl ?? null,
-                socialLinks: input.socialLinks ?? [],
-                featured: input.featured ?? false,
-                status: status as never,
-                rejectionReason: null
+                ...revisionFields,
+                occurrences: {
+                  deleteMany: {},
+                  create: input.occurrences.map(toOccurrenceCreateData)
+                }
               }
             }
           }
@@ -367,13 +323,13 @@ export const createPrismaEventRepository = (): EventRepository => ({
   },
   submitPendingRevision: async (id) => {
     try {
-      const existing = await prismaClient.event.findUnique({ where: { id }, include: { pendingRevision: true } });
+      const existing = await prismaClient.event.findUnique({ where: { id }, include: includeOccurrencesAndRevision });
       if (!existing?.pendingRevision) {
         return null;
       }
       const updated = await prismaClient.event.update({
         where: { id },
-        include: { pendingRevision: true },
+        include: includeOccurrencesAndRevision,
         data: {
           pendingRevision: {
             update: {
@@ -390,13 +346,13 @@ export const createPrismaEventRepository = (): EventRepository => ({
   },
   rejectPendingRevision: async (id, reason) => {
     try {
-      const existing = await prismaClient.event.findUnique({ where: { id }, include: { pendingRevision: true } });
+      const existing = await prismaClient.event.findUnique({ where: { id }, include: includeOccurrencesAndRevision });
       if (!existing?.pendingRevision) {
         return null;
       }
       const updated = await prismaClient.event.update({
         where: { id },
-        include: { pendingRevision: true },
+        include: includeOccurrencesAndRevision,
         data: {
           pendingRevision: {
             update: {
@@ -414,12 +370,25 @@ export const createPrismaEventRepository = (): EventRepository => ({
   publishPendingRevision: async (id, publishedAt) => {
     try {
       const updated = await prismaClient.$transaction(async (transaction) => {
-        const existing = await transaction.event.findUnique({ where: { id }, include: { pendingRevision: true } });
+        const existing = await transaction.event.findUnique({ where: { id }, include: includeOccurrencesAndRevision });
         if (!existing?.pendingRevision || existing.pendingRevision.status !== "PENDING") {
           return null;
         }
 
         const revision = existing.pendingRevision;
+        const revisionOccurrences: EventOccurrenceInput[] = revision.occurrences.map((occurrence) => ({
+          venueName: occurrence.venueName,
+          address: occurrence.address,
+          postalCode: occurrence.postalCode,
+          city: occurrence.city,
+          latitude: occurrence.latitude,
+          longitude: occurrence.longitude,
+          geolocationPrecision: occurrence.geolocationPrecision,
+          eventStartAt: occurrence.eventStartAt ? occurrence.eventStartAt.toISOString() : null,
+          eventEndAt: occurrence.eventEndAt ? occurrence.eventEndAt.toISOString() : null,
+          allDay: occurrence.allDay
+        }));
+
         await transaction.event.update({
           where: { id },
           data: {
@@ -428,16 +397,6 @@ export const createPrismaEventRepository = (): EventRepository => ({
             image: revision.image,
             categoryId: revision.categoryId,
             audienceId: revision.audienceId,
-            eventStartAt: revision.eventStartAt,
-            eventEndAt: revision.eventEndAt,
-            allDay: revision.allDay,
-            venueName: revision.venueName,
-            address: revision.address,
-            postalCode: revision.postalCode,
-            city: revision.city,
-            latitude: revision.latitude,
-            longitude: revision.longitude,
-            geolocationPrecision: revision.geolocationPrecision,
             organizerName: revision.organizerName,
             organizerUrl: revision.organizerUrl,
             contactEmail: revision.contactEmail,
@@ -449,15 +408,19 @@ export const createPrismaEventRepository = (): EventRepository => ({
             status: "PUBLISHED",
             publishedAt: new Date(publishedAt),
             rejectionReason: null,
-            publicationEndAt: revision.eventEndAt!,
+            publicationEndAt: computePublicationEndAt(revisionOccurrences),
+            occurrences: {
+              deleteMany: {},
+              create: revisionOccurrences.map(toOccurrenceCreateData)
+            },
             pendingRevision: {
               delete: true
             }
           },
-          include: { pendingRevision: true }
+          include: includeOccurrencesAndRevision
         });
 
-        return transaction.event.findUnique({ where: { id }, include: { pendingRevision: true } });
+        return transaction.event.findUnique({ where: { id }, include: includeOccurrencesAndRevision });
       });
 
       return updated ? toEvent(updated as PrismaEvent) : null;
@@ -477,7 +440,7 @@ export const createPrismaEventRepository = (): EventRepository => ({
     try {
       const updated = await prismaClient.event.update({
         where: { id },
-        include: { pendingRevision: true },
+        include: includeOccurrencesAndRevision,
         data: { featured }
       });
       return toEvent(updated);
@@ -489,7 +452,7 @@ export const createPrismaEventRepository = (): EventRepository => ({
     try {
       const updated = await prismaClient.event.update({
         where: { id },
-        include: { pendingRevision: true },
+        include: includeOccurrencesAndRevision,
         data: {
           status,
           featured: data.featured,

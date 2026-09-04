@@ -12,14 +12,18 @@ const validPayload = {
   image: "https://example.com/image.jpg",
   categoryId: "music",
   audienceId: "all",
-  eventStartAt: "2026-01-15T20:00:00.000Z",
-  eventEndAt: "2026-01-15T22:00:00.000Z",
-  allDay: false,
-  venueName: "Salle des fêtes",
-  address: "1 rue du centre",
-  postalCode: "37160",
-  city: "Descartes",
-  organizerName: "Association"
+  organizerName: "Association",
+  occurrences: [
+    {
+      eventStartAt: "2026-01-15T20:00:00.000Z",
+      eventEndAt: "2026-01-15T22:00:00.000Z",
+      allDay: false,
+      venueName: "Salle des fêtes",
+      address: "1 rue du centre",
+      postalCode: "37160",
+      city: "Descartes"
+    }
+  ]
 };
 
 describe("events routes", () => {

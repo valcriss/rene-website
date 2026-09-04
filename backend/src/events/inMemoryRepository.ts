@@ -1,8 +1,19 @@
 import { randomUUID } from "node:crypto";
 import { EventRepository } from "./repository";
-import { CreateEventInput, Event, EventRevision, EventRevisionStatus } from "./types";
+import { CreateEventInput, Event, EventOccurrence, EventOccurrenceInput, EventRevision, EventRevisionStatus } from "./types";
+import { computePublicationEndAt, sortEventsByEarliestOccurrence } from "./occurrences";
 
 const cloneSocialLinks = (socialLinks: CreateEventInput["socialLinks"]) => socialLinks?.map((link) => ({ ...link })) ?? [];
+
+const buildOccurrences = (occurrences: EventOccurrenceInput[]): EventOccurrence[] => {
+  const now = new Date().toISOString();
+  return occurrences.map((occurrence) => ({
+    ...occurrence,
+    id: randomUUID(),
+    createdAt: now,
+    updatedAt: now
+  }));
+};
 
 export const createInMemoryEventRepository = (): EventRepository => {
   const events = new Map<string, Event>();
@@ -17,6 +28,7 @@ export const createInMemoryEventRepository = (): EventRepository => {
     return {
       ...input,
       socialLinks: cloneSocialLinks(input.socialLinks),
+      occurrences: buildOccurrences(input.occurrences),
       id: existing?.id ?? randomUUID(),
       eventId,
       createdByUserId: input.createdByUserId ?? existing?.createdByUserId ?? null,
@@ -39,7 +51,7 @@ export const createInMemoryEventRepository = (): EventRepository => {
       status: "PUBLISHED",
       featured: false,
       publishedAt,
-      publicationEndAt: revision.eventEndAt!,
+      publicationEndAt: computePublicationEndAt(revision.occurrences).toISOString(),
       rejectionReason: null,
       pendingRevision: null,
       createdAt: event.createdAt,
@@ -48,19 +60,20 @@ export const createInMemoryEventRepository = (): EventRepository => {
   };
 
   return {
-    list: async () => Array.from(events.values()),
+    list: async () => sortEventsByEarliestOccurrence(Array.from(events.values())),
     getById: async (id) => events.get(id) ?? null,
     create: (input: CreateEventInput) => {
       const now = new Date().toISOString();
       const event: Event = {
         ...input,
         socialLinks: cloneSocialLinks(input.socialLinks),
+        occurrences: buildOccurrences(input.occurrences),
         id: randomUUID(),
         createdByUserId: input.createdByUserId ?? null,
         featured: false,
         status: "DRAFT",
         publishedAt: null,
-        publicationEndAt: input.eventEndAt ?? now,
+        publicationEndAt: computePublicationEndAt(input.occurrences).toISOString(),
         rejectionReason: null,
         pendingRevision: null,
         createdAt: now,
@@ -79,8 +92,9 @@ export const createInMemoryEventRepository = (): EventRepository => {
         ...existing,
         ...input,
         socialLinks: cloneSocialLinks(input.socialLinks),
+        occurrences: buildOccurrences(input.occurrences),
         createdByUserId: existing.createdByUserId ?? null,
-        publicationEndAt: input.eventEndAt ?? existing.publicationEndAt,
+        publicationEndAt: computePublicationEndAt(input.occurrences).toISOString(),
         pendingRevision: existing.pendingRevision,
         updatedAt: new Date().toISOString()
       };

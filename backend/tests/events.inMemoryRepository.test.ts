@@ -1,12 +1,7 @@
 import { createInMemoryEventRepository } from "../src/events/inMemoryRepository";
 import type { CreateEventInput } from "../src/events/types";
 
-const payload: CreateEventInput = {
-  title: "Concert",
-  content: "Soirée",
-  image: "img",
-  categoryId: "music",
-  audienceId: "all",
+const baseOccurrence = {
   eventStartAt: "2026-01-15T20:00:00.000Z",
   eventEndAt: "2026-01-15T22:00:00.000Z",
   allDay: false,
@@ -15,7 +10,16 @@ const payload: CreateEventInput = {
   postalCode: "37160",
   city: "Descartes",
   latitude: 46.97,
-  longitude: 0.7,
+  longitude: 0.7
+};
+
+const payload: CreateEventInput = {
+  title: "Concert",
+  content: "Soirée",
+  image: "img",
+  categoryId: "music",
+  audienceId: "all",
+  occurrences: [baseOccurrence],
   organizerName: "Association",
   socialLinks: [{ type: "FACEBOOK", url: "https://facebook.com/rene" }],
   featured: false
@@ -29,6 +33,8 @@ describe("inMemoryEventRepository", () => {
     await expect(repo.list()).resolves.toEqual([created]);
     await expect(repo.getById(created.id)).resolves.toEqual(created);
     expect(created.socialLinks).toEqual([{ type: "FACEBOOK", url: "https://facebook.com/rene" }]);
+    expect(created.occurrences).toHaveLength(1);
+    expect(created.occurrences[0].city).toBe("Descartes");
   });
 
   it("updates and updates status", async () => {
@@ -41,19 +47,20 @@ describe("inMemoryEventRepository", () => {
     const statusUpdated = await repo.updateStatus(created.id, "PUBLISHED", {
       publishedAt: "2026-01-01T00:00:00.000Z",
       rejectionReason: null,
-      publicationEndAt: payload.eventEndAt as string
+      publicationEndAt: baseOccurrence.eventEndAt
     });
     expect(statusUpdated?.status).toBe("PUBLISHED");
   });
 
-  it("falls back publicationEndAt when a title-only draft has no eventEndAt", async () => {
+  it("falls back publicationEndAt to now when a title-only draft has no occurrences", async () => {
     const repo = createInMemoryEventRepository();
-    const created = await repo.create({ ...payload, eventStartAt: null, eventEndAt: null });
+    const created = await repo.create({ ...payload, occurrences: [] });
 
     expect(typeof created.publicationEndAt).toBe("string");
 
-    const updated = await repo.update(created.id, { ...payload, eventEndAt: null });
-    expect(updated?.publicationEndAt).toBe(created.publicationEndAt);
+    const updated = await repo.update(created.id, { ...payload, occurrences: [] });
+    expect(typeof updated?.publicationEndAt).toBe("string");
+    expect(Math.abs(new Date(updated!.publicationEndAt).getTime() - new Date(created.publicationEndAt).getTime())).toBeLessThan(1000);
   });
 
   it("updates featured flag on published event", async () => {
@@ -78,7 +85,7 @@ describe("inMemoryEventRepository", () => {
     const statusUpdated = await repo.updateStatus("missing", "REJECTED", {
       publishedAt: null,
       rejectionReason: "Motif",
-      publicationEndAt: payload.eventEndAt as string
+      publicationEndAt: baseOccurrence.eventEndAt
     });
 
     expect(updated).toBeNull();
@@ -119,6 +126,7 @@ describe("inMemoryEventRepository", () => {
     expect(published?.featured).toBe(false);
     expect(published?.socialLinks).toEqual([{ type: "FACEBOOK", url: "https://facebook.com/rene" }]);
     expect(published?.pendingRevision).toBeNull();
+    expect(published?.occurrences).toHaveLength(1);
   });
 
   it("stores featured flag on pending revision and preserves it across updates", async () => {

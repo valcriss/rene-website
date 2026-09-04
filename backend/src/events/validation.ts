@@ -1,4 +1,4 @@
-import { EventDraftInput, SocialLink, SocialLinkType } from "./types";
+import { EventDraftInput, EventOccurrenceInput, SocialLink, SocialLinkType } from "./types";
 import { sanitizeEventContent, sanitizeEventPricingInfo } from "./sanitize";
 
 type ValidationResult =
@@ -88,6 +88,108 @@ const normalizeSocialLinks = (value: unknown): { links?: SocialLink[]; errors: s
   return { links, errors };
 };
 
+const validateOccurrence = (
+  item: unknown,
+  index: number
+): { errors: string[]; value?: EventOccurrenceInput } => {
+  const label = `Occurrence #${index + 1}`;
+
+  if (!isRecord(item)) {
+    return { errors: [`${label} est invalide.`] };
+  }
+
+  const errors: string[] = [];
+
+  if (!isOptionalString(item.venueName)) errors.push(`${label} : le lieu doit être une chaîne.`);
+  if (!isOptionalString(item.address)) errors.push(`${label} : l'adresse doit être une chaîne.`);
+  if (!isOptionalString(item.postalCode)) errors.push(`${label} : le code postal doit être une chaîne.`);
+  if (!isOptionalString(item.city)) errors.push(`${label} : la ville doit être une chaîne.`);
+  if (!isOptionalString(item.eventStartAt)) errors.push(`${label} : la date de début doit être une chaîne.`);
+  if (!isOptionalString(item.eventEndAt)) errors.push(`${label} : la date de fin doit être une chaîne.`);
+  if (item.allDay !== undefined && item.allDay !== null && typeof item.allDay !== "boolean") {
+    errors.push(`${label} : le champ allDay doit être un booléen.`);
+  }
+
+  const latitude = item.latitude === undefined ? undefined : asNumber(item.latitude);
+  const longitude = item.longitude === undefined ? undefined : asNumber(item.longitude);
+
+  if (item.latitude !== undefined && !Number.isFinite(latitude)) {
+    errors.push(`${label} : la latitude saisie manuellement doit être un nombre.`);
+  }
+  if (item.longitude !== undefined && !Number.isFinite(longitude)) {
+    errors.push(`${label} : la longitude saisie manuellement doit être un nombre.`);
+  }
+  if (typeof latitude === "number" && Number.isFinite(latitude) && (latitude < -90 || latitude > 90)) {
+    errors.push(`${label} : la latitude saisie manuellement doit être comprise entre -90 et 90.`);
+  }
+  if (typeof longitude === "number" && Number.isFinite(longitude) && (longitude < -180 || longitude > 180)) {
+    errors.push(`${label} : la longitude saisie manuellement doit être comprise entre -180 et 180.`);
+  }
+
+  const eventStartAt = typeof item.eventStartAt === "string" ? item.eventStartAt : null;
+  const eventEndAt = typeof item.eventEndAt === "string" ? item.eventEndAt : null;
+
+  if (eventStartAt && eventStartAt.trim().length > 0 && !isValidDate(eventStartAt)) {
+    errors.push(`${label} : la date de début est invalide.`);
+  }
+  if (eventEndAt && eventEndAt.trim().length > 0 && !isValidDate(eventEndAt)) {
+    errors.push(`${label} : la date de fin est invalide.`);
+  }
+  if (
+    eventStartAt &&
+    eventEndAt &&
+    eventStartAt.trim().length > 0 &&
+    eventEndAt.trim().length > 0 &&
+    isValidDate(eventStartAt) &&
+    isValidDate(eventEndAt) &&
+    new Date(eventEndAt).getTime() < new Date(eventStartAt).getTime()
+  ) {
+    errors.push(`${label} : la date de fin doit être après la date de début.`);
+  }
+
+  if (errors.length > 0) {
+    return { errors };
+  }
+
+  return {
+    errors: [],
+    value: {
+      venueName: normalizeOptionalString(item.venueName),
+      address: normalizeOptionalString(item.address),
+      postalCode: normalizeOptionalString(item.postalCode),
+      city: normalizeOptionalString(item.city),
+      latitude: latitude ?? null,
+      longitude: longitude ?? null,
+      eventStartAt: normalizeOptionalString(item.eventStartAt),
+      eventEndAt: normalizeOptionalString(item.eventEndAt),
+      allDay: typeof item.allDay === "boolean" ? item.allDay : null
+    }
+  };
+};
+
+const normalizeOccurrences = (value: unknown): { occurrences: EventOccurrenceInput[]; errors: string[] } => {
+  if (value === undefined || value === null) {
+    return { occurrences: [], errors: [] };
+  }
+
+  if (!Array.isArray(value)) {
+    return { occurrences: [], errors: ["Les occurrences doivent être une liste."] };
+  }
+
+  const errors: string[] = [];
+  const occurrences: EventOccurrenceInput[] = [];
+
+  value.forEach((item, index) => {
+    const result = validateOccurrence(item, index);
+    errors.push(...result.errors);
+    if (result.value) {
+      occurrences.push(result.value);
+    }
+  });
+
+  return { occurrences, errors };
+};
+
 export const validateCreateEvent = (input: unknown): ValidationResult => {
   if (input === null || typeof input !== "object") {
     return { ok: false, errors: ["Le corps de la requête doit être un objet."] };
@@ -101,17 +203,8 @@ export const validateCreateEvent = (input: unknown): ValidationResult => {
   if (!isOptionalString(data.image)) errors.push("L'image doit être une chaîne.");
   if (!isOptionalString(data.categoryId)) errors.push("La catégorie doit être une chaîne.");
   if (!isOptionalString(data.audienceId)) errors.push("Le public concerné doit être une chaîne.");
-  if (!isOptionalString(data.eventStartAt)) errors.push("La date de début doit être une chaîne.");
-  if (!isOptionalString(data.eventEndAt)) errors.push("La date de fin doit être une chaîne.");
-  if (data.allDay !== undefined && data.allDay !== null && typeof data.allDay !== "boolean") {
-    errors.push("Le champ allDay doit être un booléen.");
-  }
-  if (!isOptionalString(data.postalCode)) errors.push("Le code postal doit être une chaîne.");
-  if (!isOptionalString(data.city)) errors.push("La ville doit être une chaîne.");
   if (!isOptionalString(data.organizerName)) errors.push("L'organisateur doit être une chaîne.");
 
-  if (!isOptionalString(data.venueName)) errors.push("Le lieu doit être une chaîne.");
-  if (!isOptionalString(data.address)) errors.push("L'adresse doit être une chaîne.");
   if (!isOptionalString(data.organizerUrl)) errors.push("Le site de l'organisateur doit être une chaîne.");
   if (!isOptionalString(data.contactEmail)) errors.push("L'email de contact doit être une chaîne.");
   if (!isOptionalString(data.contactPhone)) errors.push("Le téléphone de contact doit être une chaîne.");
@@ -122,49 +215,8 @@ export const validateCreateEvent = (input: unknown): ValidationResult => {
   const socialLinksResult = normalizeSocialLinks(data.socialLinks);
   errors.push(...socialLinksResult.errors);
 
-  const latitude = data.latitude === undefined ? undefined : asNumber(data.latitude);
-  const longitude = data.longitude === undefined ? undefined : asNumber(data.longitude);
-
-  if (data.latitude !== undefined && !Number.isFinite(latitude)) {
-    errors.push("La latitude saisie manuellement doit être un nombre.");
-  }
-  if (data.longitude !== undefined && !Number.isFinite(longitude)) {
-    errors.push("La longitude saisie manuellement doit être un nombre.");
-  }
-
-  if (typeof latitude === "number" && Number.isFinite(latitude) && (latitude < -90 || latitude > 90)) {
-    errors.push("La latitude saisie manuellement doit être comprise entre -90 et 90.");
-  }
-
-  if (typeof longitude === "number" && Number.isFinite(longitude) && (longitude < -180 || longitude > 180)) {
-    errors.push("La longitude saisie manuellement doit être comprise entre -180 et 180.");
-  }
-
-  const eventStartAt = typeof data.eventStartAt === "string" ? data.eventStartAt : null;
-  const eventEndAt = typeof data.eventEndAt === "string" ? data.eventEndAt : null;
-
-  if (eventStartAt && eventStartAt.trim().length > 0 && !isValidDate(eventStartAt)) {
-    errors.push("La date de début est invalide.");
-  }
-
-  if (eventEndAt && eventEndAt.trim().length > 0 && !isValidDate(eventEndAt)) {
-    errors.push("La date de fin est invalide.");
-  }
-
-  if (
-    eventStartAt &&
-    eventEndAt &&
-    eventStartAt.trim().length > 0 &&
-    eventEndAt.trim().length > 0 &&
-    isValidDate(eventStartAt) &&
-    isValidDate(eventEndAt)
-  ) {
-    const start = new Date(eventStartAt).getTime();
-    const end = new Date(eventEndAt).getTime();
-    if (end < start) {
-      errors.push("La date de fin doit être après la date de début.");
-    }
-  }
+  const occurrencesResult = normalizeOccurrences(data.occurrences);
+  errors.push(...occurrencesResult.errors);
 
   const rawSanitizedContent = typeof data.content === "string" ? sanitizeEventContent(data.content) : null;
   const sanitizedContent = rawSanitizedContent && rawSanitizedContent.trim().length > 0 ? rawSanitizedContent : null;
@@ -184,15 +236,7 @@ export const validateCreateEvent = (input: unknown): ValidationResult => {
       image: normalizeOptionalString(data.image),
       categoryId: normalizeOptionalString(data.categoryId),
       audienceId: normalizeOptionalString(data.audienceId),
-      eventStartAt: normalizeOptionalString(data.eventStartAt),
-      eventEndAt: normalizeOptionalString(data.eventEndAt),
-      allDay: typeof data.allDay === "boolean" ? data.allDay : null,
-      venueName: normalizeOptionalString(data.venueName),
-      address: normalizeOptionalString(data.address),
-      postalCode: normalizeOptionalString(data.postalCode),
-      city: normalizeOptionalString(data.city),
-      latitude,
-      longitude,
+      occurrences: occurrencesResult.occurrences,
       organizerName: normalizeOptionalString(data.organizerName),
       organizerUrl: data.organizerUrl as string | undefined,
       contactEmail: data.contactEmail as string | undefined,
@@ -205,19 +249,28 @@ export const validateCreateEvent = (input: unknown): ValidationResult => {
   };
 };
 
+export type SubmittableOccurrence = {
+  city: string | null;
+  eventStartAt: string | null;
+  eventEndAt: string | null;
+  allDay: boolean | null;
+};
+
 export type SubmittableEventFields = {
   title: string;
   content: string | null;
   image: string | null;
   categoryId: string | null;
   audienceId: string | null;
-  eventStartAt: string | null;
-  eventEndAt: string | null;
-  allDay: boolean | null;
-  postalCode: string | null;
-  city: string | null;
   organizerName: string | null;
+  occurrences: SubmittableOccurrence[];
 };
+
+const isCompleteOccurrence = (occurrence: SubmittableOccurrence) =>
+  isNonEmptyString(occurrence.city) &&
+  isNonEmptyString(occurrence.eventStartAt) &&
+  isNonEmptyString(occurrence.eventEndAt) &&
+  typeof occurrence.allDay === "boolean";
 
 export const validateEventCompleteness = (event: SubmittableEventFields): string[] => {
   const errors: string[] = [];
@@ -227,11 +280,11 @@ export const validateEventCompleteness = (event: SubmittableEventFields): string
   if (!isNonEmptyString(event.image)) errors.push("L'image est requise.");
   if (!isNonEmptyString(event.categoryId)) errors.push("La catégorie est requise.");
   if (!isNonEmptyString(event.audienceId)) errors.push("Le public concerné est requis.");
-  if (!isNonEmptyString(event.eventStartAt)) errors.push("La date de début est requise.");
-  if (!isNonEmptyString(event.eventEndAt)) errors.push("La date de fin est requise.");
-  if (typeof event.allDay !== "boolean") errors.push("Le champ allDay doit être un booléen.");
-  if (!isNonEmptyString(event.city)) errors.push("La ville est requise.");
   if (!isNonEmptyString(event.organizerName)) errors.push("L'organisateur est requis.");
+
+  if (event.occurrences.length === 0 || !event.occurrences.some(isCompleteOccurrence)) {
+    errors.push("Au moins une date et un lieu (ville) sont requis.");
+  }
 
   return errors;
 };

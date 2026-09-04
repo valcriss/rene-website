@@ -11,22 +11,32 @@ export type SocialLink = {
   url: string;
 };
 
+export type EventOccurrenceInput = {
+  venueName: string | null;
+  address: string | null;
+  postalCode: string | null;
+  city: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  geolocationPrecision?: GeolocationPrecision;
+  eventStartAt: string | null;
+  eventEndAt: string | null;
+  allDay: boolean | null;
+};
+
+export type EventOccurrence = EventOccurrenceInput & {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type EventDraftInput = {
   title: string;
   content: string | null;
   image: string | null;
   categoryId: string | null;
   audienceId: string | null;
-  eventStartAt: string | null;
-  eventEndAt: string | null;
-  allDay: boolean | null;
-  venueName: string | null;
-  address: string | null;
-  postalCode: string | null;
-  city: string | null;
-  latitude?: number | null;
-  longitude?: number | null;
-  geolocationPrecision?: GeolocationPrecision;
+  occurrences: EventOccurrenceInput[];
   organizerName: string | null;
   organizerUrl?: string;
   contactEmail?: string;
@@ -39,27 +49,26 @@ export type EventDraftInput = {
 };
 
 export type CreateEventInput = EventDraftInput & {
-  latitude: number | null;
-  longitude: number | null;
-  geolocationPrecision?: GeolocationPrecision;
   createdByUserId?: string | null;
 };
 
 export type UpdateEventInput = CreateEventInput;
 
-export type EventRevision = CreateEventInput & {
+export type EventRevision = Omit<CreateEventInput, "occurrences"> & {
   id: string;
   eventId: string;
   createdByUserId: string | null;
+  occurrences: EventOccurrence[];
   status: EventRevisionStatus;
   rejectionReason: string | null;
   createdAt: string;
   updatedAt: string;
 };
 
-export type Event = CreateEventInput & {
+export type Event = Omit<CreateEventInput, "occurrences"> & {
   id: string;
   createdByUserId: string | null;
+  occurrences: EventOccurrence[];
   status: EventStatus;
   publishedAt: string | null;
   publicationEndAt: string;

@@ -13,14 +13,8 @@ jest.mock("../src/notifications/service", () => ({
   notifyEventDeleted: jest.fn(async () => ({ ok: false, errors: ["boom"] }))
 }));
 
-const baseEvent: Event = {
-  id: "1",
-  title: "Concert",
-  content: "Texte",
-  image: "https://example.com/img.png",
-  createdByUserId: null,
-  categoryId: "music",
-  audienceId: "all",
+const baseOccurrence = {
+  id: "occ-1",
   eventStartAt: "2026-01-15T00:00:00.000Z",
   eventEndAt: "2026-01-15T23:59:59.999Z",
   allDay: true,
@@ -30,6 +24,20 @@ const baseEvent: Event = {
   city: "Descartes",
   latitude: 46.97,
   longitude: 0.7,
+  geolocationPrecision: "EXACT" as const,
+  createdAt: "2026-01-01T00:00:00.000Z",
+  updatedAt: "2026-01-01T00:00:00.000Z"
+};
+
+const baseEvent: Event = {
+  id: "1",
+  title: "Concert",
+  content: "Texte",
+  image: "https://example.com/img.png",
+  createdByUserId: null,
+  categoryId: "music",
+  audienceId: "all",
+  occurrences: [baseOccurrence],
   organizerName: "Association",
   featured: false,
   status: "DRAFT",
