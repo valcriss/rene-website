@@ -84,14 +84,20 @@
                   </div>
                 </div>
 
-                <div class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                  <div class="rounded-[1.5rem] border border-sky-100 bg-sky-50/60 p-4">
-                    <p class="text-xs font-semibold uppercase tracking-[0.22em] text-sky-700/70">{{ t("detail.when") }}</p>
-                    <p class="mt-2 text-sm leading-6 text-slate-700">{{ formatDateTimeRange(detailEvent.eventStartAt, detailEvent.eventEndAt) }}</p>
+                <div class="mt-6 grid gap-4 sm:grid-cols-2">
+                  <div class="rounded-[1.5rem] bg-gradient-to-br from-slate-900 to-sky-800 p-5 text-white shadow-sm shadow-slate-900/20">
+                    <p class="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-white/75">
+                      <font-awesome-icon class="h-3.5 w-3.5" :icon="faClock" />
+                      {{ t("detail.when") }}
+                    </p>
+                    <p class="mt-2 text-base font-semibold leading-6">{{ formatDateTimeRange(detailEvent.eventStartAt, detailEvent.eventEndAt) }}</p>
                   </div>
-                  <div class="rounded-[1.5rem] border border-sky-100 bg-sky-50/60 p-4">
-                    <p class="text-xs font-semibold uppercase tracking-[0.22em] text-sky-700/70">{{ t("detail.where") }}</p>
-                    <p class="mt-2 text-sm leading-6 text-slate-700">{{ detailLocationLabel }}</p>
+                  <div class="rounded-[1.5rem] bg-gradient-to-br from-slate-900 to-sky-800 p-5 text-white shadow-sm shadow-slate-900/20">
+                    <p class="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-white/75">
+                      <font-awesome-icon class="h-3.5 w-3.5" :icon="faLocationDot" />
+                      {{ t("detail.where") }}
+                    </p>
+                    <p class="mt-2 text-base font-semibold leading-6">{{ detailLocationLabel }}</p>
                   </div>
                   <div class="rounded-[1.5rem] border border-sky-100 bg-sky-50/60 p-4">
                     <p class="text-xs font-semibold uppercase tracking-[0.22em] text-sky-700/70">{{ t("common.category") }}</p>
@@ -101,6 +107,15 @@
                     <p class="text-xs font-semibold uppercase tracking-[0.22em] text-sky-700/70">{{ t("common.audience") }}</p>
                     <p class="mt-2 text-sm leading-6 text-slate-700">{{ audienceName || t("common.notProvided") }}</p>
                   </div>
+                </div>
+
+                <div v-if="sanitizedPricingInfo" class="mt-4 rounded-[1.5rem] border border-amber-200 bg-amber-50/70 p-5">
+                  <p class="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-amber-800">
+                    <font-awesome-icon class="h-3.5 w-3.5" :icon="faTicket" />
+                    {{ t("detail.pricingInfo") }}
+                  </p>
+                  <!-- eslint-disable-next-line vue/no-v-html -->
+                  <div class="prose prose-slate mt-3 max-w-none text-sm prose-p:my-2 prose-p:text-slate-700 prose-ul:my-2 prose-ol:my-2 prose-li:my-1 prose-a:text-amber-800 prose-strong:text-slate-900" v-html="sanitizedPricingInfo"></div>
                 </div>
 
                 <!-- eslint-disable-next-line vue/no-v-html -->
@@ -150,8 +165,11 @@
                 <h2 class="font-display mt-2 text-2xl font-semibold tracking-tight text-slate-950">{{ t("detail.practicalTitle") }}</h2>
 
                 <div class="mt-6 flex-1 space-y-5 text-sm text-slate-600">
-                  <div class="space-y-2">
-                    <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">{{ t("detail.venueAccess") }}</p>
+                  <div class="space-y-2 rounded-[1.5rem] border border-sky-200 bg-sky-50/70 p-4">
+                    <p class="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-sky-700">
+                      <font-awesome-icon class="h-3.5 w-3.5" :icon="faLocationDot" />
+                      {{ t("detail.venueAccess") }}
+                    </p>
                     <p class="flex items-center gap-3">
                       <font-awesome-icon class="h-4 w-4 text-sky-700" :icon="faLocationDot" />
                       <span><span class="font-medium text-slate-700">{{ t("common.address") }}:</span> {{ optionalAddress }}</span>
@@ -196,11 +214,6 @@
                       <font-awesome-icon class="h-4 w-4 text-sky-700" :icon="faArrowUpRightFromSquare" />
                       <span><span class="font-medium text-slate-700">{{ t("common.website") }}:</span> {{ formatOptional(detailEvent.websiteUrl) }}</span>
                     </p>
-                    <div v-if="sanitizedPricingInfo" class="rounded-[1.25rem] border border-sky-100 bg-sky-50/50 px-4 py-4">
-                      <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">{{ t("detail.pricingInfo") }}</p>
-                      <!-- eslint-disable-next-line vue/no-v-html -->
-                      <div class="prose prose-slate mt-3 max-w-none text-sm prose-p:my-2 prose-p:text-slate-600 prose-ul:my-2 prose-ol:my-2 prose-li:my-1 prose-a:text-sky-700 prose-strong:text-slate-900" v-html="sanitizedPricingInfo"></div>
-                    </div>
                   </div>
                 </div>
 
@@ -249,6 +262,7 @@ import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import {
   faArrowUpRightFromSquare,
   faCalendarPlus,
+  faClock,
   faEnvelope,
   faGlobe,
   faLocationDot,
