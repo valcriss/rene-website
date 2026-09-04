@@ -67,7 +67,7 @@
 
             <div class="max-w-2xl space-y-4 rounded-[1.5rem] border border-white/10 bg-slate-950/28 p-5 backdrop-blur-md sm:p-6">
               <p class="text-sm font-medium uppercase tracking-[0.28em] text-white/88 [text-shadow:0_1px_10px_rgba(15,23,42,0.8)]">
-                {{ currentCarouselEvent.venueName }} · {{ currentCarouselEvent.city }}
+                {{ getEventLocationLabel(currentCarouselEvent, currentCarouselEvent.city) }}
               </p>
               <h2 class="font-display max-w-2xl text-4xl font-semibold leading-tight tracking-tight text-white [text-shadow:0_4px_18px_rgba(15,23,42,0.82)] sm:text-5xl">
                 {{ currentCarouselEvent.title }}
@@ -215,7 +215,7 @@
                 <div class="space-y-4 p-5 sm:p-6">
                   <div class="space-y-3">
                     <p class="text-sm font-medium uppercase tracking-[0.22em] text-sky-700/80">
-                      {{ eventItem.venueName }} · {{ eventItem.city }}
+                      {{ getEventLocationLabel(eventItem, eventItem.city) }}
                     </p>
                     <h4 class="font-display text-2xl font-semibold leading-tight text-slate-950">
                       {{ eventItem.title }}
@@ -269,6 +269,7 @@ import { useAuthStore } from "../stores/auth";
 import { useAudiencesStore } from "../stores/audiences";
 import { useCategoriesStore } from "../stores/categories";
 import { useEventsStore } from "../stores/events";
+import { getEventLocationLabel } from "../utils/eventLocation";
 
 type CategoryTheme = {
   backgroundColor: string;

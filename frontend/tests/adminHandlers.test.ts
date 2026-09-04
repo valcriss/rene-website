@@ -46,10 +46,12 @@ vi.mock("../src/api/admin", () => ({
 }));
 
 describe("admin handlers", () => {
+  const mountedWrappers: Array<ReturnType<typeof mount>> = [];
   const mountWithRouter = async (path = "/login") => {
     const router = createTestRouter(path);
     await router.isReady();
     const wrapper = mount(App, { global: { plugins: [createPinia(), router] } });
+    mountedWrappers.push(wrapper);
     return { wrapper, router };
   };
   const goToAdminUsers = async (router: ReturnType<typeof createTestRouter>) => {
@@ -110,6 +112,7 @@ describe("admin handlers", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    mountedWrappers.splice(0).forEach((wrapper) => wrapper.unmount());
   });
 
   it("resets admin user form from edit mode", async () => {

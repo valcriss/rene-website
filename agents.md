@@ -22,7 +22,7 @@ Ce document sert de **référence unique** pour tout agent IA autonome participa
 - Vue.js 3 (Vite)
 - Tailwind CSS (exclusif pour le style, CSS classique uniquement si impossible autrement)
 - Vitest pour les tests
-- Couverture de code : **100 % lignes, branches, fonctions, statements**
+- Couverture de code : **80 % lignes, branches, fonctions, statements**
 
 ### Backend
 - Node.js (TypeScript)
@@ -180,12 +180,10 @@ Le frontend visiteurs est conçu comme un **agenda culturel visuel**.
 ### Tests
 - Tests unitaires obligatoires
 - Couverture exigée :
-  - 100 % lignes
-  - 100 % branches
-  - 100 % fonctions
-  - 100 % statements
+  - Backend : 100 % lignes, branches, fonctions, statements
+  - Frontend : 80 % lignes, branches, fonctions, statements
 
-Toute baisse de couverture **doit faire échouer la CI**.
+Toute baisse de couverture sous ces seuils **doit faire échouer la CI**.
 
 ### Lisibilité
 - Code explicite

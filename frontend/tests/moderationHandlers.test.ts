@@ -24,10 +24,12 @@ vi.mock("../src/api/moderation", () => ({
 }));
 
 describe("moderation handlers", () => {
+  const mountedWrappers: Array<ReturnType<typeof mount>> = [];
   const mountWithRouter = async (path = "/login") => {
     const router = createTestRouter(path);
     await router.isReady();
     const wrapper = mount(App, { global: { plugins: [createPinia(), router] } });
+    mountedWrappers.push(wrapper);
     return { wrapper, router };
   };
   type Exposed = {
@@ -49,6 +51,7 @@ describe("moderation handlers", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    mountedWrappers.splice(0).forEach((wrapper) => wrapper.unmount());
   });
 
   it("does nothing when role is not moderator", async () => {

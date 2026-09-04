@@ -78,6 +78,19 @@ describe("events store", () => {
     expect(url).toContain("DTEND;VALUE=DATE:20260116");
   });
 
+  it("builds citywide directions and calendar urls without venue", () => {
+    const store = useEventsStore();
+    const citywideEvent = buildEvent({
+      venueName: "",
+      address: "",
+      postalCode: "37160",
+      city: "Descartes"
+    });
+
+    expect(decodeURIComponent(store.buildDirectionsUrl(citywideEvent))).toContain("destination=37160, Descartes");
+    expect(decodeURIComponent(store.buildCalendarUrl(citywideEvent))).toContain("LOCATION:37160, Descartes");
+  });
+
   it("formats datetime input with fallback", () => {
     const store = useEventsStore();
 

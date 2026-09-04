@@ -29,6 +29,8 @@ const defaultEditorForm = (): CreateEventPayload => ({
   socialLinks: []
 });
 
+const trimText = (value: string) => value.trim();
+
 const defaultSocialLink = (): SocialLink => ({
   type: "FACEBOOK",
   url: ""
@@ -145,6 +147,10 @@ export const useEditorStore = defineStore("editor", () => {
     eventStartAt: normalizeDateBoundary(editorForm.eventStartAt, false),
     eventEndAt: normalizeDateBoundary(editorForm.eventEndAt, true),
     allDay: true,
+    venueName: trimText(editorForm.venueName),
+    address: trimText(editorForm.address),
+    postalCode: trimText(editorForm.postalCode),
+    city: trimText(editorForm.city),
     organizerUrl: editorForm.organizerUrl || undefined,
     contactEmail: editorForm.contactEmail || undefined,
     contactPhone: editorForm.contactPhone || undefined,
@@ -168,10 +174,10 @@ export const useEditorStore = defineStore("editor", () => {
     eventEndAt:
       normalizeDateBoundary(editorForm.eventEndAt || editorForm.eventStartAt, true) || new Date().toISOString(),
     allDay: true,
-    venueName: editorForm.venueName || "Lieu à confirmer",
-    address: editorForm.address,
-    postalCode: editorForm.postalCode,
-    city: editorForm.city || "Descartes",
+    venueName: trimText(editorForm.venueName),
+    address: trimText(editorForm.address),
+    postalCode: trimText(editorForm.postalCode),
+    city: trimText(editorForm.city) || "Descartes",
     latitude: 46.97,
     longitude: 0.7,
     organizerName: editorForm.organizerName,

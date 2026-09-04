@@ -11,6 +11,7 @@ import {
   formatUpdatedAtLabel,
   formatOptional
 } from "../utils/formatters";
+import { getEventCalendarLocation, getEventDirectionsQuery } from "../utils/eventLocation";
 import { useAuthStore } from "./auth";
 
 const pad = (value: number) => value.toString().padStart(2, "0");
@@ -335,7 +336,7 @@ export const useEventsStore = defineStore("events", () => {
   };
 
   const buildDirectionsUrl = (eventItem: EventItem) => {
-    const destination = encodeURIComponent(`${eventItem.venueName}, ${eventItem.city}`);
+    const destination = encodeURIComponent(getEventDirectionsQuery(eventItem, eventItem.city));
     return `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
   };
 
@@ -369,7 +370,7 @@ export const useEventsStore = defineStore("events", () => {
       `DTSTART;VALUE=DATE:${toIcsDateValue(eventItem.eventStartAt)}`,
       `DTEND;VALUE=DATE:${toIcsDateValue(addDays(eventItem.eventEndAt, 1))}`,
       `SUMMARY:${eventItem.title}`,
-      `LOCATION:${eventItem.venueName} - ${eventItem.city}`,
+      `LOCATION:${getEventCalendarLocation(eventItem, eventItem.city)}`,
       "END:VEVENT",
       "END:VCALENDAR"
     ];

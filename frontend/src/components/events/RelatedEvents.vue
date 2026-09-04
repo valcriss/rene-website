@@ -44,7 +44,7 @@
 
         <div class="space-y-3 p-5">
           <p class="text-xs font-semibold uppercase tracking-[0.22em] text-sky-700/75">
-            {{ eventItem.venueName }} · {{ eventItem.city }}
+            {{ getEventLocationLabel(eventItem, eventItem.city) }}
           </p>
           <h3 class="font-display text-2xl font-semibold leading-tight text-slate-950">
             {{ eventItem.title }}
@@ -70,6 +70,7 @@ import { storeToRefs } from "pinia";
 import type { EventItem } from "../../api/events";
 import { useCategoriesStore } from "../../stores/categories";
 import { useEventsStore } from "../../stores/events";
+import { getEventLocationLabel } from "../../utils/eventLocation";
 
 type CategoryTheme = {
   backgroundColor: string;

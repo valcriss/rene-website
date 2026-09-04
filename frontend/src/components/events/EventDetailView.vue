@@ -58,7 +58,7 @@
                 </div>
                 <div class="mt-5 max-w-3xl space-y-4 rounded-[1.5rem] border border-white/10 bg-slate-950/28 p-5 backdrop-blur-md sm:p-6">
                   <p class="text-sm font-medium uppercase tracking-[0.28em] text-white/88 [text-shadow:0_1px_10px_rgba(15,23,42,0.8)]">
-                    {{ detailEvent.venueName }} · {{ detailEvent.city }}
+                    {{ detailLocationLabel }}
                   </p>
                   <h1 class="font-display text-4xl font-semibold leading-tight tracking-tight text-white [text-shadow:0_4px_18px_rgba(15,23,42,0.82)] sm:text-5xl">
                     {{ detailEvent.title }}
@@ -80,7 +80,7 @@
                     </p>
                   </div>
                   <div class="rounded-full border border-sky-100 bg-sky-50/70 px-4 py-2 text-sm font-medium text-sky-900">
-                    {{ detailEvent.venueName }} · {{ detailEvent.city }}
+                    {{ detailLocationLabel }}
                   </div>
                 </div>
 
@@ -91,7 +91,7 @@
                   </div>
                   <div class="rounded-[1.5rem] border border-sky-100 bg-sky-50/60 p-4">
                     <p class="text-xs font-semibold uppercase tracking-[0.22em] text-sky-700/70">{{ t("detail.where") }}</p>
-                    <p class="mt-2 text-sm leading-6 text-slate-700">{{ detailEvent.venueName }} · {{ detailEvent.city }}</p>
+                    <p class="mt-2 text-sm leading-6 text-slate-700">{{ detailLocationLabel }}</p>
                   </div>
                   <div class="rounded-[1.5rem] border border-sky-100 bg-sky-50/60 p-4">
                     <p class="text-xs font-semibold uppercase tracking-[0.22em] text-sky-700/70">{{ t("common.category") }}</p>
@@ -136,7 +136,7 @@
                     <p class="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700/75">{{ t("detail.mapEyebrow") }}</p>
                     <h2 class="font-display mt-2 text-xl font-semibold tracking-tight text-slate-950">{{ t("detail.mapTitle") }}</h2>
                   </div>
-                  <p class="text-sm text-slate-500">{{ detailEvent.venueName }} · {{ detailEvent.city }}</p>
+                  <p class="text-sm text-slate-500">{{ detailLocationLabel }}</p>
                 </div>
                 <div class="mt-5">
                   <EventMap :events="[detailEvent]" :selected-id="detailEvent.id" @select="emitSelect" />
@@ -264,6 +264,7 @@ import type { EventItem, SocialLinkType } from "../../api/events";
 import { useAudiencesStore } from "../../stores/audiences";
 import { useCategoriesStore } from "../../stores/categories";
 import { useEventsStore } from "../../stores/events";
+import { getEventAddressLabel, getEventLocationLabel } from "../../utils/eventLocation";
 
 type CategoryTheme = {
   backgroundColor: string;
@@ -324,15 +325,15 @@ const sanitizedPricingInfo = computed(() => {
 
 const detailUpdatedAtLabel = computed(() => formatUpdatedAtLabel(detailEvent.value?.updatedAt));
 
+const detailLocationLabel = computed(() =>
+  detailEvent.value ? getEventLocationLabel(detailEvent.value, t("common.notProvided")) : ""
+);
+
 const optionalAddress = computed(() => {
   if (!detailEvent.value) {
     return "";
   }
-  const address = formatOptional(detailEvent.value.address);
-  if (address === t("common.notProvided")) {
-    return `${detailEvent.value.venueName} · ${detailEvent.value.city}`;
-  }
-  return address;
+  return getEventAddressLabel(detailEvent.value, t("common.notProvided"));
 });
 
 const categoryName = computed(() => {

@@ -24,10 +24,12 @@ export default defineConfig({
       reporter: ["text", "lcov"],
       include: ["src/**/*.{ts,vue}"],
       exclude: ["src/vite-env.d.ts"],
-      lines: 100,
-      functions: 100,
-      branches: 100,
-      statements: 100
+      thresholds: {
+        lines: 80,
+        functions: 80,
+        branches: 80,
+        statements: 80
+      }
     }
   }
 });

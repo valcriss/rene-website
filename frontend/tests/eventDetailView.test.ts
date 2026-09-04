@@ -204,4 +204,52 @@ describe("EventDetailView", () => {
     expect(wrapper.find("[data-testid='detail-social-links']").exists()).toBe(true);
     expect(wrapper.find("a[title='Facebook']").attributes("href")).toBe("https://facebook.com/rene");
   });
+
+  it("renders citywide events without an empty venue separator", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const categoriesStore = useCategoriesStore();
+    categoriesStore.categories = [{ id: "music", name: "Musique", createdAt: "", updatedAt: "" }];
+
+    const wrapper = mount(EventDetailView, {
+      props: {
+        eventId: "1",
+        event: {
+          id: "1",
+          title: "Parcours en ville",
+          content: "<p>Texte</p>",
+          image: "img",
+          categoryId: "music",
+          eventStartAt: "2026-01-15T20:00:00.000Z",
+          eventEndAt: "2026-01-15T22:00:00.000Z",
+          allDay: false,
+          venueName: "",
+          address: "",
+          postalCode: "37160",
+          city: "Descartes",
+          latitude: 46.97,
+          longitude: 0.7,
+          organizerName: "Org",
+          status: "PUBLISHED",
+          publishedAt: null,
+          publicationEndAt: "2026-01-15T22:00:00.000Z",
+          rejectionReason: null,
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z"
+        }
+      },
+      global: {
+        plugins: [pinia],
+        stubs: {
+          EventMap: { template: "<div></div>" }
+        }
+      }
+    });
+
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.text()).toContain("Descartes");
+    expect(wrapper.text()).not.toContain("· Descartes");
+    expect(wrapper.find("a[href*='destination=37160%2C%20Descartes']").exists()).toBe(true);
+  });
 });

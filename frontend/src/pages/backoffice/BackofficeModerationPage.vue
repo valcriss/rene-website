@@ -69,7 +69,7 @@
               </div>
               <h4 class="mt-3 text-lg font-semibold text-slate-950">{{ eventItem.title }}</h4>
               <p class="mt-2 text-sm text-slate-600">
-                {{ eventItem.venueName }} · {{ eventItem.city }}
+                {{ formatEventLocation(eventItem) }}
               </p>
               <p class="mt-4 text-sm leading-6 text-slate-500">
                 {{ t("moderation.cardLead") }}
@@ -130,8 +130,10 @@
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
+import type { EventItem } from "../../api/events";
 import { useAuthStore } from "../../stores/auth";
 import { useEventsStore } from "../../stores/events";
+import { getEventLocationLabel } from "../../utils/eventLocation";
 
 const authStore = useAuthStore();
 const eventsStore = useEventsStore();
@@ -141,6 +143,7 @@ const { t } = useI18n();
 const { canModerate } = storeToRefs(authStore);
 const { pendingEvents, rejectionReasons, moderationError, featuredEventIds } = storeToRefs(eventsStore);
 const { handlePublish, handleReject, formatDate, setFeaturedEvent } = eventsStore;
+const formatEventLocation = (eventItem: EventItem) => getEventLocationLabel(eventItem, eventItem.city);
 
 const openModerationView = (id: string) => {
   router.push(`/backoffice/moderation/view/${id}`);

@@ -160,6 +160,7 @@
           <section class="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-[0_24px_60px_-40px_rgba(15,23,42,0.22)]">
             <p class="text-xs uppercase tracking-[0.3em] text-slate-500">{{ t("editor.locationEyebrow") }}</p>
             <h3 class="mt-2 text-lg font-semibold text-slate-950">{{ t("editor.locationTitle") }}</h3>
+            <p class="mt-2 text-sm leading-6 text-slate-500">{{ t("editor.locationLead") }}</p>
             <div class="mt-5 grid gap-4 md:grid-cols-2">
               <label class="text-sm text-slate-600 md:col-span-2">
                 {{ t("common.venue") }}

@@ -103,7 +103,7 @@
                     </span>
                   </div>
                   <h4 class="mt-3 text-lg font-semibold text-slate-950">{{ eventItem.title }}</h4>
-                  <p class="mt-2 text-sm text-slate-600">{{ eventItem.venueName }} · {{ eventItem.city }}</p>
+                  <p class="mt-2 text-sm text-slate-600">{{ formatEventLocation(eventItem) }}</p>
                   <p v-if="formatUpdatedAtLabel(eventItem.updatedAt)" class="mt-2 text-xs text-slate-400">
                     {{ formatUpdatedAtLabel(eventItem.updatedAt) }}
                   </p>
@@ -192,7 +192,7 @@
                     </span>
                   </div>
                   <h4 class="mt-3 text-lg font-semibold text-slate-950">{{ eventItem.title }}</h4>
-                  <p class="mt-2 text-sm text-slate-600">{{ eventItem.venueName }} · {{ eventItem.city }}</p>
+                  <p class="mt-2 text-sm text-slate-600">{{ formatEventLocation(eventItem) }}</p>
                   <p v-if="formatUpdatedAtLabel(eventItem.updatedAt)" class="mt-2 text-xs text-slate-400">
                     {{ formatUpdatedAtLabel(eventItem.updatedAt) }}
                   </p>
@@ -275,7 +275,7 @@
                     </span>
                   </div>
                   <h4 class="mt-3 text-lg font-semibold text-slate-950">{{ eventItem.title }}</h4>
-                  <p class="mt-2 text-sm text-slate-600">{{ eventItem.venueName }} · {{ eventItem.city }}</p>
+                  <p class="mt-2 text-sm text-slate-600">{{ formatEventLocation(eventItem) }}</p>
                   <p v-if="formatUpdatedAtLabel(eventItem.updatedAt)" class="mt-2 text-xs text-slate-400">
                     {{ formatUpdatedAtLabel(eventItem.updatedAt) }}
                   </p>
@@ -378,7 +378,7 @@
                     </span>
                   </div>
                   <h4 class="mt-3 text-lg font-semibold text-slate-950">{{ eventItem.title }}</h4>
-                  <p class="mt-2 text-sm text-slate-600">{{ eventItem.venueName }} · {{ eventItem.city }}</p>
+                  <p class="mt-2 text-sm text-slate-600">{{ formatEventLocation(eventItem) }}</p>
                   <p v-if="formatUpdatedAtLabel(eventItem.updatedAt)" class="mt-2 text-xs text-slate-400">
                     {{ formatUpdatedAtLabel(eventItem.updatedAt) }}
                   </p>
@@ -485,6 +485,7 @@ import { useAuthStore } from "../../stores/auth";
 import { useEditorStore } from "../../stores/editor";
 import { useEventsStore } from "../../stores/events";
 import type { EventItem } from "../../api/events";
+import { getEventLocationLabel } from "../../utils/eventLocation";
 
 const router = useRouter();
 const route = useRoute();
@@ -531,6 +532,7 @@ const isEditLocked = (eventItem: EventItem) =>
   eventItem.status === "PENDING" || eventItem.pendingRevision?.status === "PENDING";
 
 const canEditEvent = (eventItem: EventItem) => !isEditLocked(eventItem);
+const formatEventLocation = (eventItem: EventItem) => getEventLocationLabel(eventItem, eventItem.city);
 
 const lastEditableEvent = computed(
   () =>

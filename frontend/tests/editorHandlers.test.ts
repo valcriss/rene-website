@@ -32,10 +32,12 @@ vi.mock("../src/api/events", async () => {
 });
 
 describe("editor handlers", () => {
+  const mountedWrappers: Array<ReturnType<typeof mount>> = [];
   const mountWithRouter = async (path = "/login") => {
     const router = createTestRouter(path);
     await router.isReady();
     const wrapper = mount(App, { global: { plugins: [createPinia(), router] } });
+    mountedWrappers.push(wrapper);
     return { wrapper, router };
   };
   const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -98,6 +100,7 @@ describe("editor handlers", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    mountedWrappers.splice(0).forEach((wrapper) => wrapper.unmount());
   });
 
   it("does not submit when no target id", async () => {

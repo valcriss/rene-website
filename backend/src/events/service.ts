@@ -9,7 +9,7 @@ type ServiceResult<T> =
   | { ok: true; value: T }
   | { ok: false; errors: string[] };
 
-const missingCoordinatesError = "L'adresse doit être corrigée avant la soumission à modération.";
+const missingCoordinatesError = "La localisation doit être corrigée avant la soumission à modération.";
 const pendingEditionError = "L'événement ne peut pas être modifié tant qu'il est en attente de modération.";
 const invalidFeaturedError = "La mise en avant doit être un booléen.";
 const deleteForbiddenError = "Suppression non autorisée.";

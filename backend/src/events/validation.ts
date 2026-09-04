@@ -7,6 +7,7 @@ type ValidationResult =
 
 const isNonEmptyString = (value: unknown) => typeof value === "string" && value.trim().length > 0;
 const isOptionalString = (value: unknown) => value === undefined || value === null || typeof value === "string";
+const normalizeOptionalString = (value: unknown) => (typeof value === "string" ? value.trim() : "");
 
 const isValidDate = (value: string) => {
   const date = new Date(value);
@@ -97,12 +98,11 @@ export const validateCreateEvent = (input: unknown): ValidationResult => {
   if (!isNonEmptyString(data.eventStartAt)) errors.push("La date de début est requise.");
   if (!isNonEmptyString(data.eventEndAt)) errors.push("La date de fin est requise.");
   if (typeof data.allDay !== "boolean") errors.push("Le champ allDay doit être un booléen.");
-  if (!isNonEmptyString(data.venueName)) errors.push("Le lieu est requis.");
-  if (!isNonEmptyString(data.address)) errors.push("L'adresse est requise.");
   if (!isNonEmptyString(data.postalCode)) errors.push("Le code postal est requis.");
   if (!isNonEmptyString(data.city)) errors.push("La ville est requise.");
   if (!isNonEmptyString(data.organizerName)) errors.push("L'organisateur est requis.");
 
+  if (!isOptionalString(data.venueName)) errors.push("Le lieu doit être une chaîne.");
   if (!isOptionalString(data.address)) errors.push("L'adresse doit être une chaîne.");
   if (!isOptionalString(data.organizerUrl)) errors.push("Le site de l'organisateur doit être une chaîne.");
   if (!isOptionalString(data.contactEmail)) errors.push("L'email de contact doit être une chaîne.");
@@ -177,10 +177,10 @@ export const validateCreateEvent = (input: unknown): ValidationResult => {
       eventStartAt: data.eventStartAt as string,
       eventEndAt: data.eventEndAt as string,
       allDay: data.allDay as boolean,
-      venueName: data.venueName as string,
-      address: data.address as string,
-      postalCode: data.postalCode as string,
-      city: data.city as string,
+      venueName: normalizeOptionalString(data.venueName),
+      address: normalizeOptionalString(data.address),
+      postalCode: (data.postalCode as string).trim(),
+      city: (data.city as string).trim(),
       latitude,
       longitude,
       organizerName: data.organizerName as string,

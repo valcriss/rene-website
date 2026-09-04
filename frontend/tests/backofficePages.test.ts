@@ -354,10 +354,10 @@ describe("BackofficeEventsPage", () => {
     });
 
     expect(
-      screen.getByText(/Le brouillon a été enregistré, mais l'adresse n'a pas pu être localisée/i)
+      screen.getByText(/Le brouillon a été enregistré, mais la localisation n'a pas pu être retrouvée/i)
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/Cette fiche ne peut pas être soumise tant que l'adresse n'a pas été correctement localisée/i)
+      screen.getByText(/Cette fiche ne peut pas être soumise tant que la localisation n'a pas été correctement retrouvée/i)
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Soumettre" })).toBeDisabled();
     expect(submitSpy).not.toHaveBeenCalled();
@@ -382,7 +382,7 @@ describe("BackofficeEventsPage", () => {
       screen.getByText(/Le brouillon a été enregistré avec une localisation approximative/i)
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/L'adresse exacte n'a pas été géolocalisée/i)
+      screen.getByText(/Le lieu précis n'a pas été géolocalisé/i)
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Soumettre" })).not.toBeDisabled();
 
@@ -396,7 +396,7 @@ describe("BackofficeEventsPage", () => {
     const eventsStore = useEventsStore(pinia);
     const editorStore = useEditorStore(pinia);
     eventsStore.events = [buildEvent({ id: "1", status: "DRAFT" })];
-    editorStore.editorError = "L'adresse doit être corrigée avant la soumission à modération.";
+    editorStore.editorError = "La localisation doit être corrigée avant la soumission à modération.";
 
     render(BackofficeEventsPage, {
       global: {
@@ -404,7 +404,7 @@ describe("BackofficeEventsPage", () => {
       }
     });
 
-    expect(screen.getByText(/L'adresse doit être corrigée avant la soumission à modération/i)).toBeInTheDocument();
+    expect(screen.getByText(/La localisation doit être corrigée avant la soumission à modération/i)).toBeInTheDocument();
   });
 
   it("keeps edit, submit and delete actions in the other articles section", async () => {

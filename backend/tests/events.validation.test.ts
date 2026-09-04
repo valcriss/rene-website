@@ -49,9 +49,37 @@ describe("validateCreateEvent", () => {
           "Le titre est requis.",
           "Le contenu est requis.",
           "Le public concerné est requis.",
-          "L'adresse est requise."
+          "La ville est requise."
         ])
       );
+    }
+  });
+
+  it("accepts citywide payloads without venue and address", () => {
+    const result = validateCreateEvent({
+      ...validPayload,
+      venueName: "",
+      address: ""
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.venueName).toBe("");
+      expect(result.value.address).toBe("");
+    }
+  });
+
+  it("normalizes null venue and address to empty strings", () => {
+    const result = validateCreateEvent({
+      ...validPayload,
+      venueName: null,
+      address: null
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.venueName).toBe("");
+      expect(result.value.address).toBe("");
     }
   });
 
@@ -138,6 +166,7 @@ describe("validateCreateEvent", () => {
   it("returns errors for optional fields types", () => {
     const result = validateCreateEvent({
       ...validPayload,
+      venueName: 12,
       address: 123,
       organizerUrl: 456,
       contactEmail: 789,
@@ -150,6 +179,7 @@ describe("validateCreateEvent", () => {
     if (!result.ok) {
       expect(result.errors).toEqual(
         expect.arrayContaining([
+          "Le lieu doit être une chaîne.",
           "L'adresse doit être une chaîne.",
           "Le site de l'organisateur doit être une chaîne.",
           "L'email de contact doit être une chaîne.",

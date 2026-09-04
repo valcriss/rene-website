@@ -481,7 +481,7 @@ describe("event services", () => {
     const result = await submitEvent(repo, "id");
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.errors).toContain("L'adresse doit être corrigée avant la soumission à modération.");
+      expect(result.errors).toContain("La localisation doit être corrigée avant la soumission à modération.");
     }
   });
 
@@ -490,7 +490,7 @@ describe("event services", () => {
     const result = await submitEvent(repo, "id");
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.errors).toContain("L'adresse doit être corrigée avant la soumission à modération.");
+      expect(result.errors).toContain("La localisation doit être corrigée avant la soumission à modération.");
     }
   });
 
@@ -513,7 +513,7 @@ describe("event services", () => {
     const result = await submitEvent(repo, "id");
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.errors).toContain("L'adresse doit être corrigée avant la soumission à modération.");
+      expect(result.errors).toContain("La localisation doit être corrigée avant la soumission à modération.");
     }
   });
 

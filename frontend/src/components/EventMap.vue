@@ -9,6 +9,7 @@ import { onMounted, onBeforeUnmount, ref, watch } from "vue";
 import * as L from "leaflet";
 import type { EventItem } from "../api/events";
 import { formatDateRange } from "../utils/formatters";
+import { getEventLocationLabel } from "../utils/eventLocation";
 
 const props = defineProps<{ events: EventItem[]; selectedId?: string | null }>();
 const emit = defineEmits<{ (event: "select", id: string): void }>();
@@ -33,7 +34,7 @@ const updateMarkers = (items: EventItem[]) => {
 
   items.filter(hasCoordinates).forEach((event) => {
     const marker = L.marker([event.latitude, event.longitude]);
-    marker.bindPopup(`<strong>${event.title}</strong><br/>${event.venueName}`);
+    marker.bindPopup(`<strong>${event.title}</strong><br/>${getEventLocationLabel(event, event.city)}`);
     marker.bindTooltip(`<strong>${event.title}</strong><br/>${formatDateRange(event.eventStartAt, event.eventEndAt)}`);
     marker.on("click", () => emit("select", event.id));
     marker.addTo(markersLayer.value as L.LayerGroup);

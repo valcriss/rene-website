@@ -219,13 +219,13 @@ export const messages = {
       noDrafts: "Aucun brouillon ou retour \u00e0 traiter.",
       submit: "Soumettre",
       locationSavedAsDraft:
-        "Le brouillon a \u00e9t\u00e9 enregistr\u00e9, mais l'adresse n'a pas pu \u00eatre localis\u00e9e. Corrigez-la avant la soumission \u00e0 mod\u00e9ration.",
+        "Le brouillon a \u00e9t\u00e9 enregistr\u00e9, mais la localisation n'a pas pu \u00eatre retrouv\u00e9e. Corrigez-la avant la soumission \u00e0 mod\u00e9ration.",
       locationSavedAsApproximate:
-        "Le brouillon a \u00e9t\u00e9 enregistr\u00e9 avec une localisation approximative. L'adresse exacte n'a pas \u00e9t\u00e9 retrouv\u00e9e, mais vous pouvez quand m\u00eame le soumettre \u00e0 mod\u00e9ration.",
+        "Le brouillon a \u00e9t\u00e9 enregistr\u00e9 avec une localisation approximative. Le lieu pr\u00e9cis n'a pas \u00e9t\u00e9 retrouv\u00e9, mais vous pouvez quand m\u00eame le soumettre \u00e0 mod\u00e9ration.",
       locationNeedsReview:
-        "Cette fiche ne peut pas \u00eatre soumise tant que l'adresse n'a pas \u00e9t\u00e9 correctement localis\u00e9e.",
+        "Cette fiche ne peut pas \u00eatre soumise tant que la localisation n'a pas \u00e9t\u00e9 correctement retrouv\u00e9e.",
       locationApproximateNotice:
-        "L'adresse exacte n'a pas \u00e9t\u00e9 g\u00e9olocalis\u00e9e. Cette fiche utilise une localisation approximative et peut \u00eatre soumise telle quelle.",
+        "Le lieu pr\u00e9cis n'a pas \u00e9t\u00e9 g\u00e9olocalis\u00e9. Cette fiche utilise une localisation approximative et peut \u00eatre soumise telle quelle.",
       editLockedWhilePending:
         "Modification indisponible tant que cet \u00e9v\u00e9nement est en cours de mod\u00e9ration.",
       rejectionReasonLabel: "Motif : {reason}",
@@ -272,7 +272,9 @@ export const messages = {
       scheduleTitle: "Date et horaire",
       allDay: "\u00c9v\u00e9nement sur toute la journ\u00e9e",
       locationEyebrow: "Lieu",
-      locationTitle: "Adresse et localisation",
+      locationTitle: "Lieu et localisation",
+      locationLead:
+        "Vous pouvez renseigner un lieu pr\u00e9cis, ou seulement le code postal et la ville pour un \u00e9v\u00e9nement r\u00e9parti dans toute la commune.",
       organizerEyebrow: "Organisateur",
       organizerTitle: "Contacts et structure",
       usefulLinksEyebrow: "Liens utiles",
@@ -322,8 +324,8 @@ export const messages = {
         "Pr\u00e9parez un nouveau brouillon avec une structure plus claire entre contenu, lieu, programmation et contacts.",
       placeholders: {
         title: "Titre de l'\u00e9v\u00e9nement",
-        venue: "Salle, m\u00e9diath\u00e8que...",
-        address: "12 rue...",
+        venue: "Salle, m\u00e9diath\u00e8que... (optionnel)",
+        address: "12 rue... (optionnel)",
         city: "Descartes",
         organizer: "Nom de l'organisateur",
         phone: "06 00 00 00 00"
@@ -654,13 +656,13 @@ export const messages = {
       noDrafts: "No drafts or feedback to process.",
       submit: "Submit",
       locationSavedAsDraft:
-        "The draft has been saved, but the address could not be located. Correct it before submitting for moderation.",
+        "The draft has been saved, but the location could not be found. Correct it before submitting for moderation.",
       locationSavedAsApproximate:
-        "The draft has been saved with an approximate location. The exact address could not be found, but you can still submit it for moderation.",
+        "The draft has been saved with an approximate location. The exact venue could not be found, but you can still submit it for moderation.",
       locationNeedsReview:
-        "This entry cannot be submitted until the address has been located correctly.",
+        "This entry cannot be submitted until the location has been found correctly.",
       locationApproximateNotice:
-        "The exact address could not be geolocated. This entry is using an approximate location and can still be submitted as-is.",
+        "The exact venue could not be geolocated. This entry is using an approximate location and can still be submitted as-is.",
       editLockedWhilePending:
         "Editing is unavailable while this event is under moderation.",
       rejectionReasonLabel: "Reason: {reason}",
@@ -707,7 +709,9 @@ export const messages = {
       scheduleTitle: "Date and time",
       allDay: "All-day event",
       locationEyebrow: "Location",
-      locationTitle: "Address and location",
+      locationTitle: "Venue and location",
+      locationLead:
+        "You can provide a precise venue, or only the postal code and city for an event spread across the whole town.",
       organizerEyebrow: "Organizer",
       organizerTitle: "Contacts and organization",
       usefulLinksEyebrow: "Useful links",
@@ -755,8 +759,8 @@ export const messages = {
       createDescription: "Prepare a new draft with a clearer structure across content, venue, schedule, and contacts.",
       placeholders: {
         title: "Event title",
-        venue: "Hall, media library...",
-        address: "12 Main St...",
+        venue: "Hall, media library... (optional)",
+        address: "12 Main St... (optional)",
         city: "Descartes",
         organizer: "Organizer name",
         phone: "06 00 00 00 00"
