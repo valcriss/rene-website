@@ -37,7 +37,7 @@ export const messages = {
       name: "Nom"
     },
     navigation: {
-      title: "Rene Website",
+      title: "R3ne",
       tagline: "Agenda culturel"
     },
     home: {
@@ -56,7 +56,7 @@ export const messages = {
       sectionEyebrow: "S\u00e9lection du moment",
       sectionTitle: "Une programmation pens\u00e9e comme une vitrine",
       sectionLead:
-        "Explore les \u00e9v\u00e9nements \u00e0 venir, affine si besoin, puis d\u00e9couvre les lieux sur la carte en compl\u00e9ment de la s\u00e9lection visuelle.",
+        "Explorez les \u00e9v\u00e9nements \u00e0 venir, affinez si besoin, puis d\u00e9couvrez les lieux sur la carte en compl\u00e9ment de la s\u00e9lection visuelle.",
       results: "{count} r\u00e9sultat | {count} r\u00e9sultats",
       loading: "Chargement des \u00e9v\u00e9nements...",
       noPublished: "Aucun \u00e9v\u00e9nement n'est encore publi\u00e9.",
@@ -476,7 +476,7 @@ export const messages = {
       name: "Name"
     },
     navigation: {
-      title: "Rene Website",
+      title: "R3ne",
       tagline: "Cultural agenda"
     },
     home: {
