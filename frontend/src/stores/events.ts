@@ -1,6 +1,6 @@
 import { computed, reactive, ref } from "vue";
 import { defineStore } from "pinia";
-import { EventItem, GeolocationPrecision, deleteEvent, fetchEvents } from "../api/events";
+import { EventItem, EventOccurrence, deleteEvent, fetchEvents } from "../api/events";
 import { filterEvents, type EventFilters } from "../events/filterEvents";
 import placeholderEvent from "../assets/event-placeholder.svg";
 import { publishEventWithFeatured, rejectEvent, updateEventFeatured, type ModeratorRole } from "../api/moderation";
@@ -12,6 +12,14 @@ import {
   formatOptional
 } from "../utils/formatters";
 import { getEventCalendarLocation, getEventDirectionsQuery } from "../utils/eventLocation";
+import {
+  computePublicationEndAt,
+  getEarliestOccurrence,
+  hasResolvedCoordinates as occurrenceHasResolvedCoordinates,
+  getGeolocationPrecision as getOccurrenceGeolocationPrecision,
+  hasSubmittableGeolocation
+} from "../utils/occurrences";
+import { buildEventMapPins } from "../utils/mapPins";
 import { useAuthStore } from "./auth";
 
 const pad = (value: number) => value.toString().padStart(2, "0");
@@ -41,25 +49,28 @@ export const useEventsStore = defineStore("events", () => {
   const rejectionReasons = reactive<Record<string, string>>({});
   const featuredEventIds = reactive<Record<string, boolean>>({});
 
-  const hasResolvedCoordinates = (
-    event: Pick<EventItem, "latitude" | "longitude">
-  ): event is Pick<EventItem, "latitude" | "longitude"> & { latitude: number; longitude: number } =>
-    typeof event.latitude === "number" &&
-    Number.isFinite(event.latitude) &&
-    typeof event.longitude === "number" &&
-    Number.isFinite(event.longitude);
+  const eventOccurrences = (event: Pick<EventItem, "occurrences">) => event.occurrences ?? [];
 
-  const getGeolocationPrecision = (
-    event: Pick<EventItem, "latitude" | "longitude" | "geolocationPrecision">
-  ): GeolocationPrecision => event.geolocationPrecision ?? (hasResolvedCoordinates(event) ? "EXACT" : "UNRESOLVED");
+  const hasResolvedCoordinates = (event: Pick<EventItem, "occurrences">) =>
+    eventOccurrences(event).some((occurrence) => occurrenceHasResolvedCoordinates(occurrence));
 
-  const hasApproximateGeolocation = (
-    event: Pick<EventItem, "latitude" | "longitude" | "geolocationPrecision">
-  ) => hasResolvedCoordinates(event) && getGeolocationPrecision(event) === "APPROXIMATE";
+  const getGeolocationPrecision = (event: Pick<EventItem, "occurrences">) => {
+    const earliest = getEarliestOccurrence(eventOccurrences(event));
+    return earliest ? getOccurrenceGeolocationPrecision(earliest) : "UNRESOLVED";
+  };
 
-  const canSubmitForModeration = (
-    event: Pick<EventItem, "latitude" | "longitude" | "geolocationPrecision">
-  ) => hasResolvedCoordinates(event) && getGeolocationPrecision(event) !== "UNRESOLVED";
+  const hasApproximateGeolocation = (event: Pick<EventItem, "occurrences">) =>
+    eventOccurrences(event).some(
+      (occurrence) => occurrenceHasResolvedCoordinates(occurrence) && getOccurrenceGeolocationPrecision(occurrence) === "APPROXIMATE"
+    );
+
+  const canSubmitForModeration = (event: Pick<EventItem, "occurrences">) =>
+    hasSubmittableGeolocation(eventOccurrences(event));
+
+  const getEarliestResolvedOccurrence = (event: Pick<EventItem, "occurrences">) => {
+    const earliest = getEarliestOccurrence(eventOccurrences(event));
+    return earliest && occurrenceHasResolvedCoordinates(earliest) ? earliest : null;
+  };
 
   const filters = ref<EventFilters>(defaultFilters());
 
@@ -75,7 +86,7 @@ export const useEventsStore = defineStore("events", () => {
       createdByUserId: event.createdByUserId,
       status: "PENDING",
       publishedAt: event.publishedAt,
-      publicationEndAt: event.pendingRevision.eventEndAt ?? undefined,
+      publicationEndAt: computePublicationEndAt(event.pendingRevision.occurrences),
       rejectionReason: event.pendingRevision.rejectionReason,
       pendingRevision: event.pendingRevision,
       createdAt: event.createdAt,
@@ -95,7 +106,7 @@ export const useEventsStore = defineStore("events", () => {
       createdByUserId: event.createdByUserId,
       status: event.pendingRevision.status,
       publishedAt: event.publishedAt,
-      publicationEndAt: event.pendingRevision.eventEndAt ?? undefined,
+      publicationEndAt: computePublicationEndAt(event.pendingRevision.occurrences),
       rejectionReason: event.pendingRevision.rejectionReason,
       pendingRevision: event.pendingRevision,
       createdAt: event.createdAt,
@@ -149,7 +160,15 @@ export const useEventsStore = defineStore("events", () => {
     return events.value.filter((event) => authStore.userId !== null && event.createdByUserId !== authStore.userId);
   });
   const availableCities = computed(() =>
-    Array.from(new Set(publishedEvents.value.map((event) => event.city))).sort()
+    Array.from(
+      new Set(
+        publishedEvents.value.flatMap((event) =>
+          eventOccurrences(event)
+            .map((occurrence) => occurrence.city)
+            .filter((city): city is string => Boolean(city))
+        )
+      )
+    ).sort()
   );
   const availableTypes = computed(() =>
     Array.from(new Set(publishedEvents.value.map((event) => event.categoryId))).sort()
@@ -172,17 +191,24 @@ export const useEventsStore = defineStore("events", () => {
 
   const getRelatedPublishedEvents = (id: string, limit = 3) => {
     const current = getEventById(id);
-    if (!current || !hasResolvedCoordinates(current)) {
+    const currentOccurrence = current ? getEarliestResolvedOccurrence(current) : null;
+    if (!current || !currentOccurrence) {
       return [];
     }
 
-    const referenceStart = new Date(current.eventStartAt ?? "").getTime();
-    const distanceScore = (eventItem: EventItem) =>
-      hasResolvedCoordinates(eventItem)
-        ? Math.hypot(eventItem.latitude - current.latitude, eventItem.longitude - current.longitude)
+    const referenceStart = new Date(currentOccurrence.eventStartAt ?? "").getTime();
+    const distanceScore = (eventItem: EventItem) => {
+      const occurrence = getEarliestResolvedOccurrence(eventItem);
+      return occurrence
+        ? Math.hypot(
+            (occurrence.latitude as number) - (currentOccurrence.latitude as number),
+            (occurrence.longitude as number) - (currentOccurrence.longitude as number)
+          )
         : Number.POSITIVE_INFINITY;
+    };
     const timeScore = (eventItem: EventItem) => {
-      const eventStart = new Date(eventItem.eventStartAt ?? "").getTime();
+      const occurrence = getEarliestResolvedOccurrence(eventItem);
+      const eventStart = new Date(occurrence?.eventStartAt ?? "").getTime();
       if (Number.isNaN(referenceStart) || Number.isNaN(eventStart)) {
         return Number.POSITIVE_INFINITY;
       }
@@ -190,10 +216,12 @@ export const useEventsStore = defineStore("events", () => {
     };
 
     return publishedEvents.value
-      .filter((eventItem) => eventItem.id !== id && hasResolvedCoordinates(eventItem))
+      .filter((eventItem) => eventItem.id !== id && getEarliestResolvedOccurrence(eventItem) !== null)
       .sort((left, right) => {
-        const leftSameCity = left.city === current.city ? 0 : 1;
-        const rightSameCity = right.city === current.city ? 0 : 1;
+        const leftOccurrence = getEarliestResolvedOccurrence(left);
+        const rightOccurrence = getEarliestResolvedOccurrence(right);
+        const leftSameCity = leftOccurrence?.city === currentOccurrence.city ? 0 : 1;
+        const rightSameCity = rightOccurrence?.city === currentOccurrence.city ? 0 : 1;
         if (leftSameCity !== rightSameCity) {
           return leftSameCity - rightSameCity;
         }
@@ -339,8 +367,8 @@ export const useEventsStore = defineStore("events", () => {
     )}:${pad(date.getMinutes())}`;
   };
 
-  const buildDirectionsUrl = (eventItem: EventItem) => {
-    const destination = encodeURIComponent(getEventDirectionsQuery(eventItem, eventItem.city));
+  const buildDirectionsUrl = (occurrence: EventOccurrence, fallback?: string | null) => {
+    const destination = encodeURIComponent(getEventDirectionsQuery(occurrence, fallback ?? occurrence.city));
     return `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
   };
 
@@ -363,23 +391,25 @@ export const useEventsStore = defineStore("events", () => {
     return date.toISOString();
   };
 
-  const buildCalendarUrl = (eventItem: EventItem) => {
+  const buildCalendarUrl = (eventItem: EventItem, occurrence: EventOccurrence) => {
     const lines = [
       "BEGIN:VCALENDAR",
       "VERSION:2.0",
       "PRODID:-//rene-website//agenda//FR",
       "BEGIN:VEVENT",
-      `UID:${eventItem.id}@rene-website`,
+      `UID:${occurrence.id}@rene-website`,
       `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").split(".")[0]}Z`,
-      `DTSTART;VALUE=DATE:${toIcsDateValue(eventItem.eventStartAt ?? "")}`,
-      `DTEND;VALUE=DATE:${toIcsDateValue(addDays(eventItem.eventEndAt ?? "", 1))}`,
+      `DTSTART;VALUE=DATE:${toIcsDateValue(occurrence.eventStartAt ?? "")}`,
+      `DTEND;VALUE=DATE:${toIcsDateValue(addDays(occurrence.eventEndAt ?? "", 1))}`,
       `SUMMARY:${eventItem.title}`,
-      `LOCATION:${getEventCalendarLocation(eventItem, eventItem.city)}`,
+      `LOCATION:${getEventCalendarLocation(occurrence, occurrence.city ?? eventItem.title)}`,
       "END:VEVENT",
       "END:VCALENDAR"
     ];
     return `data:text/calendar;charset=utf-8,${encodeURIComponent(lines.join("\r\n"))}`;
   };
+
+  const getEventMapPins = (items: EventItem[]) => buildEventMapPins(items);
 
   const handlePublish = async (id: string) => {
     moderationError.value = null;
@@ -500,6 +530,7 @@ export const useEventsStore = defineStore("events", () => {
     formatDateTimeInput,
     buildDirectionsUrl,
     buildCalendarUrl,
+    getEventMapPins,
     handlePublish,
     handleUpdateFeatured,
     handleReject,

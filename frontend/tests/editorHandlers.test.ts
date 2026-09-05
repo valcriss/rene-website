@@ -3,7 +3,7 @@ import { createPinia } from "pinia";
 import { nextTick } from "vue";
 import { vi } from "vitest";
 import App from "../src/App.vue";
-import { CreateEventPayload } from "../src/api/events";
+import type { CreateEventPayload, EventItem } from "../src/api/events";
 import { useEditorStore } from "../src/stores/editor";
 import { createTestRouter } from "./testRouter";
 
@@ -12,7 +12,7 @@ type FetchInput = string | { url: string };
 vi.mock("../src/components/EventMap.vue", () => ({
   default: {
     name: "EventMap",
-    props: ["events", "selectedId"],
+    props: ["pins", "selectedId"],
     template: "<div></div>"
   }
 }));
@@ -47,31 +47,21 @@ describe("editor handlers", () => {
     handleSaveAndSubmit: () => Promise<boolean>;
     handleSubmitDraft: (id?: string) => Promise<boolean>;
     getEditorFormValues: () => CreateEventPayload;
-    startEdit: (event: {
-      id: string;
-      title: string;
-      content?: string;
-      image: string;
-      categoryId: string;
-      eventStartAt: string;
-      eventEndAt: string;
-      allDay?: boolean;
-      venueName: string;
-      address?: string;
-      postalCode?: string;
-      city: string;
-      latitude: number;
-      longitude: number;
-      organizerName?: string;
-      organizerUrl?: string;
-      contactEmail?: string;
-      contactPhone?: string;
-      ticketUrl?: string;
-      websiteUrl?: string;
-      status: "DRAFT" | "PENDING" | "PUBLISHED" | "REJECTED";
-      rejectionReason?: string | null;
-    }) => void;
+    startEdit: (event: EventItem) => void;
   };
+
+  const buildEditEvent = (overrides: Partial<EventItem> = {}): EventItem => ({
+    id: "1",
+    title: "Concert",
+    content: null,
+    image: "img",
+    categoryId: "music",
+    audienceId: null,
+    occurrences: [],
+    organizerName: null,
+    status: "DRAFT",
+    ...overrides
+  });
 
   beforeEach(() => {
     submitMock.mockReset();
@@ -154,10 +144,10 @@ describe("editor handlers", () => {
     editorStore.editorForm.image = "/uploads/test.png";
     editorStore.editorForm.title = "Concert";
     editorStore.editorForm.categoryId = "music";
-    editorStore.editorForm.eventStartAt = "2026-01-15";
-    editorStore.editorForm.eventEndAt = "2026-01-15";
-    editorStore.editorForm.venueName = "Salle";
-    editorStore.editorForm.city = "Descartes";
+    editorStore.editorForm.occurrences[0].eventStartAt = "2026-01-15";
+    editorStore.editorForm.occurrences[0].eventEndAt = "2026-01-15";
+    editorStore.editorForm.occurrences[0].venueName = "Salle";
+    editorStore.editorForm.occurrences[0].city = "Descartes";
     vm.setRole("EDITOR");
 
     const firstSave = vm.handleSaveDraft();
@@ -171,19 +161,25 @@ describe("editor handlers", () => {
       throw new Error("Create resolver not set");
     }
 
-    resolveCreate({
-      id: "created-1",
-      title: "Concert",
-      image: "/uploads/test.png",
-      categoryId: "music",
-      eventStartAt: "2026-01-15T00:00:00.000Z",
-      eventEndAt: "2026-01-15T23:59:59.999Z",
-      venueName: "Salle",
-      city: "Descartes",
-      latitude: 46.97,
-      longitude: 0.7,
-      status: "DRAFT"
-    });
+    resolveCreate(
+      buildEditEvent({
+        id: "created-1",
+        occurrences: [
+          {
+            id: "occ-1",
+            eventStartAt: "2026-01-15T00:00:00.000Z",
+            eventEndAt: "2026-01-15T23:59:59.999Z",
+            allDay: true,
+            venueName: "Salle",
+            address: null,
+            postalCode: null,
+            city: "Descartes",
+            latitude: 46.97,
+            longitude: 0.7
+          }
+        ]
+      })
+    );
 
     await expect(firstSave).resolves.toBe(true);
   });
@@ -215,21 +211,7 @@ describe("editor handlers", () => {
   });
 
   it("saves a title-only draft without requiring an image or other fields", async () => {
-    createMock.mockResolvedValue({
-      id: "draft-title-only",
-      title: "Brouillon",
-      content: null,
-      image: null,
-      categoryId: null,
-      audienceId: null,
-      eventStartAt: null,
-      eventEndAt: null,
-      venueName: null,
-      city: null,
-      latitude: null,
-      longitude: null,
-      status: "DRAFT"
-    });
+    createMock.mockResolvedValue(buildEditEvent({ id: "draft-title-only", title: "Brouillon" }));
 
     const { wrapper } = await mountWithRouter();
     await nextTick();
@@ -244,35 +226,12 @@ describe("editor handlers", () => {
     expect(ok).toBe(true);
     expect(vm.getEditorError()).toBeNull();
     expect(createMock).toHaveBeenCalledOnce();
+    expect(createMock).toHaveBeenCalledWith(expect.objectContaining({ occurrences: [] }), "EDITOR");
   });
 
   it("creates then submits from create mode", async () => {
-    createMock.mockResolvedValue({
-      id: "created-1",
-      title: "Concert",
-      image: "/uploads/test.png",
-      categoryId: "music",
-      eventStartAt: "2026-01-15T00:00:00.000Z",
-      eventEndAt: "2026-01-15T23:59:59.999Z",
-      venueName: "Salle",
-      city: "Descartes",
-      latitude: 46.97,
-      longitude: 0.7,
-      status: "DRAFT"
-    });
-    submitMock.mockResolvedValue({
-      id: "created-1",
-      title: "Concert",
-      image: "/uploads/test.png",
-      categoryId: "music",
-      eventStartAt: "2026-01-15T20:00:00.000Z",
-      eventEndAt: "2026-01-15T22:00:00.000Z",
-      venueName: "Salle",
-      city: "Descartes",
-      latitude: 46.97,
-      longitude: 0.7,
-      status: "PENDING"
-    });
+    createMock.mockResolvedValue(buildEditEvent({ id: "created-1" }));
+    submitMock.mockResolvedValue(buildEditEvent({ id: "created-1", status: "PENDING" }));
 
     const { wrapper } = await mountWithRouter();
     await nextTick();
@@ -282,10 +241,10 @@ describe("editor handlers", () => {
     editorStore.editorForm.image = "/uploads/test.png";
     editorStore.editorForm.title = "Concert";
     editorStore.editorForm.categoryId = "music";
-    editorStore.editorForm.eventStartAt = "2026-01-15";
-    editorStore.editorForm.eventEndAt = "2026-01-15";
-    editorStore.editorForm.venueName = "Salle";
-    editorStore.editorForm.city = "Descartes";
+    editorStore.editorForm.occurrences[0].eventStartAt = "2026-01-15";
+    editorStore.editorForm.occurrences[0].eventEndAt = "2026-01-15";
+    editorStore.editorForm.occurrences[0].venueName = "Salle";
+    editorStore.editorForm.occurrences[0].city = "Descartes";
     vm.setRole("EDITOR");
 
     await vm.handleSaveAndSubmit();
@@ -295,20 +254,7 @@ describe("editor handlers", () => {
   });
 
   it("keeps editor state after saving a new draft", async () => {
-    createMock.mockResolvedValue({
-      id: "created-keep-1",
-      title: "Concert",
-      image: "/uploads/test.png",
-      categoryId: "music",
-      audienceId: "all",
-      eventStartAt: "2026-01-15T00:00:00.000Z",
-      eventEndAt: "2026-01-15T23:59:59.999Z",
-      venueName: "Salle",
-      city: "Descartes",
-      latitude: 46.97,
-      longitude: 0.7,
-      status: "DRAFT"
-    });
+    createMock.mockResolvedValue(buildEditEvent({ id: "created-keep-1", image: "/uploads/test.png" }));
 
     const { wrapper } = await mountWithRouter();
     await nextTick();
@@ -319,10 +265,10 @@ describe("editor handlers", () => {
     editorStore.editorForm.title = "Concert";
     editorStore.editorForm.categoryId = "music";
     editorStore.editorForm.audienceId = "all";
-    editorStore.editorForm.eventStartAt = "2026-01-15";
-    editorStore.editorForm.eventEndAt = "2026-01-15";
-    editorStore.editorForm.venueName = "Salle";
-    editorStore.editorForm.city = "Descartes";
+    editorStore.editorForm.occurrences[0].eventStartAt = "2026-01-15";
+    editorStore.editorForm.occurrences[0].eventEndAt = "2026-01-15";
+    editorStore.editorForm.occurrences[0].venueName = "Salle";
+    editorStore.editorForm.occurrences[0].city = "Descartes";
     vm.setRole("EDITOR");
 
     await expect(vm.handleSaveDraft()).resolves.toBe(true);
@@ -334,21 +280,12 @@ describe("editor handlers", () => {
   });
 
   it("serializes social links in the editor payload", async () => {
-    createMock.mockResolvedValue({
-      id: "created-social-1",
-      title: "Concert",
-      image: "/uploads/test.png",
-      categoryId: "music",
-      audienceId: "all",
-      eventStartAt: "2026-01-15T00:00:00.000Z",
-      eventEndAt: "2026-01-15T23:59:59.999Z",
-      venueName: "Salle",
-      city: "Descartes",
-      latitude: 46.97,
-      longitude: 0.7,
-      socialLinks: [{ type: "FACEBOOK", url: "https://facebook.com/rene" }],
-      status: "DRAFT"
-    });
+    createMock.mockResolvedValue(
+      buildEditEvent({
+        id: "created-social-1",
+        socialLinks: [{ type: "FACEBOOK", url: "https://facebook.com/rene" }]
+      })
+    );
 
     const { wrapper } = await mountWithRouter();
     await nextTick();
@@ -359,10 +296,10 @@ describe("editor handlers", () => {
     editorStore.editorForm.title = "Concert";
     editorStore.editorForm.categoryId = "music";
     editorStore.editorForm.audienceId = "all";
-    editorStore.editorForm.eventStartAt = "2026-01-15";
-    editorStore.editorForm.eventEndAt = "2026-01-15";
-    editorStore.editorForm.venueName = "Salle";
-    editorStore.editorForm.city = "Descartes";
+    editorStore.editorForm.occurrences[0].eventStartAt = "2026-01-15";
+    editorStore.editorForm.occurrences[0].eventEndAt = "2026-01-15";
+    editorStore.editorForm.occurrences[0].venueName = "Salle";
+    editorStore.editorForm.occurrences[0].city = "Descartes";
     editorStore.editorForm.socialLinks = [{ type: "FACEBOOK", url: " https://facebook.com/rene " }];
     vm.setRole("EDITOR");
 
@@ -400,10 +337,10 @@ describe("editor handlers", () => {
     editorStore.editorForm.image = "/uploads/test.png";
     editorStore.editorForm.title = "Concert";
     editorStore.editorForm.categoryId = "music";
-    editorStore.editorForm.eventStartAt = "2026-01-15T20:00";
-    editorStore.editorForm.eventEndAt = "2026-01-15T22:00";
-    editorStore.editorForm.venueName = "Salle";
-    editorStore.editorForm.city = "Descartes";
+    editorStore.editorForm.occurrences[0].eventStartAt = "2026-01-15T20:00";
+    editorStore.editorForm.occurrences[0].eventEndAt = "2026-01-15T22:00";
+    editorStore.editorForm.occurrences[0].venueName = "Salle";
+    editorStore.editorForm.occurrences[0].city = "Descartes";
     vm.setRole("EDITOR");
 
     const firstSubmit = vm.handleSaveAndSubmit();
@@ -417,19 +354,7 @@ describe("editor handlers", () => {
       throw new Error("Create resolver not set");
     }
 
-    resolveCreate({
-      id: "created-1",
-      title: "Concert",
-      image: "/uploads/test.png",
-      categoryId: "music",
-      eventStartAt: "2026-01-15T20:00:00.000Z",
-      eventEndAt: "2026-01-15T22:00:00.000Z",
-      venueName: "Salle",
-      city: "Descartes",
-      latitude: 46.97,
-      longitude: 0.7,
-      status: "DRAFT"
-    });
+    resolveCreate(buildEditEvent({ id: "created-1" }));
 
     await flushPromises();
     expect(submitMock).toHaveBeenCalledTimes(1);
@@ -438,19 +363,7 @@ describe("editor handlers", () => {
       throw new Error("Submit resolver not set");
     }
 
-    resolveSubmit({
-      id: "created-1",
-      title: "Concert",
-      image: "/uploads/test.png",
-      categoryId: "music",
-      eventStartAt: "2026-01-15T20:00:00.000Z",
-      eventEndAt: "2026-01-15T22:00:00.000Z",
-      venueName: "Salle",
-      city: "Descartes",
-      latitude: 46.97,
-      longitude: 0.7,
-      status: "PENDING"
-    });
+    resolveSubmit(buildEditEvent({ id: "created-1", status: "PENDING" }));
 
     await expect(firstSubmit).resolves.toBe(true);
   });
@@ -473,19 +386,7 @@ describe("editor handlers", () => {
   });
 
   it("keeps created event and surfaces submit error in save and submit flow", async () => {
-    createMock.mockResolvedValue({
-      id: "created-2",
-      title: "Concert",
-      image: "/uploads/test.png",
-      categoryId: "music",
-      eventStartAt: "2026-01-15T20:00:00.000Z",
-      eventEndAt: "2026-01-15T22:00:00.000Z",
-      venueName: "Salle",
-      city: "Descartes",
-      latitude: 46.97,
-      longitude: 0.7,
-      status: "DRAFT"
-    });
+    createMock.mockResolvedValue(buildEditEvent({ id: "created-2" }));
     submitMock.mockRejectedValue(new Error("Soumission impossible"));
 
     const { wrapper } = await mountWithRouter();
@@ -504,32 +405,8 @@ describe("editor handlers", () => {
   });
 
   it("saves then submits in edit mode from save and submit flow", async () => {
-    updateMock.mockResolvedValue({
-      id: "1",
-      title: "Concert",
-      image: "/uploads/test.png",
-      categoryId: "music",
-      eventStartAt: "2026-01-15T20:00:00.000Z",
-      eventEndAt: "2026-01-15T22:00:00.000Z",
-      venueName: "Salle",
-      city: "Descartes",
-      latitude: 46.97,
-      longitude: 0.7,
-      status: "DRAFT"
-    });
-    submitMock.mockResolvedValue({
-      id: "1",
-      title: "Concert",
-      image: "/uploads/test.png",
-      categoryId: "music",
-      eventStartAt: "2026-01-15T20:00:00.000Z",
-      eventEndAt: "2026-01-15T22:00:00.000Z",
-      venueName: "Salle",
-      city: "Descartes",
-      latitude: 46.97,
-      longitude: 0.7,
-      status: "PENDING"
-    });
+    updateMock.mockResolvedValue(buildEditEvent({ id: "1" }));
+    submitMock.mockResolvedValue(buildEditEvent({ id: "1", status: "PENDING" }));
 
     const { wrapper, router } = await mountWithRouter();
     await nextTick();
@@ -540,19 +417,7 @@ describe("editor handlers", () => {
     await router.push("/backoffice/events/new");
     await flushPromises();
     await nextTick();
-    vm.startEdit({
-      id: "1",
-      title: "Concert",
-      image: "img",
-      categoryId: "music",
-      eventStartAt: "2026-01-15T20:00:00.000Z",
-      eventEndAt: "2026-01-15T22:00:00.000Z",
-      venueName: "Salle",
-      city: "Descartes",
-      latitude: 46.97,
-      longitude: 0.7,
-      status: "DRAFT"
-    });
+    vm.startEdit(buildEditEvent({ id: "1", image: "img" }));
 
     await vm.handleSaveAndSubmit();
 
@@ -566,60 +431,44 @@ describe("editor handlers", () => {
   });
 
   it("saves then submits when editing a published event", async () => {
-    updateMock.mockResolvedValue({
-      id: "1",
-      title: "Concert",
-      image: "/uploads/test.png",
-      categoryId: "music",
-      eventStartAt: "2026-01-15T20:00:00.000Z",
-      eventEndAt: "2026-01-15T22:00:00.000Z",
-      venueName: "Salle",
-      city: "Descartes",
-      latitude: 46.97,
-      longitude: 0.7,
-      status: "PUBLISHED",
-      pendingRevision: {
-        id: "revision-1",
-        eventId: "1",
-        title: "Concert",
-        image: "/uploads/test.png",
-        categoryId: "music",
-        eventStartAt: "2026-01-15T20:00:00.000Z",
-        eventEndAt: "2026-01-15T22:00:00.000Z",
-        venueName: "Salle",
-        city: "Descartes",
-        latitude: 46.97,
-        longitude: 0.7,
-        status: "DRAFT"
-      }
-    });
-    submitMock.mockResolvedValue({
-      id: "1",
-      title: "Concert",
-      image: "/uploads/test.png",
-      categoryId: "music",
-      eventStartAt: "2026-01-15T20:00:00.000Z",
-      eventEndAt: "2026-01-15T22:00:00.000Z",
-      venueName: "Salle",
-      city: "Descartes",
-      latitude: 46.97,
-      longitude: 0.7,
-      status: "PUBLISHED",
-      pendingRevision: {
-        id: "revision-1",
-        eventId: "1",
-        title: "Concert",
-        image: "/uploads/test.png",
-        categoryId: "music",
-        eventStartAt: "2026-01-15T20:00:00.000Z",
-        eventEndAt: "2026-01-15T22:00:00.000Z",
-        venueName: "Salle",
-        city: "Descartes",
-        latitude: 46.97,
-        longitude: 0.7,
-        status: "PENDING"
-      }
-    });
+    updateMock.mockResolvedValue(
+      buildEditEvent({
+        id: "1",
+        status: "PUBLISHED",
+        pendingRevision: {
+          id: "revision-1",
+          eventId: "1",
+          title: "Concert",
+          content: null,
+          image: "/uploads/test.png",
+          createdByUserId: null,
+          categoryId: "music",
+          audienceId: null,
+          occurrences: [],
+          organizerName: null,
+          status: "DRAFT"
+        }
+      })
+    );
+    submitMock.mockResolvedValue(
+      buildEditEvent({
+        id: "1",
+        status: "PUBLISHED",
+        pendingRevision: {
+          id: "revision-1",
+          eventId: "1",
+          title: "Concert",
+          content: null,
+          image: "/uploads/test.png",
+          createdByUserId: null,
+          categoryId: "music",
+          audienceId: null,
+          occurrences: [],
+          organizerName: null,
+          status: "PENDING"
+        }
+      })
+    );
 
     const { wrapper, router } = await mountWithRouter();
     await nextTick();
@@ -630,19 +479,7 @@ describe("editor handlers", () => {
     await router.push("/backoffice/events/new");
     await flushPromises();
     await nextTick();
-    vm.startEdit({
-      id: "1",
-      title: "Concert",
-      image: "img",
-      categoryId: "music",
-      eventStartAt: "2026-01-15T20:00:00.000Z",
-      eventEndAt: "2026-01-15T22:00:00.000Z",
-      venueName: "Salle",
-      city: "Descartes",
-      latitude: 46.97,
-      longitude: 0.7,
-      status: "PUBLISHED"
-    });
+    vm.startEdit(buildEditEvent({ id: "1", image: "img", status: "PUBLISHED" }));
 
     await vm.handleSaveAndSubmit();
 
@@ -664,23 +501,28 @@ describe("editor handlers", () => {
     await router.push("/backoffice/events/new");
     await flushPromises();
     await nextTick();
-    vm.startEdit({
-      id: "1",
-      title: "Concert",
-      content: "Desc",
-      image: "img",
-      categoryId: "music",
-      eventStartAt: "invalid",
-      eventEndAt: "invalid",
-      allDay: false,
-      venueName: "Salle",
-      postalCode: "37100",
-      city: "Descartes",
-      latitude: 46.97,
-      longitude: 0.7,
-      organizerName: "Asso",
-      status: "DRAFT"
-    });
+    vm.startEdit(
+      buildEditEvent({
+        id: "1",
+        content: "Desc",
+        image: "img",
+        organizerName: "Asso",
+        occurrences: [
+          {
+            id: "occ-1",
+            eventStartAt: "invalid",
+            eventEndAt: "invalid",
+            allDay: false,
+            venueName: "Salle",
+            address: null,
+            postalCode: "37100",
+            city: "Descartes",
+            latitude: 46.97,
+            longitude: 0.7
+          }
+        ]
+      })
+    );
     await nextTick();
 
     const dateInputs = wrapper.findAll('input[type="date"]');
@@ -698,29 +540,33 @@ describe("editor handlers", () => {
     await router.push("/backoffice/events/new");
     await flushPromises();
     await nextTick();
-    vm.startEdit({
-      id: "1",
-      title: "Concert",
-      content: "Desc",
-      image: "img",
-      categoryId: "music",
-      eventStartAt: "2026-01-15T00:00:00.000Z",
-      eventEndAt: "2026-01-15T23:59:59.999Z",
-      allDay: false,
-      venueName: "Salle",
-      address: "Rue",
-      postalCode: "37100",
-      city: "Descartes",
-      latitude: 46.97,
-      longitude: 0.7,
-      organizerName: "Asso",
-      organizerUrl: "https://example.com",
-      contactEmail: "contact@example.com",
-      contactPhone: "0102030405",
-      ticketUrl: "https://tickets.example.com",
-      websiteUrl: "https://example.com",
-      status: "DRAFT"
-    });
+    vm.startEdit(
+      buildEditEvent({
+        id: "1",
+        content: "Desc",
+        image: "img",
+        organizerName: "Asso",
+        organizerUrl: "https://example.com",
+        contactEmail: "contact@example.com",
+        contactPhone: "0102030405",
+        ticketUrl: "https://tickets.example.com",
+        websiteUrl: "https://example.com",
+        occurrences: [
+          {
+            id: "occ-1",
+            eventStartAt: "2026-01-15T00:00:00.000Z",
+            eventEndAt: "2026-01-15T23:59:59.999Z",
+            allDay: false,
+            venueName: "Salle",
+            address: "Rue",
+            postalCode: "37100",
+            city: "Descartes",
+            latitude: 46.97,
+            longitude: 0.7
+          }
+        ]
+      })
+    );
     await nextTick();
 
     expect(wrapper.find('input[placeholder="Titre de l\'événement"]').element).toHaveProperty(
@@ -744,26 +590,33 @@ describe("editor handlers", () => {
       await flushPromises();
       await nextTick();
     }
-    vm.startEdit({
-      id: "1",
-      title: "Concert",
-      image: "img",
-      categoryId: "music",
-      eventStartAt: "2026-01-15T00:00:00.000Z",
-      eventEndAt: "2026-01-15T23:59:59.999Z",
-      venueName: "Salle",
-      city: "Descartes",
-      latitude: 46.97,
-      longitude: 0.7,
-      status: "DRAFT"
-    });
+    vm.startEdit(
+      buildEditEvent({
+        id: "1",
+        image: "img",
+        occurrences: [
+          {
+            id: "occ-1",
+            eventStartAt: "2026-01-15T00:00:00.000Z",
+            eventEndAt: "2026-01-15T23:59:59.999Z",
+            allDay: false,
+            venueName: "Salle",
+            address: null,
+            postalCode: null,
+            city: "Descartes",
+            latitude: 46.97,
+            longitude: 0.7
+          }
+        ]
+      })
+    );
     await nextTick();
 
     const values = vm.getEditorFormValues();
 
     expect(values.content).toBe("");
-    expect(values.address).toBe("");
-    expect(values.postalCode).toBe("");
+    expect(values.occurrences[0].address).toBe("");
+    expect(values.occurrences[0].postalCode).toBe("");
   });
 
   it("startEdit prefills coordinates and geolocation status from the loaded event", async () => {
@@ -773,56 +626,75 @@ describe("editor handlers", () => {
     const vm = wrapper.vm as unknown as Exposed;
     const editorStore = useEditorStore();
     vm.setRole("EDITOR");
-    vm.startEdit({
-      id: "1",
-      title: "Concert",
-      image: "img",
-      categoryId: "music",
-      eventStartAt: "2026-01-15T00:00:00.000Z",
-      eventEndAt: "2026-01-15T23:59:59.999Z",
-      venueName: "Salle",
-      city: "Descartes",
-      latitude: 47.1,
-      longitude: 0.68,
-      geolocationPrecision: "APPROXIMATE",
-      status: "DRAFT"
-    });
+    vm.startEdit(
+      buildEditEvent({
+        id: "1",
+        image: "img",
+        occurrences: [
+          {
+            id: "occ-1",
+            eventStartAt: "2026-01-15T00:00:00.000Z",
+            eventEndAt: "2026-01-15T23:59:59.999Z",
+            allDay: false,
+            venueName: "Salle",
+            address: null,
+            postalCode: null,
+            city: "Descartes",
+            latitude: 47.1,
+            longitude: 0.68,
+            geolocationPrecision: "APPROXIMATE"
+          }
+        ]
+      })
+    );
 
-    expect(vm.getEditorFormValues().latitude).toBe(47.1);
-    expect(vm.getEditorFormValues().longitude).toBe(0.68);
-    expect(editorStore.lastGeolocationPrecision).toBe("APPROXIMATE");
-    expect(editorStore.useManualLocation).toBe(false);
+    expect(vm.getEditorFormValues().occurrences[0].latitude).toBe(47.1);
+    expect(vm.getEditorFormValues().occurrences[0].longitude).toBe(0.68);
+    expect(editorStore.lastGeolocationPrecision[0]).toBe("APPROXIMATE");
+    expect(editorStore.useManualLocation[0]).toBe(false);
   });
 
   it("only sends manual coordinates to the API when manual location is enabled", async () => {
-    createMock.mockResolvedValue({
-      id: "created-manual",
-      title: "Concert",
-      image: "/uploads/test.png",
-      categoryId: "music",
-      eventStartAt: "2026-01-15T00:00:00.000Z",
-      eventEndAt: "2026-01-15T23:59:59.999Z",
-      venueName: "Salle",
-      city: "Descartes",
-      latitude: 46.97,
-      longitude: 0.7,
-      geolocationPrecision: "APPROXIMATE",
-      status: "DRAFT"
-    });
-    updateMock.mockResolvedValue({
-      id: "created-manual",
-      title: "Concert",
-      image: "/uploads/test.png",
-      categoryId: "music",
-      eventStartAt: "2026-01-15T00:00:00.000Z",
-      eventEndAt: "2026-01-15T23:59:59.999Z",
-      venueName: "Salle",
-      city: "Descartes",
-      latitude: 48.8566,
-      longitude: 2.3522,
-      geolocationPrecision: "EXACT",
-      status: "DRAFT"
-    });
+    createMock.mockResolvedValue(
+      buildEditEvent({
+        id: "created-manual",
+        occurrences: [
+          {
+            id: "occ-1",
+            eventStartAt: "2026-01-15T00:00:00.000Z",
+            eventEndAt: "2026-01-15T23:59:59.999Z",
+            allDay: true,
+            venueName: "Salle",
+            address: null,
+            postalCode: null,
+            city: "Descartes",
+            latitude: 46.97,
+            longitude: 0.7,
+            geolocationPrecision: "APPROXIMATE"
+          }
+        ]
+      })
+    );
+    updateMock.mockResolvedValue(
+      buildEditEvent({
+        id: "created-manual",
+        occurrences: [
+          {
+            id: "occ-1",
+            eventStartAt: "2026-01-15T00:00:00.000Z",
+            eventEndAt: "2026-01-15T23:59:59.999Z",
+            allDay: true,
+            venueName: "Salle",
+            address: null,
+            postalCode: null,
+            city: "Descartes",
+            latitude: 48.8566,
+            longitude: 2.3522,
+            geolocationPrecision: "EXACT"
+          }
+        ]
+      })
+    );
 
     const { wrapper } = await mountWithRouter();
     await nextTick();
@@ -831,26 +703,30 @@ describe("editor handlers", () => {
     const editorStore = useEditorStore();
     vm.setRole("EDITOR");
     editorStore.editorForm.title = "Concert";
-    editorStore.editorForm.latitude = 48.8566;
-    editorStore.editorForm.longitude = 2.3522;
+    editorStore.editorForm.occurrences[0].latitude = 48.8566;
+    editorStore.editorForm.occurrences[0].longitude = 2.3522;
 
     await vm.handleSaveDraft();
     expect(createMock).toHaveBeenLastCalledWith(
-      expect.objectContaining({ latitude: undefined, longitude: undefined }),
+      expect.objectContaining({
+        occurrences: [expect.objectContaining({ latitude: undefined, longitude: undefined })]
+      }),
       "EDITOR"
     );
-    expect(editorStore.lastGeolocationPrecision).toBe("APPROXIMATE");
+    expect(editorStore.lastGeolocationPrecision[0]).toBe("APPROXIMATE");
 
-    editorStore.setManualLocation(true);
-    editorStore.editorForm.latitude = 48.8566;
-    editorStore.editorForm.longitude = 2.3522;
+    editorStore.setManualLocation(0, true);
+    editorStore.editorForm.occurrences[0].latitude = 48.8566;
+    editorStore.editorForm.occurrences[0].longitude = 2.3522;
     await vm.handleSaveDraft();
     expect(updateMock).toHaveBeenLastCalledWith(
       "created-manual",
-      expect.objectContaining({ latitude: 48.8566, longitude: 2.3522 }),
+      expect.objectContaining({
+        occurrences: [expect.objectContaining({ latitude: 48.8566, longitude: 2.3522 })]
+      }),
       "EDITOR"
     );
 
-    expect(editorStore.lastGeolocationPrecision).toBe("EXACT");
+    expect(editorStore.lastGeolocationPrecision[0]).toBe("EXACT");
   });
 });

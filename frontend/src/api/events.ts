@@ -13,6 +13,25 @@ export type SocialLink = {
   url: string;
 };
 
+export type EventOccurrenceInput = {
+  venueName: string | null;
+  address: string | null;
+  postalCode: string | null;
+  city: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  geolocationPrecision?: GeolocationPrecision;
+  eventStartAt: string | null;
+  eventEndAt: string | null;
+  allDay: boolean | null;
+};
+
+export type EventOccurrence = EventOccurrenceInput & {
+  id: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
 export type EventPendingRevision = {
   id: string;
   eventId: string;
@@ -22,16 +41,7 @@ export type EventPendingRevision = {
   createdByUserId?: string | null;
   categoryId: string | null;
   audienceId: string | null;
-  eventStartAt: string | null;
-  eventEndAt: string | null;
-  allDay: boolean | null;
-  venueName: string | null;
-  address: string | null;
-  postalCode: string | null;
-  city: string | null;
-  latitude: number | null;
-  longitude: number | null;
-  geolocationPrecision?: GeolocationPrecision;
+  occurrences: EventOccurrence[];
   organizerName: string | null;
   organizerUrl?: string;
   contactEmail?: string;
@@ -55,16 +65,7 @@ export type EventItem = {
   createdByUserId?: string | null;
   categoryId: string | null;
   audienceId: string | null;
-  eventStartAt: string | null;
-  eventEndAt: string | null;
-  allDay: boolean | null;
-  venueName: string | null;
-  address: string | null;
-  postalCode: string | null;
-  city: string | null;
-  latitude: number | null;
-  longitude: number | null;
-  geolocationPrecision?: GeolocationPrecision;
+  occurrences: EventOccurrence[];
   organizerName: string | null;
   organizerUrl?: string;
   contactEmail?: string;
@@ -89,15 +90,7 @@ export type CreateEventPayload = {
   image?: string | null;
   categoryId?: string | null;
   audienceId?: string | null;
-  eventStartAt?: string | null;
-  eventEndAt?: string | null;
-  allDay?: boolean | null;
-  venueName?: string | null;
-  address?: string | null;
-  postalCode?: string | null;
-  city?: string | null;
-  latitude?: number | null;
-  longitude?: number | null;
+  occurrences: EventOccurrenceInput[];
   organizerName?: string | null;
   organizerUrl?: string;
   contactEmail?: string;

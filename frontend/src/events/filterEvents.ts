@@ -58,20 +58,19 @@ export const filterEvents = (events: EventItem[], filters: EventFilters): EventI
   const audiences = normalizeList(filters.audiences);
 
   return events.filter((event) => {
-    const eventStart = new Date(event.eventStartAt ?? "");
-    const eventEnd = new Date(event.eventEndAt ?? "");
+    const occurrences = event.occurrences ?? [];
 
     if (
       search &&
       !normalize(event.title).includes(search) &&
-      !normalize(event.venueName ?? "").includes(search) &&
-      !normalize(event.city ?? "").includes(search) &&
+      !occurrences.some((occurrence) => normalize(occurrence.venueName ?? "").includes(search)) &&
+      !occurrences.some((occurrence) => normalize(occurrence.city ?? "").includes(search)) &&
       !normalize(stripHtml(event.content ?? "")).includes(search)
     ) {
       return false;
     }
 
-    if (cities.length > 0 && !cities.includes(normalize(event.city ?? ""))) {
+    if (cities.length > 0 && !occurrences.some((occurrence) => cities.includes(normalize(occurrence.city ?? "")))) {
       return false;
     }
 
@@ -83,6 +82,8 @@ export const filterEvents = (events: EventItem[], filters: EventFilters): EventI
       return false;
     }
 
-    return withinDateRange(eventStart, eventEnd, filters.dateRange);
+    return occurrences.some((occurrence) =>
+      withinDateRange(new Date(occurrence.eventStartAt ?? ""), new Date(occurrence.eventEndAt ?? ""), filters.dateRange)
+    );
   });
 };

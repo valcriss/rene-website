@@ -2,6 +2,7 @@ import { render } from "@testing-library/vue";
 import * as L from "leaflet";
 import { vi } from "vitest";
 import EventMap from "../src/components/EventMap.vue";
+import type { EventMapPin } from "../src/utils/mapPins";
 
 type LeafletMap = {
   setView: ReturnType<typeof vi.fn>;
@@ -43,6 +44,16 @@ vi.mock("leaflet", () => ({
   marker: vi.fn(() => markerInstance)
 }));
 
+const buildPin = (overrides: Partial<EventMapPin> = {}): EventMapPin => ({
+  id: "1:occ-1",
+  eventId: "1",
+  latitude: 46.97,
+  longitude: 0.7,
+  popupHtml: "<strong>Concert</strong><br/>Salle, Descartes",
+  tooltipHtml: "<strong>Concert</strong><br/>15 janvier 2026",
+  ...overrides
+});
+
 describe("EventMap", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -51,21 +62,7 @@ describe("EventMap", () => {
   it("renders markers", () => {
     const { unmount } = render(EventMap, {
       props: {
-        events: [
-          {
-            id: "1",
-            title: "Concert",
-            eventStartAt: "2026-01-15T20:00:00.000Z",
-            eventEndAt: "2026-01-15T22:00:00.000Z",
-            venueName: "Salle",
-            city: "Descartes",
-            image: "img",
-            categoryId: "music",
-            latitude: 46.97,
-            longitude: 0.7,
-            status: "PUBLISHED"
-          }
-        ]
+        pins: [buildPin()]
       }
     });
 
@@ -89,8 +86,8 @@ describe("EventMap", () => {
         }
       }
     });
-    expect(markerInstance.bindPopup).toHaveBeenCalled();
-    expect(markerInstance.bindTooltip).toHaveBeenCalled();
+    expect(markerInstance.bindPopup).toHaveBeenCalledWith("<strong>Concert</strong><br/>Salle, Descartes");
+    expect(markerInstance.bindTooltip).toHaveBeenCalledWith("<strong>Concert</strong><br/>15 janvier 2026");
 
     unmount();
     expect(mapInstance.remove).toHaveBeenCalled();
@@ -100,21 +97,7 @@ describe("EventMap", () => {
     render(EventMap, {
       props: {
         selectedId: "1",
-        events: [
-          {
-            id: "1",
-            title: "Concert",
-            eventStartAt: "2026-01-15T20:00:00.000Z",
-            eventEndAt: "2026-01-15T22:00:00.000Z",
-            venueName: "Salle",
-            city: "Descartes",
-            image: "img",
-            categoryId: "music",
-            latitude: 46.97,
-            longitude: 0.7,
-            status: "PUBLISHED"
-          }
-        ]
+        pins: [buildPin()]
       }
     });
 
@@ -126,130 +109,66 @@ describe("EventMap", () => {
     render(EventMap, {
       props: {
         selectedId: "missing",
-        events: []
+        pins: []
       }
     });
 
     expect(markerInstance.openPopup).not.toHaveBeenCalled();
   });
 
-  it("updates markers when events change", async () => {
+  it("updates markers when pins change", async () => {
     const { rerender } = render(EventMap, {
       props: {
-        events: []
+        pins: []
       }
     });
 
     await rerender({
-      events: [
-        {
-          id: "1",
-          title: "Concert",
-          eventStartAt: "2026-01-15T20:00:00.000Z",
-          eventEndAt: "2026-01-15T22:00:00.000Z",
-          venueName: "Salle",
-          city: "Descartes",
-          image: "img",
-          categoryId: "music",
-          latitude: 46.97,
-          longitude: 0.7,
-          status: "PUBLISHED"
-        },
-        {
-          id: "2",
-          title: "Expo",
-          eventStartAt: "2026-01-16T10:00:00.000Z",
-          eventEndAt: "2026-01-16T12:00:00.000Z",
-          venueName: "Galerie",
-          city: "Tours",
-          image: "img",
-          categoryId: "art",
-          latitude: 47,
-          longitude: 0.69,
-          status: "PUBLISHED"
-        }
-      ]
+      pins: [buildPin({ id: "1:occ-1" }), buildPin({ id: "2:occ-1", eventId: "2", latitude: 47, longitude: 0.69 })]
     });
 
     expect(layerGroupInstance.clearLayers).toHaveBeenCalledTimes(2);
     expect(mapInstance.fitBounds).toHaveBeenCalled();
   });
 
-  it("recenters when events are cleared", async () => {
+  it("shows a single marker centered without bounds fitting", async () => {
     const { rerender } = render(EventMap, {
       props: {
-        events: [
-          {
-            id: "1",
-            title: "Concert",
-            eventStartAt: "2026-01-15T20:00:00.000Z",
-            eventEndAt: "2026-01-15T22:00:00.000Z",
-            venueName: "Salle",
-            city: "Descartes",
-            image: "img",
-            categoryId: "music",
-            latitude: 46.97,
-            longitude: 0.7,
-            status: "PUBLISHED"
-          }
-        ]
+        pins: []
       }
     });
 
     mapInstance.setView.mockClear();
 
-    await rerender({ events: [] });
+    await rerender({ pins: [buildPin()] });
+
+    expect(mapInstance.setView).toHaveBeenCalledWith([46.97, 0.7], 13);
+  });
+
+  it("recenters when pins are cleared", async () => {
+    const { rerender } = render(EventMap, {
+      props: {
+        pins: [buildPin()]
+      }
+    });
+
+    mapInstance.setView.mockClear();
+
+    await rerender({ pins: [] });
 
     expect(mapInstance.setView).toHaveBeenCalledWith([46.972, 0.705], 12);
   });
 
-  it("uses fallback date format when dates are invalid", () => {
-    render(EventMap, {
+  it("emits select with the pin's event id when a marker is clicked", () => {
+    const { emitted } = render(EventMap, {
       props: {
-        events: [
-          {
-            id: "1",
-            title: "Concert",
-            eventStartAt: "invalid",
-            eventEndAt: "invalid",
-            venueName: "Salle",
-            city: "Descartes",
-            image: "img",
-            categoryId: "music",
-            latitude: 46.97,
-            longitude: 0.7,
-            status: "PUBLISHED"
-          }
-        ]
+        pins: [buildPin({ eventId: "42" })]
       }
     });
 
-    const tooltipArg = markerInstance.bindTooltip.mock.calls[0]?.[0] ?? "";
-    expect(tooltipArg).toContain("Invalid");
-  });
+    const clickHandler = markerInstance.on.mock.calls.find(([eventName]) => eventName === "click")?.[1];
+    clickHandler?.();
 
-  it("renders range label when dates span multiple days", () => {
-    render(EventMap, {
-      props: {
-        events: [
-          {
-            id: "1",
-            title: "Festival",
-            eventStartAt: "2026-01-15T20:00:00.000Z",
-            eventEndAt: "2026-01-16T22:00:00.000Z",
-            venueName: "Salle",
-            city: "Descartes",
-            image: "img",
-            categoryId: "music",
-            latitude: 46.97,
-            longitude: 0.7,
-            status: "PUBLISHED"
-          }
-        ]
-      }
-    });
-
-    const tooltipArg = markerInstance.bindTooltip.mock.calls[0]?.[0] ?? "";
-    expect(tooltipArg).toContain("→");
+    expect(emitted().select?.[0]).toEqual(["42"]);
   });
 });

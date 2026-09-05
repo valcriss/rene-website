@@ -77,12 +77,22 @@ describe("coverage extras", () => {
         content: "Desc",
         image: "img",
         categoryId: "music",
-        eventStartAt: "2030-01-15T20:00:00.000Z",
-        eventEndAt: "2030-01-15T22:00:00.000Z",
-        venueName: "Salle",
-        city: "Descartes",
-        latitude: 46.97,
-        longitude: 0.7,
+        audienceId: null,
+        occurrences: [
+          {
+            id: "occ-1",
+            eventStartAt: "2030-01-15T20:00:00.000Z",
+            eventEndAt: "2030-01-15T22:00:00.000Z",
+            allDay: false,
+            venueName: "Salle",
+            address: null,
+            postalCode: null,
+            city: "Descartes",
+            latitude: 46.97,
+            longitude: 0.7
+          }
+        ],
+        organizerName: null,
         status: "PUBLISHED"
       },
       {
@@ -91,15 +101,25 @@ describe("coverage extras", () => {
         content: "Desc",
         image: "img",
         categoryId: "art",
-        eventStartAt: "2030-01-16T20:00:00.000Z",
-        eventEndAt: "2030-01-16T22:00:00.000Z",
-        venueName: "Galerie",
-        city: "Tours",
-        latitude: 47,
-        longitude: 0.69,
+        audienceId: null,
+        occurrences: [
+          {
+            id: "occ-2",
+            eventStartAt: "2030-01-16T20:00:00.000Z",
+            eventEndAt: "2030-01-16T22:00:00.000Z",
+            allDay: false,
+            venueName: "Galerie",
+            address: null,
+            postalCode: null,
+            city: "Tours",
+            latitude: 47,
+            longitude: 0.69
+          }
+        ],
+        organizerName: null,
         status: "PUBLISHED"
       }
-    ] as never;
+    ];
     categoriesStore.categories = [
       { id: "music", name: "Musique", createdAt: "", updatedAt: "" },
       { id: "art", name: "Art", createdAt: "", updatedAt: "" }
@@ -147,12 +167,22 @@ describe("coverage extras", () => {
         content: "Texte sans phrase finale mais assez long".repeat(10),
         image: "img",
         categoryId: "music",
-        eventStartAt: "2030-01-15T20:00:00.000Z",
-        eventEndAt: "2030-01-15T22:00:00.000Z",
-        venueName: "Salle",
-        city: "Descartes",
-        latitude: 46.97,
-        longitude: 0.7,
+        audienceId: null,
+        occurrences: [
+          {
+            id: "occ-1",
+            eventStartAt: "2030-01-15T20:00:00.000Z",
+            eventEndAt: "2030-01-15T22:00:00.000Z",
+            allDay: false,
+            venueName: "Salle",
+            address: null,
+            postalCode: null,
+            city: "Descartes",
+            latitude: 46.97,
+            longitude: 0.7
+          }
+        ],
+        organizerName: null,
         status: "PUBLISHED"
       },
       {
@@ -161,12 +191,22 @@ describe("coverage extras", () => {
         content: "Desc",
         image: "img",
         categoryId: "music",
-        eventStartAt: "invalid",
-        eventEndAt: "invalid",
-        venueName: "Salle",
-        city: "Descartes",
-        latitude: 46.971,
-        longitude: 0.701,
+        audienceId: null,
+        occurrences: [
+          {
+            id: "occ-2",
+            eventStartAt: "invalid",
+            eventEndAt: "invalid",
+            allDay: false,
+            venueName: "Salle",
+            address: null,
+            postalCode: null,
+            city: "Descartes",
+            latitude: 46.971,
+            longitude: 0.701
+          }
+        ],
+        organizerName: null,
         status: "PUBLISHED"
       },
       {
@@ -175,15 +215,25 @@ describe("coverage extras", () => {
         content: "Desc",
         image: "img",
         categoryId: "music",
-        eventStartAt: "2030-01-15T20:00:00.000Z",
-        eventEndAt: "2030-01-15T22:00:00.000Z",
-        venueName: "Salle",
-        city: "Tours",
-        latitude: 48,
-        longitude: 1,
+        audienceId: null,
+        occurrences: [
+          {
+            id: "occ-3",
+            eventStartAt: "2030-01-15T20:00:00.000Z",
+            eventEndAt: "2030-01-15T22:00:00.000Z",
+            allDay: false,
+            venueName: "Salle",
+            address: null,
+            postalCode: null,
+            city: "Tours",
+            latitude: 48,
+            longitude: 1
+          }
+        ],
+        organizerName: null,
         status: "PUBLISHED"
       }
-    ] as never;
+    ];
 
     expect(eventsStore.getRelatedPublishedEvents("missing")).toEqual([]);
     expect(eventsStore.getRelatedPublishedEvents("1", 2).map((event) => event.id)).toEqual(["2", "3"]);

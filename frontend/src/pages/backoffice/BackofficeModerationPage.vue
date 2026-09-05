@@ -64,7 +64,7 @@
                   {{ t("moderation.pendingBadge") }}
                 </span>
                 <span class="text-xs uppercase tracking-[0.24em] text-slate-400">
-                  {{ formatDate(eventItem.eventStartAt) }}
+                  {{ formatEventDateBadge(eventItem.occurrences) }}
                 </span>
               </div>
               <h4 class="mt-3 text-lg font-semibold text-slate-950">{{ eventItem.title }}</h4>
@@ -133,7 +133,7 @@ import { useRouter } from "vue-router";
 import type { EventItem } from "../../api/events";
 import { useAuthStore } from "../../stores/auth";
 import { useEventsStore } from "../../stores/events";
-import { getEventLocationLabel } from "../../utils/eventLocation";
+import { formatEventDateBadge, getEventLocationSummary } from "../../utils/occurrences";
 
 const authStore = useAuthStore();
 const eventsStore = useEventsStore();
@@ -142,8 +142,8 @@ const { t } = useI18n();
 
 const { canModerate } = storeToRefs(authStore);
 const { pendingEvents, rejectionReasons, moderationError, featuredEventIds } = storeToRefs(eventsStore);
-const { handlePublish, handleReject, formatDate, setFeaturedEvent } = eventsStore;
-const formatEventLocation = (eventItem: EventItem) => getEventLocationLabel(eventItem, eventItem.city);
+const { handlePublish, handleReject, setFeaturedEvent } = eventsStore;
+const formatEventLocation = (eventItem: EventItem) => getEventLocationSummary(eventItem.occurrences);
 
 const openModerationView = (id: string) => {
   router.push(`/backoffice/moderation/view/${id}`);

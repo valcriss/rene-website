@@ -7,40 +7,72 @@ describe("filterEvents", () => {
       id: "1",
       title: "Concert Jazz",
       content: "Une soirée dédiée au jazz.",
-      eventStartAt: "2026-01-15T20:00:00.000Z",
-      eventEndAt: "2026-01-15T22:00:00.000Z",
-      venueName: "Salle",
-      city: "Descartes",
       image: "img",
       categoryId: "music",
-      latitude: 46.97,
-      longitude: 0.7,
+      audienceId: null,
+      occurrences: [
+        {
+          id: "occ-1",
+          eventStartAt: "2026-01-15T20:00:00.000Z",
+          eventEndAt: "2026-01-15T22:00:00.000Z",
+          allDay: false,
+          venueName: "Salle",
+          address: null,
+          postalCode: null,
+          city: "Descartes",
+          latitude: 46.97,
+          longitude: 0.7
+        }
+      ],
+      organizerName: null,
       status: "PUBLISHED"
     },
     {
       id: "2",
       title: "Expo",
-      eventStartAt: "2026-01-18T10:00:00.000Z",
-      eventEndAt: "2026-01-18T12:00:00.000Z",
-      venueName: "Galerie",
-      city: "Tours",
+      content: null,
       image: "img",
       categoryId: "art",
-      latitude: 47,
-      longitude: 0.69,
+      audienceId: null,
+      occurrences: [
+        {
+          id: "occ-2",
+          eventStartAt: "2026-01-18T10:00:00.000Z",
+          eventEndAt: "2026-01-18T12:00:00.000Z",
+          allDay: false,
+          venueName: "Galerie",
+          address: null,
+          postalCode: null,
+          city: "Tours",
+          latitude: 47,
+          longitude: 0.69
+        }
+      ],
+      organizerName: null,
       status: "PUBLISHED"
     },
     {
       id: "3",
       title: "Festival",
-      eventStartAt: "2026-01-14T08:00:00.000Z",
-      eventEndAt: "2026-01-16T22:00:00.000Z",
-      venueName: "Parc",
-      city: "Descartes",
+      content: null,
       image: "img",
       categoryId: "festival",
-      latitude: 46.98,
-      longitude: 0.71,
+      audienceId: null,
+      occurrences: [
+        {
+          id: "occ-3",
+          eventStartAt: "2026-01-14T08:00:00.000Z",
+          eventEndAt: "2026-01-16T22:00:00.000Z",
+          allDay: false,
+          venueName: "Parc",
+          address: null,
+          postalCode: null,
+          city: "Descartes",
+          latitude: 46.98,
+          longitude: 0.71
+        }
+      ],
+      organizerName: null,
       status: "PUBLISHED"
     }
   ];
@@ -49,6 +81,7 @@ describe("filterEvents", () => {
     search: "",
     cities: [],
     types: [],
+    audiences: [],
     dateRange: { start: "", end: "" }
   };
 
@@ -90,5 +123,47 @@ describe("filterEvents", () => {
   it("ignores invalid date inputs", () => {
     const result = filterEvents(events, { ...baseFilters, dateRange: { start: "invalid", end: "" } });
     expect(result).toHaveLength(3);
+  });
+
+  it("matches an event if any of its several occurrences satisfies the filters", () => {
+    const multiOccurrenceEvent: EventItem = {
+      id: "4",
+      title: "Tournée",
+      content: null,
+      image: "img",
+      categoryId: "music",
+      audienceId: null,
+      occurrences: [
+        {
+          id: "occ-4a",
+          eventStartAt: "2026-02-01T20:00:00.000Z",
+          eventEndAt: "2026-02-01T22:00:00.000Z",
+          allDay: false,
+          venueName: "Salle",
+          address: null,
+          postalCode: null,
+          city: "Paris",
+          latitude: 48.85,
+          longitude: 2.35
+        },
+        {
+          id: "occ-4b",
+          eventStartAt: "2026-01-15T20:00:00.000Z",
+          eventEndAt: "2026-01-15T22:00:00.000Z",
+          allDay: false,
+          venueName: "Salle",
+          address: null,
+          postalCode: null,
+          city: "Descartes",
+          latitude: 46.97,
+          longitude: 0.7
+        }
+      ],
+      organizerName: null,
+      status: "PUBLISHED"
+    };
+
+    const result = filterEvents([multiOccurrenceEvent], { ...baseFilters, cities: ["descartes"] });
+    expect(result).toHaveLength(1);
   });
 });

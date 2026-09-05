@@ -24,12 +24,22 @@ describe("RelatedEvents", () => {
             content: "<p>Contenu</p>",
             image: "",
             categoryId: "unknown",
-            eventStartAt: "2030-01-15T20:00:00.000Z",
-            eventEndAt: "2030-01-15T22:00:00.000Z",
-            venueName: "Salle",
-            city: "Descartes",
-            latitude: 46.97,
-            longitude: 0.7,
+            audienceId: null,
+            occurrences: [
+              {
+                id: "occ-1",
+                eventStartAt: "2030-01-15T20:00:00.000Z",
+                eventEndAt: "2030-01-15T22:00:00.000Z",
+                allDay: false,
+                venueName: "Salle",
+                address: null,
+                postalCode: null,
+                city: "Descartes",
+                latitude: 46.97,
+                longitude: 0.7
+              }
+            ],
+            organizerName: null,
             status: "PUBLISHED"
           }
         ]

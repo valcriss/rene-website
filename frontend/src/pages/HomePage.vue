@@ -54,7 +54,7 @@
                 {{ t("home.featured") }}
               </span>
               <span class="rounded-full bg-slate-950/40 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-white ring-1 ring-white/20 backdrop-blur">
-                {{ formatDateRange(currentCarouselEvent.eventStartAt, currentCarouselEvent.eventEndAt) }}
+                {{ formatEventDateBadge(currentCarouselEvent.occurrences) }}
               </span>
               <span
                 v-if="getCategoryName(currentCarouselEvent.categoryId)"
@@ -67,7 +67,7 @@
 
             <div class="max-w-2xl space-y-4 rounded-[1.5rem] border border-white/10 bg-slate-950/28 p-5 backdrop-blur-md sm:p-6">
               <p class="text-sm font-medium uppercase tracking-[0.28em] text-white/88 [text-shadow:0_1px_10px_rgba(15,23,42,0.8)]">
-                {{ getEventLocationLabel(currentCarouselEvent, currentCarouselEvent.city) }}
+                {{ getEventLocationSummary(currentCarouselEvent.occurrences) }}
               </p>
               <h2 class="font-display max-w-2xl text-4xl font-semibold leading-tight tracking-tight text-white [text-shadow:0_4px_18px_rgba(15,23,42,0.82)] sm:text-5xl">
                 {{ currentCarouselEvent.title }}
@@ -201,7 +201,7 @@
                   />
                   <div class="absolute left-5 top-5 flex flex-wrap gap-2">
                     <span class="rounded-full bg-white/95 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-800 shadow-sm">
-                      {{ formatDateRange(eventItem.eventStartAt, eventItem.eventEndAt) }}
+                      {{ formatEventDateBadge(eventItem.occurrences) }}
                     </span>
                     <span
                       v-if="getCategoryName(eventItem.categoryId)"
@@ -216,7 +216,7 @@
                 <div class="space-y-4 p-5 sm:p-6">
                   <div class="space-y-3">
                     <p class="text-sm font-medium uppercase tracking-[0.22em] text-sky-700/80">
-                      {{ getEventLocationLabel(eventItem, eventItem.city) }}
+                      {{ getEventLocationSummary(eventItem.occurrences) }}
                     </p>
                     <h4 class="font-display text-2xl font-semibold leading-tight text-slate-950">
                       {{ eventItem.title }}
@@ -246,7 +246,7 @@
                 <p class="text-sm text-slate-500">{{ t("home.mapLead") }}</p>
               </div>
               <div class="mt-5">
-                <EventMap :events="filteredEvents" @select="openEventDetail" />
+                <EventMap :pins="eventsStore.getEventMapPins(filteredEvents)" @select="openEventDetail" />
               </div>
             </div>
           </div>
@@ -267,12 +267,13 @@ import HomeFilters from "../components/home/Filters.vue";
 import HomeSearch from "../components/home/Search.vue";
 import HomeTitle from "../components/home/Title.vue";
 import NavigationHeader from "../components/navigation/Header.vue";
+import type { EventItem } from "../api/events";
 import { useAuthStore } from "../stores/auth";
 import { useAudiencesStore } from "../stores/audiences";
 import { useCategoriesStore } from "../stores/categories";
 import { useEventsStore } from "../stores/events";
 import { useSettingsStore } from "../stores/settings";
-import { getEventLocationLabel } from "../utils/eventLocation";
+import { formatEventDateBadge, getEarliestOccurrence, getEventLocationSummary } from "../utils/occurrences";
 
 type CategoryTheme = {
   backgroundColor: string;
@@ -310,15 +311,15 @@ const categoryNames = computed(() =>
 );
 
 const now = () => Date.now();
+const isStillActive = (event: EventItem) => new Date(event.publicationEndAt ?? "").getTime() > now();
+const earliestStart = (event: EventItem) => getEarliestOccurrence(event.occurrences ?? [])?.eventStartAt ?? "";
 const activeFeaturedEvents = computed(() =>
-  filteredEvents.value.filter((event) => event.featured === true && new Date(event.eventEndAt).getTime() > now())
+  filteredEvents.value.filter((event) => event.featured === true && isStillActive(event))
 );
-const fallbackFeaturedEvent = computed(
-  () => filteredEvents.value.find((event) => new Date(event.eventEndAt).getTime() > now()) ?? null
-);
+const fallbackFeaturedEvent = computed(() => filteredEvents.value.find((event) => isStillActive(event)) ?? null);
 const carouselEvents = computed(() =>
   activeFeaturedEvents.value.length > 0
-    ? [...activeFeaturedEvents.value].sort((left, right) => left.eventStartAt.localeCompare(right.eventStartAt))
+    ? [...activeFeaturedEvents.value].sort((left, right) => earliestStart(left).localeCompare(earliestStart(right)))
     : fallbackFeaturedEvent.value
       ? [fallbackFeaturedEvent.value]
       : []
@@ -350,7 +351,6 @@ const {
   toggleAudience,
   getEventImage,
   markImageError,
-  formatDateRange,
   formatUpdatedAtLabel,
   getEventShortExcerpt
 } = eventsStore;

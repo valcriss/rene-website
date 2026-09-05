@@ -30,7 +30,7 @@
           />
           <div class="absolute left-4 top-4 flex flex-wrap gap-2">
             <span class="rounded-full bg-white/95 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-800 shadow-sm">
-              {{ formatDateRange(eventItem.eventStartAt, eventItem.eventEndAt) }}
+              {{ formatEventDateBadge(eventItem.occurrences) }}
             </span>
             <span
               v-if="getCategoryName(eventItem.categoryId)"
@@ -44,7 +44,7 @@
 
         <div class="space-y-3 p-5">
           <p class="text-xs font-semibold uppercase tracking-[0.22em] text-sky-700/75">
-            {{ getEventLocationLabel(eventItem, eventItem.city) }}
+            {{ getEventLocationSummary(eventItem.occurrences) }}
           </p>
           <h3 class="font-display text-2xl font-semibold leading-tight text-slate-950">
             {{ eventItem.title }}
@@ -70,7 +70,7 @@ import { storeToRefs } from "pinia";
 import type { EventItem } from "../../api/events";
 import { useCategoriesStore } from "../../stores/categories";
 import { useEventsStore } from "../../stores/events";
-import { getEventLocationLabel } from "../../utils/eventLocation";
+import { formatEventDateBadge, getEventLocationSummary } from "../../utils/occurrences";
 
 type CategoryTheme = {
   backgroundColor: string;
@@ -104,7 +104,7 @@ const categoryThemeMap: Record<string, CategoryTheme> = {
   science: { backgroundColor: "rgba(110, 231, 245, 0.2)", color: "#0f766e", borderColor: "rgba(45, 212, 191, 0.28)" }
 };
 
-const { getEventImage, markImageError, formatDateRange, formatUpdatedAtLabel, getEventExcerpt } = eventsStore;
+const { getEventImage, markImageError, formatUpdatedAtLabel, getEventExcerpt } = eventsStore;
 
 const getCategoryName = (categoryId: string) => categoryNames.value.get(categoryId) ?? "";
 

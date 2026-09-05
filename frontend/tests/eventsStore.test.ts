@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import { useEventsStore } from "../src/stores/events";
 import { useAuthStore } from "../src/stores/auth";
-import type { EventItem } from "../src/api/events";
+import type { EventItem, EventOccurrence } from "../src/api/events";
 import { deleteEvent, fetchEvents } from "../src/api/events";
 import { publishEventWithFeatured, updateEventFeatured } from "../src/api/moderation";
 
@@ -17,12 +17,8 @@ vi.mock("../src/api/moderation", () => ({
   rejectEvent: vi.fn()
 }));
 
-const buildEvent = (overrides: Partial<EventItem> = {}): EventItem => ({
-  id: "1",
-  title: "Concert",
-  content: "Texte",
-  image: "img",
-  categoryId: "music",
+const buildOccurrence = (overrides: Partial<EventOccurrence> = {}): EventOccurrence => ({
+  id: "occ-1",
   eventStartAt: "2026-01-15T00:00:00.000Z",
   eventEndAt: "2026-01-15T23:59:59.999Z",
   allDay: true,
@@ -32,6 +28,17 @@ const buildEvent = (overrides: Partial<EventItem> = {}): EventItem => ({
   city: "Descartes",
   latitude: 46.97,
   longitude: 0.7,
+  ...overrides
+});
+
+const buildEvent = (overrides: Partial<EventItem> = {}): EventItem => ({
+  id: "1",
+  title: "Concert",
+  content: "Texte",
+  image: "img",
+  categoryId: "music",
+  audienceId: null,
+  occurrences: [buildOccurrence()],
   organizerName: "Org",
   status: "PUBLISHED",
   publishedAt: null,
@@ -56,6 +63,17 @@ describe("events store", () => {
     expect(store.availableTypes).toEqual(["music"]);
   });
 
+  it("exposes available cities gathered from all occurrences", () => {
+    const store = useEventsStore();
+    store.events = [
+      buildEvent({
+        occurrences: [buildOccurrence({ city: "Descartes" }), buildOccurrence({ id: "occ-2", city: "Tours" })]
+      })
+    ];
+
+    expect(store.availableCities).toEqual(["Descartes", "Tours"]);
+  });
+
   it("formats date ranges and times", () => {
     const store = useEventsStore();
 
@@ -72,7 +90,8 @@ describe("events store", () => {
 
   it("builds all-day calendar urls", () => {
     const store = useEventsStore();
-    const url = decodeURIComponent(store.buildCalendarUrl(buildEvent()));
+    const event = buildEvent();
+    const url = decodeURIComponent(store.buildCalendarUrl(event, event.occurrences[0]));
 
     expect(url).toContain("DTSTART;VALUE=DATE:20260115");
     expect(url).toContain("DTEND;VALUE=DATE:20260116");
@@ -80,15 +99,32 @@ describe("events store", () => {
 
   it("builds citywide directions and calendar urls without venue", () => {
     const store = useEventsStore();
-    const citywideEvent = buildEvent({
+    const citywideOccurrence = buildOccurrence({
       venueName: "",
       address: "",
       postalCode: "37160",
       city: "Descartes"
     });
+    const citywideEvent = buildEvent({ occurrences: [citywideOccurrence] });
 
-    expect(decodeURIComponent(store.buildDirectionsUrl(citywideEvent))).toContain("destination=37160, Descartes");
-    expect(decodeURIComponent(store.buildCalendarUrl(citywideEvent))).toContain("LOCATION:37160, Descartes");
+    expect(decodeURIComponent(store.buildDirectionsUrl(citywideOccurrence))).toContain("destination=37160, Descartes");
+    expect(decodeURIComponent(store.buildCalendarUrl(citywideEvent, citywideOccurrence))).toContain("LOCATION:37160, Descartes");
+  });
+
+  it("builds a map pin per geolocated occurrence", () => {
+    const store = useEventsStore();
+    const event = buildEvent({
+      occurrences: [
+        buildOccurrence({ id: "occ-a", latitude: 46.97, longitude: 0.7 }),
+        buildOccurrence({ id: "occ-b", latitude: null, longitude: null }),
+        buildOccurrence({ id: "occ-c", latitude: 47, longitude: 0.69 })
+      ]
+    });
+
+    const pins = store.getEventMapPins([event]);
+
+    expect(pins).toHaveLength(2);
+    expect(pins.map((pin) => pin.id)).toEqual(["1:occ-a", "1:occ-c"]);
   });
 
   it("formats datetime input with fallback", () => {

@@ -16,14 +16,10 @@ import BackofficeModerationViewPage from "../src/pages/backoffice/BackofficeMode
 import BackofficeAdminUsersPage from "../src/pages/backoffice/BackofficeAdminUsersPage.vue";
 import BackofficeAdminCategoriesPage from "../src/pages/backoffice/BackofficeAdminCategoriesPage.vue";
 import BackofficeAdminSettingsPage from "../src/pages/backoffice/BackofficeAdminSettingsPage.vue";
-import type { EventItem } from "../src/api/events";
+import type { EventItem, EventOccurrence } from "../src/api/events";
 
-const buildEvent = (overrides: Partial<EventItem> = {}): EventItem => ({
-  id: "1",
-  title: "Concert",
-  content: "Hello",
-  image: "img",
-  categoryId: "music",
+const buildOccurrence = (overrides: Partial<EventOccurrence> = {}): EventOccurrence => ({
+  id: "occ-1",
   eventStartAt: "2030-01-15T20:00:00.000Z",
   eventEndAt: "2030-01-15T22:00:00.000Z",
   allDay: false,
@@ -34,6 +30,17 @@ const buildEvent = (overrides: Partial<EventItem> = {}): EventItem => ({
   latitude: 46.97,
   longitude: 0.7,
   geolocationPrecision: "EXACT",
+  ...overrides
+});
+
+const buildEvent = (overrides: Partial<EventItem> = {}): EventItem => ({
+  id: "1",
+  title: "Concert",
+  content: "Hello",
+  image: "img",
+  categoryId: "music",
+  audienceId: null,
+  occurrences: [buildOccurrence()],
   organizerName: "Org",
   status: "PUBLISHED",
   publishedAt: null,
@@ -176,15 +183,7 @@ describe("BackofficeEventsPage", () => {
           image: "img-2",
           createdByUserId: "current-user",
           categoryId: "music",
-          eventStartAt: "2030-01-15T20:00:00.000Z",
-          eventEndAt: "2030-01-15T22:00:00.000Z",
-          allDay: false,
-          venueName: "Salle",
-          address: "",
-          postalCode: "",
-          city: "Descartes",
-          latitude: 46.97,
-          longitude: 0.7,
+          occurrences: [buildOccurrence()],
           organizerName: "Org",
           status: "PENDING",
           rejectionReason: null,
@@ -223,15 +222,7 @@ describe("BackofficeEventsPage", () => {
           image: "img-2",
           createdByUserId: "current-user",
           categoryId: "music",
-          eventStartAt: "2030-01-15T20:00:00.000Z",
-          eventEndAt: "2030-01-15T22:00:00.000Z",
-          allDay: false,
-          venueName: "Salle",
-          address: "",
-          postalCode: "",
-          city: "Descartes",
-          latitude: 46.97,
-          longitude: 0.7,
+          occurrences: [buildOccurrence()],
           organizerName: "Org",
           status: "DRAFT",
           rejectionReason: null,
@@ -344,7 +335,7 @@ describe("BackofficeEventsPage", () => {
     const editorStore = useEditorStore(pinia);
     const submitSpy = vi.spyOn(editorStore, "handleSubmitDraft").mockResolvedValue(true);
     eventsStore.events = [
-      buildEvent({ id: "1", status: "DRAFT", latitude: null, longitude: null })
+      buildEvent({ id: "1", status: "DRAFT", occurrences: [buildOccurrence({ latitude: null, longitude: null })] })
     ];
 
     render(BackofficeEventsPage, {
@@ -369,7 +360,7 @@ describe("BackofficeEventsPage", () => {
     const editorStore = useEditorStore(pinia);
     const submitSpy = vi.spyOn(editorStore, "handleSubmitDraft").mockResolvedValue(true);
     eventsStore.events = [
-      buildEvent({ id: "1", status: "DRAFT", geolocationPrecision: "APPROXIMATE" })
+      buildEvent({ id: "1", status: "DRAFT", occurrences: [buildOccurrence({ geolocationPrecision: "APPROXIMATE" })] })
     ];
 
     render(BackofficeEventsPage, {

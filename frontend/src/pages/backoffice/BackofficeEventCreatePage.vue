@@ -150,66 +150,92 @@
           </section>
 
           <section class="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-[0_24px_60px_-40px_rgba(15,23,42,0.22)]">
-            <p class="text-xs uppercase tracking-[0.3em] text-slate-500">{{ t("editor.scheduleEyebrow") }}</p>
-            <h3 class="mt-2 text-lg font-semibold text-slate-950">{{ t("editor.scheduleTitle") }}</h3>
-            <div class="mt-5 grid gap-4 md:grid-cols-2">
-              <label class="text-sm text-slate-600">
-                {{ t("common.start") }}
-                <input v-model="editorForm.eventStartAt" type="date" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" />
-              </label>
-              <label class="text-sm text-slate-600">
-                {{ t("common.end") }}
-                <input v-model="editorForm.eventEndAt" type="date" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" />
-              </label>
-            </div>
-          </section>
-
-          <section class="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-[0_24px_60px_-40px_rgba(15,23,42,0.22)]">
-            <p class="text-xs uppercase tracking-[0.3em] text-slate-500">{{ t("editor.locationEyebrow") }}</p>
-            <h3 class="mt-2 text-lg font-semibold text-slate-950">{{ t("editor.locationTitle") }}</h3>
-            <p class="mt-2 text-sm leading-6 text-slate-500">{{ t("editor.locationLead") }}</p>
-            <div class="mt-5 grid gap-4 md:grid-cols-2">
-              <label class="text-sm text-slate-600 md:col-span-2">
-                {{ t("common.venue") }}
-                <input v-model="editorForm.venueName" type="text" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" :placeholder="t('editor.placeholders.venue')" />
-              </label>
-              <label class="text-sm text-slate-600 md:col-span-2">
-                {{ t("common.address") }}
-                <input v-model="editorForm.address" type="text" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" :placeholder="t('editor.placeholders.address')" />
-              </label>
-              <label class="text-sm text-slate-600">
-                {{ t("common.postalCode") }}
-                <input v-model="editorForm.postalCode" type="text" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" />
-              </label>
-              <label class="text-sm text-slate-600">
-                {{ t("common.city") }}
-                <input v-model="editorForm.city" type="text" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" />
-              </label>
-            </div>
-
-            <div class="mt-5 rounded-2xl border border-slate-100 bg-slate-50/60 p-4">
-              <div class="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">{{ t("editor.geolocationStatus") }}</p>
-                  <span class="mt-1 inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold" :class="geolocationStatusClass">
-                    {{ geolocationStatusLabel }}
-                  </span>
-                </div>
-                <label class="inline-flex items-center gap-2 text-sm text-slate-600">
-                  <input type="checkbox" :checked="useManualLocation" @change="onManualLocationToggle" />
-                  {{ t("editor.manualLocationToggle") }}
-                </label>
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p class="text-xs uppercase tracking-[0.3em] text-slate-500">{{ t("editor.scheduleEyebrow") }}</p>
+                <h3 class="mt-2 text-lg font-semibold text-slate-950">{{ t("editor.occurrencesTitle") }}</h3>
+                <p class="mt-2 text-sm leading-6 text-slate-500">{{ t("editor.locationLead") }}</p>
               </div>
-              <p class="mt-2 text-xs text-slate-400">{{ t("editor.manualLocationHint") }}</p>
-              <div v-if="useManualLocation" class="mt-4 grid gap-4 sm:grid-cols-2">
-                <label class="text-sm text-slate-600">
-                  {{ t("common.latitude") }}
-                  <input v-model.number="editorForm.latitude" type="number" step="any" min="-90" max="90" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" />
-                </label>
-                <label class="text-sm text-slate-600">
-                  {{ t("common.longitude") }}
-                  <input v-model.number="editorForm.longitude" type="number" step="any" min="-180" max="180" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" />
-                </label>
+              <button
+                type="button"
+                class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-sky-200 hover:bg-sky-50/70 hover:text-slate-900"
+                @click="addOccurrence"
+              >
+                {{ t("editor.addOccurrence") }}
+              </button>
+            </div>
+
+            <div class="mt-5 grid gap-5">
+              <div
+                v-for="(occurrence, index) in editorForm.occurrences"
+                :key="index"
+                class="rounded-[1.5rem] border border-slate-200 bg-slate-50/60 p-5"
+                :data-testid="`occurrence-row-${index}`"
+              >
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                  <p class="text-sm font-semibold text-slate-700">{{ t("editor.occurrenceLabel", { index: index + 1 }) }}</p>
+                  <button
+                    v-if="editorForm.occurrences.length > 1"
+                    type="button"
+                    class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700"
+                    @click="removeOccurrence(index)"
+                  >
+                    {{ t("editor.removeOccurrence") }}
+                  </button>
+                </div>
+
+                <div class="mt-4 grid gap-4 md:grid-cols-2">
+                  <label class="text-sm text-slate-600">
+                    {{ t("common.start") }}
+                    <input v-model="occurrence.eventStartAt" type="date" class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm" />
+                  </label>
+                  <label class="text-sm text-slate-600">
+                    {{ t("common.end") }}
+                    <input v-model="occurrence.eventEndAt" type="date" class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm" />
+                  </label>
+                  <label class="text-sm text-slate-600 md:col-span-2">
+                    {{ t("common.venue") }}
+                    <input v-model="occurrence.venueName" type="text" class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm" :placeholder="t('editor.placeholders.venue')" />
+                  </label>
+                  <label class="text-sm text-slate-600 md:col-span-2">
+                    {{ t("common.address") }}
+                    <input v-model="occurrence.address" type="text" class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm" :placeholder="t('editor.placeholders.address')" />
+                  </label>
+                  <label class="text-sm text-slate-600">
+                    {{ t("common.postalCode") }}
+                    <input v-model="occurrence.postalCode" type="text" class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm" />
+                  </label>
+                  <label class="text-sm text-slate-600">
+                    {{ t("common.city") }}
+                    <input v-model="occurrence.city" type="text" class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm" />
+                  </label>
+                </div>
+
+                <div class="mt-4 rounded-2xl border border-slate-100 bg-white p-4">
+                  <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">{{ t("editor.geolocationStatus") }}</p>
+                      <span class="mt-1 inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold" :class="geolocationStatusClass(index)">
+                        {{ geolocationStatusLabel(index) }}
+                      </span>
+                    </div>
+                    <label class="inline-flex items-center gap-2 text-sm text-slate-600">
+                      <input type="checkbox" :checked="useManualLocation[index]" @change="onManualLocationToggle(index, $event)" />
+                      {{ t("editor.manualLocationToggle") }}
+                    </label>
+                  </div>
+                  <p class="mt-2 text-xs text-slate-400">{{ t("editor.manualLocationHint") }}</p>
+                  <div v-if="useManualLocation[index]" class="mt-4 grid gap-4 sm:grid-cols-2">
+                    <label class="text-sm text-slate-600">
+                      {{ t("common.latitude") }}
+                      <input v-model.number="occurrence.latitude" type="number" step="any" min="-90" max="90" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" />
+                    </label>
+                    <label class="text-sm text-slate-600">
+                      {{ t("common.longitude") }}
+                      <input v-model.number="occurrence.longitude" type="number" step="any" min="-180" max="180" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" />
+                    </label>
+                  </div>
+                </div>
               </div>
             </div>
           </section>
@@ -379,6 +405,8 @@ import { useAuthStore } from "../../stores/auth";
 import { useAudiencesStore } from "../../stores/audiences";
 import { useCategoriesStore } from "../../stores/categories";
 import { useEditorStore } from "../../stores/editor";
+import { useEventsStore } from "../../stores/events";
+import type { EventItem } from "../../api/events";
 
 const router = useRouter();
 const { t } = useI18n();
@@ -386,6 +414,7 @@ const authStore = useAuthStore();
 const categoriesStore = useCategoriesStore();
 const audiencesStore = useAudiencesStore();
 const editorStore = useEditorStore();
+const eventsStore = useEventsStore();
 
 const { canEdit } = storeToRefs(authStore);
 const { categories, loading: categoriesLoading } = storeToRefs(categoriesStore);
@@ -412,11 +441,13 @@ const {
   addSocialLink,
   removeSocialLink,
   updateSocialLink,
-  setManualLocation
+  setManualLocation,
+  addOccurrence,
+  removeOccurrence
 } = editorStore;
 
-const geolocationStatusLabel = computed(() => {
-  switch (lastGeolocationPrecision.value) {
+const geolocationStatusLabel = (index: number) => {
+  switch (lastGeolocationPrecision.value[index]) {
     case "EXACT":
       return t("editor.geolocationExact");
     case "APPROXIMATE":
@@ -426,10 +457,10 @@ const geolocationStatusLabel = computed(() => {
     default:
       return t("editor.geolocationPending");
   }
-});
+};
 
-const geolocationStatusClass = computed(() => {
-  switch (lastGeolocationPrecision.value) {
+const geolocationStatusClass = (index: number) => {
+  switch (lastGeolocationPrecision.value[index]) {
     case "EXACT":
       return "bg-emerald-50 text-emerald-700";
     case "APPROXIMATE":
@@ -439,10 +470,10 @@ const geolocationStatusClass = computed(() => {
     default:
       return "bg-slate-100 text-slate-500";
   }
-});
+};
 
-const onManualLocationToggle = (event: Event) => {
-  setManualLocation((event.target as HTMLInputElement).checked);
+const onManualLocationToggle = (index: number, event: Event) => {
+  setManualLocation(index, (event.target as HTMLInputElement).checked);
 };
 
 const socialLinkTypes: SocialLinkType[] = ["FACEBOOK", "INSTAGRAM", "YOUTUBE", "LINKEDIN", "X", "TIKTOK"];
@@ -454,22 +485,12 @@ const socialLinkTypeOptions = computed(() =>
   }))
 );
 
-const hasResolvedCoordinates = (event: { latitude: number | null; longitude: number | null }) =>
-  typeof event.latitude === "number" &&
-  Number.isFinite(event.latitude) &&
-  typeof event.longitude === "number" &&
-  Number.isFinite(event.longitude);
-
-const getLocationQuery = (event: {
-  latitude: number | null;
-  longitude: number | null;
-  geolocationPrecision?: "EXACT" | "APPROXIMATE" | "UNRESOLVED";
-}) => {
-  if (!hasResolvedCoordinates(event)) {
+const getLocationQuery = (event: EventItem) => {
+  if (!eventsStore.hasResolvedCoordinates(event)) {
     return { location: "unresolved", saved: "draft" };
   }
 
-  if (event.geolocationPrecision === "APPROXIMATE") {
+  if (eventsStore.hasApproximateGeolocation(event)) {
     return { location: "approximate", saved: "draft" };
   }
 

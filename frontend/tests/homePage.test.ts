@@ -4,15 +4,11 @@ import HomePage from "../src/pages/HomePage.vue";
 import { useEventsStore } from "../src/stores/events";
 import { useCategoriesStore } from "../src/stores/categories";
 import { createTestRouter } from "./testRouter";
-import type { EventItem } from "../src/api/events";
+import type { EventItem, EventOccurrence } from "../src/api/events";
 import { vi } from "vitest";
 
-const buildEvent = (): EventItem => ({
-  id: "1",
-  title: "Concert",
-  content: "Première phrase. Deuxième phrase. Troisième phrase inutile.",
-  image: "img",
-  categoryId: "music",
+const buildOccurrence = (overrides: Partial<EventOccurrence> = {}): EventOccurrence => ({
+  id: "occ-1",
   eventStartAt: "2030-01-15T20:00:00.000Z",
   eventEndAt: "2030-01-15T22:00:00.000Z",
   allDay: false,
@@ -22,13 +18,25 @@ const buildEvent = (): EventItem => ({
   city: "Descartes",
   latitude: 46.97,
   longitude: 0.7,
+  ...overrides
+});
+
+const buildEvent = (overrides: Partial<EventItem> = {}): EventItem => ({
+  id: "1",
+  title: "Concert",
+  content: "Première phrase. Deuxième phrase. Troisième phrase inutile.",
+  image: "img",
+  categoryId: "music",
+  audienceId: null,
+  occurrences: [buildOccurrence()],
   organizerName: "Org",
   status: "PUBLISHED",
   publishedAt: null,
   publicationEndAt: "2030-01-15T22:00:00.000Z",
   rejectionReason: null,
   createdAt: "2030-01-01T00:00:00.000Z",
-  updatedAt: "2030-01-01T00:00:00.000Z"
+  updatedAt: "2030-01-01T00:00:00.000Z",
+  ...overrides
 });
 
 describe("HomePage", () => {
@@ -84,7 +92,13 @@ describe("HomePage", () => {
     eventsStore.error = null;
     eventsStore.events = [
       buildEvent(),
-      { ...buildEvent(), id: "2", title: "Expo", featured: true, eventStartAt: "2030-01-16T20:00:00.000Z", eventEndAt: "2030-01-16T22:00:00.000Z" }
+      buildEvent({
+        id: "2",
+        title: "Expo",
+        occurrences: [
+          buildOccurrence({ id: "occ-2", eventStartAt: "2030-01-16T20:00:00.000Z", eventEndAt: "2030-01-16T22:00:00.000Z" })
+        ]
+      })
     ].map((eventItem) => ({ ...eventItem, featured: true }));
     categoriesStore.hasLoaded = true;
 

@@ -7,17 +7,15 @@
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount, ref, watch } from "vue";
 import * as L from "leaflet";
-import type { EventItem } from "../api/events";
-import { formatDateRange } from "../utils/formatters";
-import { getEventLocationLabel } from "../utils/eventLocation";
+import type { EventMapPin } from "../utils/mapPins";
 
-const props = defineProps<{ events: EventItem[]; selectedId?: string | null }>();
+const props = defineProps<{ pins: EventMapPin[]; selectedId?: string | null }>();
 const emit = defineEmits<{ (event: "select", id: string): void }>();
 
 const mapContainer = ref<HTMLDivElement | null>(null);
 const mapInstance = ref<L.Map | null>(null);
 const markersLayer = ref<L.LayerGroup>(L.layerGroup());
-const markersById = new Map<string, L.Marker>();
+const markersByEventId = new Map<string, L.Marker>();
 
 const defaultCenter = { lat: 46.972, lng: 0.705 };
 const defaultZoom = 12;
@@ -29,47 +27,38 @@ const markerIcon = L.icon({
   tooltipAnchor: [16, -28]
 });
 
-const hasCoordinates = (event: EventItem) =>
-  typeof event.latitude === "number" &&
-  Number.isFinite(event.latitude) &&
-  typeof event.longitude === "number" &&
-  Number.isFinite(event.longitude);
-
-const updateMarkers = (items: EventItem[]) => {
+const updateMarkers = (pins: EventMapPin[]) => {
   markersLayer.value.clearLayers();
-  markersById.clear();
+  markersByEventId.clear();
 
-  items.filter(hasCoordinates).forEach((event) => {
-    const marker = L.marker([event.latitude, event.longitude], { icon: markerIcon });
-    marker.bindPopup(`<strong>${event.title}</strong><br/>${getEventLocationLabel(event, event.city)}`);
-    marker.bindTooltip(`<strong>${event.title}</strong><br/>${formatDateRange(event.eventStartAt, event.eventEndAt)}`);
-    marker.on("click", () => emit("select", event.id));
+  pins.forEach((pin) => {
+    const marker = L.marker([pin.latitude, pin.longitude], { icon: markerIcon });
+    marker.bindPopup(pin.popupHtml);
+    marker.bindTooltip(pin.tooltipHtml);
+    marker.on("click", () => emit("select", pin.eventId));
     marker.addTo(markersLayer.value as L.LayerGroup);
-    markersById.set(event.id, marker);
+    markersByEventId.set(pin.eventId, marker);
   });
 };
 
-const fitToMarkers = (items: EventItem[]) => {
+const fitToMarkers = (pins: EventMapPin[]) => {
   const map = mapInstance.value as L.Map;
-  const geocodedItems = items.filter(hasCoordinates);
 
-  if (geocodedItems.length === 0) {
+  if (pins.length === 0) {
     map.setView([defaultCenter.lat, defaultCenter.lng], defaultZoom);
     return;
   }
-  if (geocodedItems.length === 1) {
-    map.setView([geocodedItems[0].latitude, geocodedItems[0].longitude], 13);
+  if (pins.length === 1) {
+    map.setView([pins[0].latitude, pins[0].longitude], 13);
     return;
   }
-  const bounds = L.latLngBounds(
-    geocodedItems.map((event) => [event.latitude, event.longitude] as L.LatLngExpression)
-  );
+  const bounds = L.latLngBounds(pins.map((pin) => [pin.latitude, pin.longitude] as L.LatLngExpression));
   map.fitBounds(bounds, { padding: [24, 24] });
 };
 
 const openSelectedMarker = () => {
   if (!props.selectedId || !mapInstance.value) return;
-  const marker = markersById.get(props.selectedId);
+  const marker = markersByEventId.get(props.selectedId);
   if (!marker) return;
   marker.openPopup();
   mapInstance.value.setView(marker.getLatLng(), 13);
@@ -83,16 +72,16 @@ onMounted(() => {
 
   mapInstance.value = map;
   markersLayer.value.addTo(map);
-  updateMarkers(props.events);
-  fitToMarkers(props.events);
+  updateMarkers(props.pins);
+  fitToMarkers(props.pins);
   openSelectedMarker();
 });
 
 watch(
-  () => props.events,
-  (items) => {
-    updateMarkers(items);
-    fitToMarkers(items);
+  () => props.pins,
+  (pins) => {
+    updateMarkers(pins);
+    fitToMarkers(pins);
     openSelectedMarker();
   }
 );

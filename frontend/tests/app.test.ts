@@ -12,7 +12,7 @@ type FetchInit = { method?: string };
 vi.mock("../src/components/EventMap.vue", () => ({
   default: {
     name: "EventMap",
-    props: ["events"],
+    props: ["pins"],
     template: "<div data-testid='event-map'></div>"
   }
 }));
@@ -30,6 +30,51 @@ vi.mock("cropperjs", () => ({
     }
   }
 }));
+
+type FlatEventFixture = Record<string, unknown> & { id: string };
+
+const toOccurrence = (fixture: FlatEventFixture) => ({
+  id: `${fixture.id}-occ-1`,
+  eventStartAt: fixture.eventStartAt ?? null,
+  eventEndAt: fixture.eventEndAt ?? null,
+  allDay: fixture.allDay ?? false,
+  venueName: fixture.venueName ?? null,
+  address: fixture.address ?? null,
+  postalCode: fixture.postalCode ?? null,
+  city: fixture.city ?? null,
+  latitude: fixture.latitude ?? null,
+  longitude: fixture.longitude ?? null,
+  geolocationPrecision: fixture.geolocationPrecision ?? "EXACT"
+});
+
+// Test fixtures throughout this file are authored in the convenient flat shape the API used
+// before the multi-occurrence model; this converts them to the real `occurrences: [...]` shape
+// at the point they're handed to a mocked fetch response.
+const toEventPayload = (fixture: FlatEventFixture): Record<string, unknown> => {
+  const {
+    eventStartAt,
+    eventEndAt,
+    venueName,
+    address,
+    postalCode,
+    city,
+    latitude,
+    longitude,
+    pendingRevision,
+    ...rest
+  } = fixture;
+  const hasOccurrenceData = [eventStartAt, eventEndAt, venueName, address, postalCode, city, latitude, longitude].some(
+    (value) => value !== undefined && value !== null
+  );
+
+  return {
+    ...rest,
+    occurrences: hasOccurrenceData ? [toOccurrence(fixture)] : [],
+    ...(pendingRevision ? { pendingRevision: toEventPayload(pendingRevision as FlatEventFixture) } : {})
+  };
+};
+
+const toEventsPayload = (fixtures: FlatEventFixture[]) => fixtures.map(toEventPayload);
 
 describe("App", () => {
   const renderWithRouter = async (path = "/") => {
@@ -163,21 +208,23 @@ describe("App", () => {
         Promise.resolve({
           ok: true,
           json: () =>
-            Promise.resolve([
-              {
-                id: "1",
-                title: "Concert",
-                eventStartAt: "2026-01-15T20:00:00.000Z",
-                eventEndAt: "2026-01-15T22:00:00.000Z",
-                venueName: "Salle",
-                city: "Descartes",
-                image: "https://example.com",
-                categoryId: "music",
-                latitude: 46.97,
-                longitude: 0.7,
-                status: "PUBLISHED"
-              }
-            ])
+            Promise.resolve(
+              toEventsPayload([
+                {
+                  id: "1",
+                  title: "Concert",
+                  eventStartAt: "2026-01-15T20:00:00.000Z",
+                  eventEndAt: "2026-01-15T22:00:00.000Z",
+                  venueName: "Salle",
+                  city: "Descartes",
+                  image: "https://example.com",
+                  categoryId: "music",
+                  latitude: 46.97,
+                  longitude: 0.7,
+                  status: "PUBLISHED"
+                }
+              ])
+            )
         })
       )
     );
@@ -195,21 +242,23 @@ describe("App", () => {
         Promise.resolve({
           ok: true,
           json: () =>
-            Promise.resolve([
-              {
-                id: "1",
-                title: "Concert",
-                eventStartAt: "2026-01-15T20:00:00.000Z",
-                eventEndAt: "2026-01-15T22:00:00.000Z",
-                venueName: "Salle",
-                city: "Descartes",
-                image: "",
-                categoryId: "music",
-                latitude: 46.97,
-                longitude: 0.7,
-                status: "PUBLISHED"
-              }
-            ])
+            Promise.resolve(
+              toEventsPayload([
+                {
+                  id: "1",
+                  title: "Concert",
+                  eventStartAt: "2026-01-15T20:00:00.000Z",
+                  eventEndAt: "2026-01-15T22:00:00.000Z",
+                  venueName: "Salle",
+                  city: "Descartes",
+                  image: "",
+                  categoryId: "music",
+                  latitude: 46.97,
+                  longitude: 0.7,
+                  status: "PUBLISHED"
+                }
+              ])
+            )
         })
       )
     );
@@ -228,21 +277,23 @@ describe("App", () => {
         Promise.resolve({
           ok: true,
           json: () =>
-            Promise.resolve([
-              {
-                id: "1",
-                title: "Concert",
-                eventStartAt: "2026-01-15T20:00:00.000Z",
-                eventEndAt: "2026-01-15T22:00:00.000Z",
-                venueName: "Salle",
-                city: "Descartes",
-                image: "https://bad-image.test/404.jpg",
-                categoryId: "music",
-                latitude: 46.97,
-                longitude: 0.7,
-                status: "PUBLISHED"
-              }
-            ])
+            Promise.resolve(
+              toEventsPayload([
+                {
+                  id: "1",
+                  title: "Concert",
+                  eventStartAt: "2026-01-15T20:00:00.000Z",
+                  eventEndAt: "2026-01-15T22:00:00.000Z",
+                  venueName: "Salle",
+                  city: "Descartes",
+                  image: "https://bad-image.test/404.jpg",
+                  categoryId: "music",
+                  latitude: 46.97,
+                  longitude: 0.7,
+                  status: "PUBLISHED"
+                }
+              ])
+            )
         })
       )
     );
@@ -263,21 +314,23 @@ describe("App", () => {
         Promise.resolve({
           ok: true,
           json: () =>
-            Promise.resolve([
-              {
-                id: "1",
-                title: "Concert",
-                eventStartAt: "2026-01-15T20:00:00.000Z",
-                eventEndAt: "2026-01-15T22:00:00.000Z",
-                venueName: "Salle",
-                city: "Descartes",
-                image: "https://example.com",
-                categoryId: "music",
-                latitude: 46.97,
-                longitude: 0.7,
-                status: "PUBLISHED"
-              }
-            ])
+            Promise.resolve(
+              toEventsPayload([
+                {
+                  id: "1",
+                  title: "Concert",
+                  eventStartAt: "2026-01-15T20:00:00.000Z",
+                  eventEndAt: "2026-01-15T22:00:00.000Z",
+                  venueName: "Salle",
+                  city: "Descartes",
+                  image: "https://example.com",
+                  categoryId: "music",
+                  latitude: 46.97,
+                  longitude: 0.7,
+                  status: "PUBLISHED"
+                }
+              ])
+            )
         })
       )
     );
@@ -298,47 +351,49 @@ describe("App", () => {
         Promise.resolve({
           ok: true,
           json: () =>
-            Promise.resolve([
-              {
-                id: "1",
-                title: "Concert",
-                content: "Une soirée dédiée au jazz.",
-                eventStartAt: "2026-01-15T20:00:00.000Z",
-                eventEndAt: "2026-01-15T22:00:00.000Z",
-                venueName: "Salle",
-                address: "12 rue de la musique",
-                postalCode: "37100",
-                city: "Descartes",
-                image: "https://example.com",
-                categoryId: "music",
-                latitude: 46.97,
-                longitude: 0.7,
-                organizerName: "Association Musique",
-                organizerUrl: "https://organisateur.test",
-                contactEmail: "contact@test.fr",
-                contactPhone: "01 02 03 04 05",
-                ticketUrl: "https://billetterie.test",
-                websiteUrl: "https://evenement.test",
-                status: "PUBLISHED"
-              },
-              {
-                id: "2",
-                title: "Festival voisin",
-                content: "A découvrir aussi.",
-                eventStartAt: "2026-01-16T20:00:00.000Z",
-                eventEndAt: "2026-01-16T22:00:00.000Z",
-                venueName: "Place",
-                address: "1 rue du centre",
-                postalCode: "37100",
-                city: "Descartes",
-                image: "https://example.com/2",
-                categoryId: "art",
-                latitude: 46.971,
-                longitude: 0.701,
-                organizerName: "Association Arts",
-                status: "PUBLISHED"
-              }
-            ])
+            Promise.resolve(
+              toEventsPayload([
+                {
+                  id: "1",
+                  title: "Concert",
+                  content: "Une soirée dédiée au jazz.",
+                  eventStartAt: "2026-01-15T20:00:00.000Z",
+                  eventEndAt: "2026-01-15T22:00:00.000Z",
+                  venueName: "Salle",
+                  address: "12 rue de la musique",
+                  postalCode: "37100",
+                  city: "Descartes",
+                  image: "https://example.com",
+                  categoryId: "music",
+                  latitude: 46.97,
+                  longitude: 0.7,
+                  organizerName: "Association Musique",
+                  organizerUrl: "https://organisateur.test",
+                  contactEmail: "contact@test.fr",
+                  contactPhone: "01 02 03 04 05",
+                  ticketUrl: "https://billetterie.test",
+                  websiteUrl: "https://evenement.test",
+                  status: "PUBLISHED"
+                },
+                {
+                  id: "2",
+                  title: "Festival voisin",
+                  content: "A découvrir aussi.",
+                  eventStartAt: "2026-01-16T20:00:00.000Z",
+                  eventEndAt: "2026-01-16T22:00:00.000Z",
+                  venueName: "Place",
+                  address: "1 rue du centre",
+                  postalCode: "37100",
+                  city: "Descartes",
+                  image: "https://example.com/2",
+                  categoryId: "art",
+                  latitude: 46.971,
+                  longitude: 0.701,
+                  organizerName: "Association Arts",
+                  status: "PUBLISHED"
+                }
+              ])
+            )
         })
       )
     );
@@ -379,21 +434,23 @@ describe("App", () => {
         Promise.resolve({
           ok: true,
           json: () =>
-            Promise.resolve([
-              {
-                id: "1",
-                title: "Concert",
-                eventStartAt: "2026-01-15T20:00:00.000Z",
-                eventEndAt: "2026-01-15T22:00:00.000Z",
-                venueName: "Salle",
-                city: "Descartes",
-                image: "https://example.com",
-                categoryId: "music",
-                latitude: 46.97,
-                longitude: 0.7,
-                status: "PUBLISHED"
-              }
-            ])
+            Promise.resolve(
+              toEventsPayload([
+                {
+                  id: "1",
+                  title: "Concert",
+                  eventStartAt: "2026-01-15T20:00:00.000Z",
+                  eventEndAt: "2026-01-15T22:00:00.000Z",
+                  venueName: "Salle",
+                  city: "Descartes",
+                  image: "https://example.com",
+                  categoryId: "music",
+                  latitude: 46.97,
+                  longitude: 0.7,
+                  status: "PUBLISHED"
+                }
+              ])
+            )
         })
       )
     );
@@ -492,34 +549,36 @@ describe("App", () => {
         Promise.resolve({
           ok: true,
           json: () =>
-            Promise.resolve([
-              {
-                id: "1",
-                title: "Concert",
-                eventStartAt: "2026-01-15T10:00:00.000Z",
-                eventEndAt: "2026-01-15T12:00:00.000Z",
-                venueName: "Salle",
-                city: "Descartes",
-                image: "https://example.com",
-                categoryId: "music",
-                latitude: 46.97,
-                longitude: 0.7,
-                status: "PUBLISHED"
-              },
-              {
-                id: "2",
-                title: "Expo",
-                eventStartAt: "2026-01-18T10:00:00.000Z",
-                eventEndAt: "2026-01-18T12:00:00.000Z",
-                venueName: "Galerie",
-                city: "Tours",
-                image: "https://example.com",
-                categoryId: "art",
-                latitude: 47,
-                longitude: 0.69,
-                status: "PUBLISHED"
-              }
-            ])
+            Promise.resolve(
+              toEventsPayload([
+                {
+                  id: "1",
+                  title: "Concert",
+                  eventStartAt: "2026-01-15T10:00:00.000Z",
+                  eventEndAt: "2026-01-15T12:00:00.000Z",
+                  venueName: "Salle",
+                  city: "Descartes",
+                  image: "https://example.com",
+                  categoryId: "music",
+                  latitude: 46.97,
+                  longitude: 0.7,
+                  status: "PUBLISHED"
+                },
+                {
+                  id: "2",
+                  title: "Expo",
+                  eventStartAt: "2026-01-18T10:00:00.000Z",
+                  eventEndAt: "2026-01-18T12:00:00.000Z",
+                  venueName: "Galerie",
+                  city: "Tours",
+                  image: "https://example.com",
+                  categoryId: "art",
+                  latitude: 47,
+                  longitude: 0.69,
+                  status: "PUBLISHED"
+                }
+              ])
+            )
         })
       )
     );
@@ -542,34 +601,36 @@ describe("App", () => {
         Promise.resolve({
           ok: true,
           json: () =>
-            Promise.resolve([
-              {
-                id: "1",
-                title: "Concert",
-                eventStartAt: "2026-01-18T10:00:00.000Z",
-                eventEndAt: "2026-01-18T12:00:00.000Z",
-                venueName: "Salle",
-                city: "Descartes",
-                image: "https://example.com",
-                categoryId: "music",
-                latitude: 46.97,
-                longitude: 0.7,
-                status: "PUBLISHED"
-              },
-              {
-                id: "2",
-                title: "Expo",
-                eventStartAt: "2026-01-20T10:00:00.000Z",
-                eventEndAt: "2026-01-20T12:00:00.000Z",
-                venueName: "Galerie",
-                city: "Tours",
-                image: "https://example.com",
-                categoryId: "art",
-                latitude: 47,
-                longitude: 0.69,
-                status: "PUBLISHED"
-              }
-            ])
+            Promise.resolve(
+              toEventsPayload([
+                {
+                  id: "1",
+                  title: "Concert",
+                  eventStartAt: "2026-01-18T10:00:00.000Z",
+                  eventEndAt: "2026-01-18T12:00:00.000Z",
+                  venueName: "Salle",
+                  city: "Descartes",
+                  image: "https://example.com",
+                  categoryId: "music",
+                  latitude: 46.97,
+                  longitude: 0.7,
+                  status: "PUBLISHED"
+                },
+                {
+                  id: "2",
+                  title: "Expo",
+                  eventStartAt: "2026-01-20T10:00:00.000Z",
+                  eventEndAt: "2026-01-20T12:00:00.000Z",
+                  venueName: "Galerie",
+                  city: "Tours",
+                  image: "https://example.com",
+                  categoryId: "art",
+                  latitude: 47,
+                  longitude: 0.69,
+                  status: "PUBLISHED"
+                }
+              ])
+            )
         })
       )
     );
@@ -590,21 +651,23 @@ describe("App", () => {
         Promise.resolve({
           ok: true,
           json: () =>
-            Promise.resolve([
-              {
-                id: "1",
-                title: "Concert",
-                eventStartAt: "2026-01-15T20:00:00.000Z",
-                eventEndAt: "2026-01-15T22:00:00.000Z",
-                venueName: "Salle",
-                city: "Descartes",
-                image: "https://example.com",
-                categoryId: "music",
-                latitude: 46.97,
-                longitude: 0.7,
-                status: "PUBLISHED"
-              }
-            ])
+            Promise.resolve(
+              toEventsPayload([
+                {
+                  id: "1",
+                  title: "Concert",
+                  eventStartAt: "2026-01-15T20:00:00.000Z",
+                  eventEndAt: "2026-01-15T22:00:00.000Z",
+                  venueName: "Salle",
+                  city: "Descartes",
+                  image: "https://example.com",
+                  categoryId: "music",
+                  latitude: 46.97,
+                  longitude: 0.7,
+                  status: "PUBLISHED"
+                }
+              ])
+            )
         })
       )
     );
@@ -629,21 +692,23 @@ describe("App", () => {
         Promise.resolve({
           ok: true,
           json: () =>
-            Promise.resolve([
-              {
-                id: "1",
-                title: "Concert",
-                eventStartAt: "2026-01-15T20:00:00.000Z",
-                eventEndAt: "2026-01-15T22:00:00.000Z",
-                venueName: "Salle",
-                city: "Descartes",
-                image: "https://example.com",
-                categoryId: "music",
-                latitude: 46.97,
-                longitude: 0.7,
-                status: "PUBLISHED"
-              }
-            ])
+            Promise.resolve(
+              toEventsPayload([
+                {
+                  id: "1",
+                  title: "Concert",
+                  eventStartAt: "2026-01-15T20:00:00.000Z",
+                  eventEndAt: "2026-01-15T22:00:00.000Z",
+                  venueName: "Salle",
+                  city: "Descartes",
+                  image: "https://example.com",
+                  categoryId: "music",
+                  latitude: 46.97,
+                  longitude: 0.7,
+                  status: "PUBLISHED"
+                }
+              ])
+            )
         })
       )
     );
@@ -669,34 +734,36 @@ describe("App", () => {
         Promise.resolve({
           ok: true,
           json: () =>
-            Promise.resolve([
-              {
-                id: "1",
-                title: "Concert",
-                eventStartAt: "2026-01-15T20:00:00.000Z",
-                eventEndAt: "2026-01-15T22:00:00.000Z",
-                venueName: "Salle",
-                city: "Descartes",
-                image: "https://example.com",
-                categoryId: "music",
-                latitude: 46.97,
-                longitude: 0.7,
-                status: "PUBLISHED"
-              },
-              {
-                id: "2",
-                title: "Expo",
-                eventStartAt: "2026-01-16T10:00:00.000Z",
-                eventEndAt: "2026-01-16T12:00:00.000Z",
-                venueName: "Galerie",
-                city: "Tours",
-                image: "https://example.com",
-                categoryId: "art",
-                latitude: 47,
-                longitude: 0.69,
-                status: "PUBLISHED"
-              }
-            ])
+            Promise.resolve(
+              toEventsPayload([
+                {
+                  id: "1",
+                  title: "Concert",
+                  eventStartAt: "2026-01-15T20:00:00.000Z",
+                  eventEndAt: "2026-01-15T22:00:00.000Z",
+                  venueName: "Salle",
+                  city: "Descartes",
+                  image: "https://example.com",
+                  categoryId: "music",
+                  latitude: 46.97,
+                  longitude: 0.7,
+                  status: "PUBLISHED"
+                },
+                {
+                  id: "2",
+                  title: "Expo",
+                  eventStartAt: "2026-01-16T10:00:00.000Z",
+                  eventEndAt: "2026-01-16T12:00:00.000Z",
+                  venueName: "Galerie",
+                  city: "Tours",
+                  image: "https://example.com",
+                  categoryId: "art",
+                  latitude: 47,
+                  longitude: 0.69,
+                  status: "PUBLISHED"
+                }
+              ])
+            )
         })
       )
     );
@@ -723,25 +790,27 @@ describe("App", () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve([
-          {
-            id: "1",
-            title: "Concert",
-            eventStartAt: "2026-01-15T20:00:00.000Z",
-            eventEndAt: "2026-01-15T22:00:00.000Z",
-            venueName: "Salle",
-            city: "Descartes",
-            image: "https://example.com",
-            categoryId: "music",
-            latitude: 46.97,
-            longitude: 0.7,
-            status: "PENDING"
-          }
-        ])
+        json: () => Promise.resolve(
+          toEventsPayload([
+            {
+              id: "1",
+              title: "Concert",
+              eventStartAt: "2026-01-15T20:00:00.000Z",
+              eventEndAt: "2026-01-15T22:00:00.000Z",
+              venueName: "Salle",
+              city: "Descartes",
+              image: "https://example.com",
+              categoryId: "music",
+              latitude: 46.97,
+              longitude: 0.7,
+              status: "PENDING"
+            }
+          ])
+        )
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({
+        json: () => Promise.resolve(toEventPayload({
           id: "1",
           title: "Concert",
           eventStartAt: "2026-01-15T20:00:00.000Z",
@@ -753,7 +822,7 @@ describe("App", () => {
           latitude: 46.97,
           longitude: 0.7,
           status: "PUBLISHED"
-        })
+        }))
       });
 
     vi.stubGlobal("fetch", fetchMock);
@@ -770,21 +839,23 @@ describe("App", () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve([
-          {
-            id: "1",
-            title: "Concert",
-            eventStartAt: "2026-01-15T20:00:00.000Z",
-            eventEndAt: "2026-01-15T22:00:00.000Z",
-            venueName: "Salle",
-            city: "Descartes",
-            image: "https://example.com",
-            categoryId: "music",
-            latitude: 46.97,
-            longitude: 0.7,
-            status: "PENDING"
-          }
-        ])
+        json: () => Promise.resolve(
+          toEventsPayload([
+            {
+              id: "1",
+              title: "Concert",
+              eventStartAt: "2026-01-15T20:00:00.000Z",
+              eventEndAt: "2026-01-15T22:00:00.000Z",
+              venueName: "Salle",
+              city: "Descartes",
+              image: "https://example.com",
+              categoryId: "music",
+              latitude: 46.97,
+              longitude: 0.7,
+              status: "PENDING"
+            }
+          ])
+        )
       })
       .mockResolvedValueOnce({
         ok: false,
@@ -805,21 +876,23 @@ describe("App", () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve([
-          {
-            id: "1",
-            title: "Concert",
-            eventStartAt: "2026-01-15T20:00:00.000Z",
-            eventEndAt: "2026-01-15T22:00:00.000Z",
-            venueName: "Salle",
-            city: "Descartes",
-            image: "https://example.com",
-            categoryId: "music",
-            latitude: 46.97,
-            longitude: 0.7,
-            status: "PENDING"
-          }
-        ])
+        json: () => Promise.resolve(
+          toEventsPayload([
+            {
+              id: "1",
+              title: "Concert",
+              eventStartAt: "2026-01-15T20:00:00.000Z",
+              eventEndAt: "2026-01-15T22:00:00.000Z",
+              venueName: "Salle",
+              city: "Descartes",
+              image: "https://example.com",
+              categoryId: "music",
+              latitude: 46.97,
+              longitude: 0.7,
+              status: "PENDING"
+            }
+          ])
+        )
       })
       .mockResolvedValueOnce({
         ok: false,
@@ -845,21 +918,23 @@ describe("App", () => {
         Promise.resolve({
           ok: true,
           json: () =>
-            Promise.resolve([
-              {
-                id: "1",
-                title: "Concert",
-                eventStartAt: "2026-01-15T20:00:00.000Z",
-                eventEndAt: "2026-01-15T22:00:00.000Z",
-                venueName: "Salle",
-                city: "Descartes",
-                image: "https://example.com",
-                categoryId: "music",
-                latitude: 46.97,
-                longitude: 0.7,
-                status: "PUBLISHED"
-              }
-            ])
+            Promise.resolve(
+              toEventsPayload([
+                {
+                  id: "1",
+                  title: "Concert",
+                  eventStartAt: "2026-01-15T20:00:00.000Z",
+                  eventEndAt: "2026-01-15T22:00:00.000Z",
+                  venueName: "Salle",
+                  city: "Descartes",
+                  image: "https://example.com",
+                  categoryId: "music",
+                  latitude: 46.97,
+                  longitude: 0.7,
+                  status: "PUBLISHED"
+                }
+              ])
+            )
         })
       )
     );
@@ -874,21 +949,23 @@ describe("App", () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve([
-          {
-            id: "1",
-            title: "Concert",
-            eventStartAt: "2026-01-15T20:00:00.000Z",
-            eventEndAt: "2026-01-15T22:00:00.000Z",
-            venueName: "Salle",
-            city: "Descartes",
-            image: "https://example.com",
-            categoryId: "music",
-            latitude: 46.97,
-            longitude: 0.7,
-            status: "PENDING"
-          }
-        ])
+        json: () => Promise.resolve(
+          toEventsPayload([
+            {
+              id: "1",
+              title: "Concert",
+              eventStartAt: "2026-01-15T20:00:00.000Z",
+              eventEndAt: "2026-01-15T22:00:00.000Z",
+              venueName: "Salle",
+              city: "Descartes",
+              image: "https://example.com",
+              categoryId: "music",
+              latitude: 46.97,
+              longitude: 0.7,
+              status: "PENDING"
+            }
+          ])
+        )
       })
       .mockRejectedValueOnce("nope");
 
@@ -906,38 +983,40 @@ describe("App", () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve([
-          {
-            id: "1",
-            title: "Concert",
-            eventStartAt: "2026-01-15T20:00:00.000Z",
-            eventEndAt: "2026-01-15T22:00:00.000Z",
-            venueName: "Salle",
-            city: "Descartes",
-            image: "https://example.com",
-            categoryId: "music",
-            latitude: 46.97,
-            longitude: 0.7,
-            status: "PENDING"
-          },
-          {
-            id: "2",
-            title: "Expo",
-            eventStartAt: "2026-01-16T10:00:00.000Z",
-            eventEndAt: "2026-01-16T12:00:00.000Z",
-            venueName: "Galerie",
-            city: "Tours",
-            image: "https://example.com",
-            categoryId: "art",
-            latitude: 47,
-            longitude: 0.69,
-            status: "PENDING"
-          }
-        ])
+        json: () => Promise.resolve(
+          toEventsPayload([
+            {
+              id: "1",
+              title: "Concert",
+              eventStartAt: "2026-01-15T20:00:00.000Z",
+              eventEndAt: "2026-01-15T22:00:00.000Z",
+              venueName: "Salle",
+              city: "Descartes",
+              image: "https://example.com",
+              categoryId: "music",
+              latitude: 46.97,
+              longitude: 0.7,
+              status: "PENDING"
+            },
+            {
+              id: "2",
+              title: "Expo",
+              eventStartAt: "2026-01-16T10:00:00.000Z",
+              eventEndAt: "2026-01-16T12:00:00.000Z",
+              venueName: "Galerie",
+              city: "Tours",
+              image: "https://example.com",
+              categoryId: "art",
+              latitude: 47,
+              longitude: 0.69,
+              status: "PENDING"
+            }
+          ])
+        )
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({
+        json: () => Promise.resolve(toEventPayload({
           id: "1",
           title: "Concert",
           eventStartAt: "2026-01-15T20:00:00.000Z",
@@ -949,7 +1028,7 @@ describe("App", () => {
           latitude: 46.97,
           longitude: 0.7,
           status: "PUBLISHED"
-        })
+        }))
       });
 
     vi.stubGlobal("fetch", fetchMock);
@@ -968,25 +1047,27 @@ describe("App", () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve([
-          {
-            id: "1",
-            title: "Concert",
-            eventStartAt: "2026-01-15T20:00:00.000Z",
-            eventEndAt: "2026-01-15T22:00:00.000Z",
-            venueName: "Salle",
-            city: "Descartes",
-            image: "https://example.com",
-            categoryId: "music",
-            latitude: 46.97,
-            longitude: 0.7,
-            status: "PENDING"
-          }
-        ])
+        json: () => Promise.resolve(
+          toEventsPayload([
+            {
+              id: "1",
+              title: "Concert",
+              eventStartAt: "2026-01-15T20:00:00.000Z",
+              eventEndAt: "2026-01-15T22:00:00.000Z",
+              venueName: "Salle",
+              city: "Descartes",
+              image: "https://example.com",
+              categoryId: "music",
+              latitude: 46.97,
+              longitude: 0.7,
+              status: "PENDING"
+            }
+          ])
+        )
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({
+        json: () => Promise.resolve(toEventPayload({
           id: "1",
           title: "Concert",
           eventStartAt: "2026-01-15T20:00:00.000Z",
@@ -998,7 +1079,7 @@ describe("App", () => {
           latitude: 46.97,
           longitude: 0.7,
           status: "REJECTED"
-        })
+        }))
       });
 
     vi.stubGlobal("fetch", fetchMock);
@@ -1041,7 +1122,7 @@ describe("App", () => {
         return Promise.resolve({
           ok: true,
           json: () =>
-            Promise.resolve({
+            Promise.resolve(toEventPayload({
               id: "draft-1",
               title: "Atelier",
               content: "Desc",
@@ -1059,7 +1140,7 @@ describe("App", () => {
               organizerName: "Asso",
               status: "DRAFT",
               createdByUserId: "user-1"
-            })
+            }))
         });
       }
       if (url === "/api/events") {
@@ -1124,106 +1205,8 @@ describe("App", () => {
       .mockResolvedValueOnce({
         ok: true,
         json: () =>
-          Promise.resolve([
-            {
-              id: "draft-1",
-              title: "Atelier",
-              content: "Desc",
-              image: "https://example.com",
-              categoryId: "atelier",
-              audienceId: "all",
-              eventStartAt: "2026-01-15T20:00:00.000Z",
-              eventEndAt: "2026-01-15T22:00:00.000Z",
-              allDay: false,
-              venueName: "Salle",
-              postalCode: "37100",
-              city: "Descartes",
-              latitude: 46.97,
-              longitude: 0.7,
-              organizerName: "Asso",
-              status: "DRAFT",
-              createdByUserId: "user-1"
-            }
-          ])
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            id: "draft-1",
-            title: "Atelier",
-            content: "Desc",
-            image: "https://example.com",
-            categoryId: "atelier",
-            audienceId: "all",
-            eventStartAt: "2026-01-15T20:00:00.000Z",
-            eventEndAt: "2026-01-15T22:00:00.000Z",
-            allDay: false,
-            venueName: "Salle",
-            postalCode: "37100",
-            city: "Descartes",
-            latitude: 46.97,
-            longitude: 0.7,
-            organizerName: "Asso",
-            status: "PENDING",
-            createdByUserId: "user-1"
-          })
-      });
-
-    vi.stubGlobal("fetch", fetchMock);
-    await loginAsRole("EDITOR");
-
-    await fireEvent.click(await screen.findByRole("button", { name: "Soumettre" }));
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-  });
-
-  it("shows editor submit error", async () => {
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve([
-            {
-              id: "draft-1",
-              title: "Atelier",
-              content: "Desc",
-              image: "https://example.com",
-              categoryId: "atelier",
-              audienceId: "all",
-              eventStartAt: "2026-01-15T20:00:00.000Z",
-              eventEndAt: "2026-01-15T22:00:00.000Z",
-              allDay: false,
-              venueName: "Salle",
-              postalCode: "37100",
-              city: "Descartes",
-              latitude: 46.97,
-              longitude: 0.7,
-              organizerName: "Asso",
-              status: "DRAFT",
-              createdByUserId: "user-1"
-            }
-          ])
-      })
-        .mockResolvedValueOnce({ ok: false, json: () => Promise.resolve({}) })
-        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve([{ id: "atelier", name: "Atelier" }]) });
-
-    vi.stubGlobal("fetch", fetchMock);
-      const router = await loginAsRole("EDITOR");
-
-    await fireEvent.click(await screen.findByRole("button", { name: "Soumettre" }));
-      await router.push("/backoffice/events/new");
-      await router.isReady();
-      expect(await screen.findByText("Impossible de soumettre l'événement")).toBeInTheDocument();
-  });
-
-  it("enters edit mode and resets draft form", async () => {
-    const fetchMock = vi.fn((input: FetchInput, init?: FetchInit) => {
-      const url = typeof input === "string" ? input : input.url;
-      if (url === "/api/events") {
-        return Promise.resolve({
-          ok: true,
-          json: () =>
-            Promise.resolve([
+          Promise.resolve(
+            toEventsPayload([
               {
                 id: "draft-1",
                 title: "Atelier",
@@ -1244,6 +1227,110 @@ describe("App", () => {
                 createdByUserId: "user-1"
               }
             ])
+          )
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve(toEventPayload({
+            id: "draft-1",
+            title: "Atelier",
+            content: "Desc",
+            image: "https://example.com",
+            categoryId: "atelier",
+            audienceId: "all",
+            eventStartAt: "2026-01-15T20:00:00.000Z",
+            eventEndAt: "2026-01-15T22:00:00.000Z",
+            allDay: false,
+            venueName: "Salle",
+            postalCode: "37100",
+            city: "Descartes",
+            latitude: 46.97,
+            longitude: 0.7,
+            organizerName: "Asso",
+            status: "PENDING",
+            createdByUserId: "user-1"
+          }))
+      });
+
+    vi.stubGlobal("fetch", fetchMock);
+    await loginAsRole("EDITOR");
+
+    await fireEvent.click(await screen.findByRole("button", { name: "Soumettre" }));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("shows editor submit error", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve(
+            toEventsPayload([
+              {
+                id: "draft-1",
+                title: "Atelier",
+                content: "Desc",
+                image: "https://example.com",
+                categoryId: "atelier",
+                audienceId: "all",
+                eventStartAt: "2026-01-15T20:00:00.000Z",
+                eventEndAt: "2026-01-15T22:00:00.000Z",
+                allDay: false,
+                venueName: "Salle",
+                postalCode: "37100",
+                city: "Descartes",
+                latitude: 46.97,
+                longitude: 0.7,
+                organizerName: "Asso",
+                status: "DRAFT",
+                createdByUserId: "user-1"
+              }
+            ])
+          )
+      })
+        .mockResolvedValueOnce({ ok: false, json: () => Promise.resolve({}) })
+        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve([{ id: "atelier", name: "Atelier" }]) });
+
+    vi.stubGlobal("fetch", fetchMock);
+      const router = await loginAsRole("EDITOR");
+
+    await fireEvent.click(await screen.findByRole("button", { name: "Soumettre" }));
+      await router.push("/backoffice/events/new");
+      await router.isReady();
+      expect(await screen.findByText("Impossible de soumettre l'événement")).toBeInTheDocument();
+  });
+
+  it("enters edit mode and resets draft form", async () => {
+    const fetchMock = vi.fn((input: FetchInput, init?: FetchInit) => {
+      const url = typeof input === "string" ? input : input.url;
+      if (url === "/api/events") {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve(
+              toEventsPayload([
+                {
+                  id: "draft-1",
+                  title: "Atelier",
+                  content: "Desc",
+                  image: "https://example.com",
+                  categoryId: "atelier",
+                  audienceId: "all",
+                  eventStartAt: "2026-01-15T20:00:00.000Z",
+                  eventEndAt: "2026-01-15T22:00:00.000Z",
+                  allDay: false,
+                  venueName: "Salle",
+                  postalCode: "37100",
+                  city: "Descartes",
+                  latitude: 46.97,
+                  longitude: 0.7,
+                  organizerName: "Asso",
+                  status: "DRAFT",
+                  createdByUserId: "user-1"
+                }
+              ])
+            )
         });
       }
       if (url === "/api/categories") {
@@ -1256,7 +1343,7 @@ describe("App", () => {
         return Promise.resolve({
           ok: true,
           json: () =>
-            Promise.resolve({
+            Promise.resolve(toEventPayload({
               id: "draft-1",
               title: "Atelier mis à jour",
               content: "Desc",
@@ -1274,7 +1361,7 @@ describe("App", () => {
               organizerName: "Asso",
               status: "DRAFT",
               createdByUserId: "user-1"
-            })
+            }))
         });
       }
       return Promise.resolve({ ok: false, json: () => Promise.resolve([]) });
@@ -1300,28 +1387,30 @@ describe("App", () => {
         Promise.resolve({
           ok: true,
           json: () =>
-            Promise.resolve([
-              {
-                id: "draft-1",
-                title: "Atelier",
-                content: "Desc",
-                image: "https://example.com",
-                categoryId: "atelier",
-                audienceId: "all",
-                eventStartAt: "2026-01-15T20:00:00.000Z",
-                eventEndAt: "2026-01-15T22:00:00.000Z",
-                allDay: false,
-                venueName: "Salle",
-                postalCode: "37100",
-                city: "Descartes",
-                latitude: 46.97,
-                longitude: 0.7,
-                organizerName: "Asso",
-                status: "REJECTED",
-                createdByUserId: "user-1",
-                rejectionReason: "Manque une info"
-              }
-            ])
+            Promise.resolve(
+              toEventsPayload([
+                {
+                  id: "draft-1",
+                  title: "Atelier",
+                  content: "Desc",
+                  image: "https://example.com",
+                  categoryId: "atelier",
+                  audienceId: "all",
+                  eventStartAt: "2026-01-15T20:00:00.000Z",
+                  eventEndAt: "2026-01-15T22:00:00.000Z",
+                  allDay: false,
+                  venueName: "Salle",
+                  postalCode: "37100",
+                  city: "Descartes",
+                  latitude: 46.97,
+                  longitude: 0.7,
+                  organizerName: "Asso",
+                  status: "REJECTED",
+                  createdByUserId: "user-1",
+                  rejectionReason: "Manque une info"
+                }
+              ])
+            )
         })
       )
     );

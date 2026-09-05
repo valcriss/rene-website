@@ -23,15 +23,21 @@ describe("EventDetailView", () => {
         content: "",
         image: "img",
         categoryId: "music",
-        eventStartAt: "2026-01-15T20:00:00.000Z",
-        eventEndAt: "2026-01-15T22:00:00.000Z",
-        allDay: false,
-        venueName: "Salle",
-        address: "",
-        postalCode: "",
-        city: "Descartes",
-        latitude: 46.97,
-        longitude: 0.7,
+        audienceId: null,
+        occurrences: [
+          {
+            id: "occ-1",
+            eventStartAt: "2026-01-15T20:00:00.000Z",
+            eventEndAt: "2026-01-15T22:00:00.000Z",
+            allDay: false,
+            venueName: "Salle",
+            address: "",
+            postalCode: "",
+            city: "Descartes",
+            latitude: 46.97,
+            longitude: 0.7
+          }
+        ],
         organizerName: "Org",
         status: "PUBLISHED",
         publishedAt: null,
@@ -84,15 +90,21 @@ describe("EventDetailView", () => {
         content: "<p>Texte</p>",
         image: "img",
         categoryId: "music",
-        eventStartAt: "2026-01-15T20:00:00.000Z",
-        eventEndAt: "2026-01-15T22:00:00.000Z",
-        allDay: false,
-        venueName: "Salle",
-        address: "",
-        postalCode: "",
-        city: "Descartes",
-        latitude: 46.97,
-        longitude: 0.7,
+        audienceId: null,
+        occurrences: [
+          {
+            id: "occ-1",
+            eventStartAt: "2026-01-15T20:00:00.000Z",
+            eventEndAt: "2026-01-15T22:00:00.000Z",
+            allDay: false,
+            venueName: "Salle",
+            address: "",
+            postalCode: "",
+            city: "Descartes",
+            latitude: 46.97,
+            longitude: 0.7
+          }
+        ],
         organizerName: "Org",
         status: "PUBLISHED",
         publishedAt: null,
@@ -107,15 +119,21 @@ describe("EventDetailView", () => {
         content: "Autre événement",
         image: "img-2",
         categoryId: "festival",
-        eventStartAt: "2026-01-16T20:00:00.000Z",
-        eventEndAt: "2026-01-16T22:00:00.000Z",
-        allDay: false,
-        venueName: "Place",
-        address: "",
-        postalCode: "",
-        city: "Descartes",
-        latitude: 46.971,
-        longitude: 0.701,
+        audienceId: null,
+        occurrences: [
+          {
+            id: "occ-2",
+            eventStartAt: "2026-01-16T20:00:00.000Z",
+            eventEndAt: "2026-01-16T22:00:00.000Z",
+            allDay: false,
+            venueName: "Place",
+            address: "",
+            postalCode: "",
+            city: "Descartes",
+            latitude: 46.971,
+            longitude: 0.701
+          }
+        ],
         organizerName: "Org",
         status: "PUBLISHED",
         publishedAt: null,
@@ -167,15 +185,21 @@ describe("EventDetailView", () => {
           content: "<p>Texte</p>",
           image: "img",
           categoryId: "music",
-          eventStartAt: "2026-01-15T20:00:00.000Z",
-          eventEndAt: "2026-01-15T22:00:00.000Z",
-          allDay: false,
-          venueName: "Salle",
-          address: "",
-          postalCode: "",
-          city: "Descartes",
-          latitude: 46.97,
-          longitude: 0.7,
+          audienceId: null,
+          occurrences: [
+            {
+              id: "occ-1",
+              eventStartAt: "2026-01-15T20:00:00.000Z",
+              eventEndAt: "2026-01-15T22:00:00.000Z",
+              allDay: false,
+              venueName: "Salle",
+              address: "",
+              postalCode: "",
+              city: "Descartes",
+              latitude: 46.97,
+              longitude: 0.7
+            }
+          ],
           organizerName: "Org",
           socialLinks: [{ type: "FACEBOOK", url: "https://facebook.com/rene" }],
           ticketUrl: "https://tickets.example.com",
@@ -220,15 +244,21 @@ describe("EventDetailView", () => {
           content: "<p>Texte</p>",
           image: "img",
           categoryId: "music",
-          eventStartAt: "2026-01-15T20:00:00.000Z",
-          eventEndAt: "2026-01-15T22:00:00.000Z",
-          allDay: false,
-          venueName: "",
-          address: "",
-          postalCode: "37160",
-          city: "Descartes",
-          latitude: 46.97,
-          longitude: 0.7,
+          audienceId: null,
+          occurrences: [
+            {
+              id: "occ-1",
+              eventStartAt: "2026-01-15T20:00:00.000Z",
+              eventEndAt: "2026-01-15T22:00:00.000Z",
+              allDay: false,
+              venueName: "",
+              address: "",
+              postalCode: "37160",
+              city: "Descartes",
+              latitude: 46.97,
+              longitude: 0.7
+            }
+          ],
           organizerName: "Org",
           status: "PUBLISHED",
           publishedAt: null,
@@ -251,5 +281,73 @@ describe("EventDetailView", () => {
     expect(wrapper.text()).toContain("Descartes");
     expect(wrapper.text()).not.toContain("· Descartes");
     expect(wrapper.find("a[href*='destination=37160%2C%20Descartes']").exists()).toBe(true);
+  });
+
+  it("lists several occurrences with their own calendar and directions actions", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const categoriesStore = useCategoriesStore();
+    categoriesStore.categories = [{ id: "music", name: "Musique", createdAt: "", updatedAt: "" }];
+
+    const wrapper = mount(EventDetailView, {
+      props: {
+        eventId: "1",
+        event: {
+          id: "1",
+          title: "Tournée",
+          content: "<p>Texte</p>",
+          image: "img",
+          categoryId: "music",
+          audienceId: null,
+          occurrences: [
+            {
+              id: "occ-1",
+              eventStartAt: "2026-01-15T20:00:00.000Z",
+              eventEndAt: "2026-01-15T22:00:00.000Z",
+              allDay: false,
+              venueName: "Salle",
+              address: "",
+              postalCode: "",
+              city: "Descartes",
+              latitude: 46.97,
+              longitude: 0.7
+            },
+            {
+              id: "occ-2",
+              eventStartAt: "2026-02-01T20:00:00.000Z",
+              eventEndAt: "2026-02-01T22:00:00.000Z",
+              allDay: false,
+              venueName: "Autre salle",
+              address: "",
+              postalCode: "",
+              city: "Tours",
+              latitude: 47,
+              longitude: 0.69
+            }
+          ],
+          organizerName: "Org",
+          status: "PUBLISHED",
+          publishedAt: null,
+          publicationEndAt: "2026-02-01T22:00:00.000Z",
+          rejectionReason: null,
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z"
+        }
+      },
+      global: {
+        plugins: [pinia],
+        stubs: {
+          EventMap: { template: "<div></div>" }
+        }
+      }
+    });
+
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.find("[data-testid='detail-occurrence-occ-1']").exists()).toBe(true);
+    expect(wrapper.find("[data-testid='detail-occurrence-occ-2']").exists()).toBe(true);
+    expect(wrapper.findAll("a[download]")).toHaveLength(2);
+    expect(wrapper.find("a[download='evenement-occ-1.ics']").exists()).toBe(true);
+    expect(wrapper.find("a[download='evenement-occ-2.ics']").exists()).toBe(true);
   });
 });

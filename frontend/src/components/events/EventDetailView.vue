@@ -47,7 +47,7 @@
               >
                 <div class="flex flex-wrap items-center gap-3">
                   <span class="rounded-full bg-white/92 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-slate-900">
-                    {{ formatDateTimeRange(detailEvent.eventStartAt, detailEvent.eventEndAt) }}
+                    {{ detailDateBadge }}
                   </span>
                   <span
                     v-if="categoryName"
@@ -86,20 +86,6 @@
                 </div>
 
                 <div class="mt-6 grid gap-4 sm:grid-cols-2">
-                  <div class="rounded-[1.5rem] bg-gradient-to-br from-slate-900 to-sky-800 p-5 text-white shadow-sm shadow-slate-900/20">
-                    <p class="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-white/75">
-                      <font-awesome-icon class="h-3.5 w-3.5" :icon="faClock" />
-                      {{ t("detail.when") }}
-                    </p>
-                    <p class="mt-2 text-base font-semibold leading-6">{{ formatDateTimeRange(detailEvent.eventStartAt, detailEvent.eventEndAt) }}</p>
-                  </div>
-                  <div class="rounded-[1.5rem] bg-gradient-to-br from-slate-900 to-sky-800 p-5 text-white shadow-sm shadow-slate-900/20">
-                    <p class="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-white/75">
-                      <font-awesome-icon class="h-3.5 w-3.5" :icon="faLocationDot" />
-                      {{ t("detail.where") }}
-                    </p>
-                    <p class="mt-2 text-base font-semibold leading-6">{{ detailLocationLabel }}</p>
-                  </div>
                   <div class="rounded-[1.5rem] border border-sky-100 bg-sky-50/60 p-4">
                     <p class="text-xs font-semibold uppercase tracking-[0.22em] text-sky-700/70">{{ t("common.category") }}</p>
                     <p class="mt-2 text-sm leading-6 text-slate-700">{{ categoryName || t("detail.categoryFallback") }}</p>
@@ -108,6 +94,48 @@
                     <p class="text-xs font-semibold uppercase tracking-[0.22em] text-sky-700/70">{{ t("common.audience") }}</p>
                     <p class="mt-2 text-sm leading-6 text-slate-700">{{ audienceName || t("common.notProvided") }}</p>
                   </div>
+                </div>
+
+                <div class="mt-6" data-testid="detail-occurrences">
+                  <p class="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700/70">{{ t("detail.occurrencesTitle") }}</p>
+                  <ul class="mt-4 grid gap-3">
+                    <li
+                      v-for="occurrence in detailOccurrences"
+                      :key="occurrence.id"
+                      class="flex flex-wrap items-center justify-between gap-3 rounded-[1.5rem] bg-gradient-to-br from-slate-900 to-sky-800 p-5 text-white shadow-sm shadow-slate-900/20"
+                      :data-testid="`detail-occurrence-${occurrence.id}`"
+                    >
+                      <div>
+                        <p class="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-white/75">
+                          <font-awesome-icon class="h-3.5 w-3.5" :icon="faClock" />
+                          {{ formatDateTimeRange(occurrence.eventStartAt ?? '', occurrence.eventEndAt ?? '') }}
+                        </p>
+                        <p class="mt-2 flex items-center gap-2 text-sm leading-6 text-white/90">
+                          <font-awesome-icon class="h-3.5 w-3.5" :icon="faLocationDot" />
+                          {{ getEventLocationLabel(occurrence, t('common.notProvided')) }}
+                        </p>
+                      </div>
+                      <div class="flex flex-wrap gap-2">
+                        <a
+                          class="inline-flex items-center justify-center gap-2 rounded-full bg-white/15 px-4 py-2 text-xs font-semibold text-white ring-1 ring-white/25 transition hover:bg-white/25"
+                          :href="buildDirectionsUrl(occurrence)"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <font-awesome-icon class="h-3.5 w-3.5" :icon="faRoute" />
+                          {{ t("detail.directions") }}
+                        </a>
+                        <a
+                          class="inline-flex items-center justify-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-semibold text-slate-900 transition hover:bg-sky-50"
+                          :href="buildCalendarUrl(detailEvent, occurrence)"
+                          :download="`evenement-${occurrence.id}.ics`"
+                        >
+                          <font-awesome-icon class="h-3.5 w-3.5" :icon="faCalendarPlus" />
+                          {{ t("detail.addToCalendar") }}
+                        </a>
+                      </div>
+                    </li>
+                  </ul>
                 </div>
 
                 <div v-if="sanitizedPricingInfo" class="mt-4 rounded-[1.5rem] border border-amber-200 bg-amber-50/70 p-5">
@@ -155,7 +183,7 @@
                   <p class="text-sm text-slate-500">{{ detailLocationLabel }}</p>
                 </div>
                 <div class="mt-5">
-                  <EventMap :events="[detailEvent]" :selected-id="detailEvent.id" @select="emitSelect" />
+                  <EventMap :pins="detailMapPins" :selected-id="detailEvent.id" @select="emitSelect" />
                 </div>
               </section>
             </div>
@@ -177,7 +205,7 @@
                     </p>
                     <p class="flex items-center gap-3">
                       <font-awesome-icon class="h-4 w-4 text-sky-700" :icon="faMapPin" />
-                      <span><span class="font-medium text-slate-700">{{ t("common.postalCode") }}:</span> {{ formatOptional(detailEvent.postalCode) }}</span>
+                      <span><span class="font-medium text-slate-700">{{ t("common.postalCode") }}:</span> {{ formatOptional(detailPrimaryOccurrence?.postalCode) }}</span>
                     </p>
                   </div>
 
@@ -215,30 +243,6 @@
                       <font-awesome-icon class="h-4 w-4 text-sky-700" :icon="faArrowUpRightFromSquare" />
                       <span><span class="font-medium text-slate-700">{{ t("common.website") }}:</span> {{ formatOptional(detailEvent.websiteUrl) }}</span>
                     </p>
-                  </div>
-                </div>
-
-                <div class="mt-8 border-t border-sky-100 pt-5" data-testid="detail-actions">
-                  <div class="flex flex-wrap gap-3">
-                    <a
-                      class="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-slate-900 to-sky-700 px-5 py-3 text-sm font-semibold text-white shadow-sm shadow-slate-900/20"
-                      :href="buildDirectionsUrl(detailEvent)"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <font-awesome-icon class="h-4 w-4" :icon="faRoute" />
-                      <span>{{ t("detail.directions") }}</span>
-                    </a>
-                    <a
-                      class="inline-flex items-center justify-center gap-2 rounded-full border border-sky-200 bg-white px-5 py-3 text-sm font-semibold text-sky-900 shadow-sm shadow-sky-100/70 transition hover:border-sky-300 hover:bg-sky-50"
-                      :href="buildCalendarUrl(detailEvent)"
-                      download="evenement.ics"
-                    >
-                      <span class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-sky-100 text-sky-700">
-                        <font-awesome-icon class="h-3.5 w-3.5" :icon="faCalendarPlus" />
-                      </span>
-                      <span>{{ t("detail.addToCalendar") }}</span>
-                    </a>
                   </div>
                 </div>
               </section>
@@ -282,6 +286,8 @@ import { useCategoriesStore } from "../../stores/categories";
 import { useEventsStore } from "../../stores/events";
 import { getEventAddressLabel, getEventLocationLabel } from "../../utils/eventLocation";
 import { formatPhoneNumber } from "../../utils/formatters";
+import { formatEventDateBadge, getEarliestOccurrence, getEventLocationSummary, sortOccurrences } from "../../utils/occurrences";
+import { buildEventMapPins } from "../../utils/mapPins";
 
 type CategoryTheme = {
   backgroundColor: string;
@@ -342,15 +348,21 @@ const sanitizedPricingInfo = computed(() => {
 
 const detailUpdatedAtLabel = computed(() => formatUpdatedAtLabel(detailEvent.value?.updatedAt));
 
+const detailOccurrences = computed(() => sortOccurrences(detailEvent.value?.occurrences ?? []));
+const detailPrimaryOccurrence = computed(() => getEarliestOccurrence(detailEvent.value?.occurrences ?? []));
+const detailMapPins = computed(() => (detailEvent.value ? buildEventMapPins([detailEvent.value]) : []));
+
+const detailDateBadge = computed(() => formatEventDateBadge(detailEvent.value?.occurrences ?? []));
+
 const detailLocationLabel = computed(() =>
-  detailEvent.value ? getEventLocationLabel(detailEvent.value, t("common.notProvided")) : ""
+  detailEvent.value ? getEventLocationSummary(detailEvent.value.occurrences ?? [], t("common.notProvided")) : ""
 );
 
 const optionalAddress = computed(() => {
   if (!detailEvent.value) {
     return "";
   }
-  return getEventAddressLabel(detailEvent.value, t("common.notProvided"));
+  return getEventAddressLabel(detailPrimaryOccurrence.value ?? {}, t("common.notProvided"));
 });
 
 const categoryName = computed(() => {

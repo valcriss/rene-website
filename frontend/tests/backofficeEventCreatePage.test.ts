@@ -124,7 +124,7 @@ describe("BackofficeEventCreatePage", () => {
 
     expect(screen.getByLabelText("Latitude")).toBeInTheDocument();
     expect(screen.getByLabelText("Longitude")).toBeInTheDocument();
-    expect(setup.editorStore.useManualLocation).toBe(true);
+    expect(setup.editorStore.useManualLocation[0]).toBe(true);
   });
 
   it("shows the geolocation status badge for the loaded event", async () => {
@@ -135,7 +135,7 @@ describe("BackofficeEventCreatePage", () => {
 
     const setup = await setupPage();
     setup.categoriesStore.hasLoaded = true;
-    setup.editorStore.lastGeolocationPrecision = "UNRESOLVED";
+    setup.editorStore.lastGeolocationPrecision = ["UNRESOLVED"];
     renderPage(setup);
 
     expect(await screen.findByText("Position non trouvée")).toBeInTheDocument();
@@ -245,16 +245,21 @@ describe("BackofficeEventCreatePage", () => {
       image: "/uploads/test.png",
       categoryId: "music",
       audienceId: "all",
-      eventStartAt: "2026-01-15T00:00:00.000Z",
-      eventEndAt: "2026-01-15T23:59:59.999Z",
-      allDay: true,
-      venueName: "Salle",
-      address: "1 rue du centre",
-      postalCode: "37160",
-      city: "Descartes",
-      latitude: 46.97,
-      longitude: 0.7,
-      geolocationPrecision: "EXACT",
+      occurrences: [
+        {
+          id: "occ-1",
+          eventStartAt: "2026-01-15T00:00:00.000Z",
+          eventEndAt: "2026-01-15T23:59:59.999Z",
+          allDay: true,
+          venueName: "Salle",
+          address: "1 rue du centre",
+          postalCode: "37160",
+          city: "Descartes",
+          latitude: 46.97,
+          longitude: 0.7,
+          geolocationPrecision: "EXACT"
+        }
+      ],
       organizerName: "Association",
       status: "DRAFT"
     });
@@ -313,16 +318,21 @@ describe("BackofficeEventCreatePage", () => {
       image: "/uploads/test.png",
       categoryId: "music",
       audienceId: "all",
-      eventStartAt: "2026-01-15T00:00:00.000Z",
-      eventEndAt: "2026-01-15T23:59:59.999Z",
-      allDay: true,
-      venueName: "Salle",
-      address: "1 rue du centre",
-      postalCode: "37160",
-      city: "Descartes",
-      latitude: 46.97,
-      longitude: 0.7,
-      geolocationPrecision: "EXACT",
+      occurrences: [
+        {
+          id: "occ-1",
+          eventStartAt: "2026-01-15T00:00:00.000Z",
+          eventEndAt: "2026-01-15T23:59:59.999Z",
+          allDay: true,
+          venueName: "Salle",
+          address: "1 rue du centre",
+          postalCode: "37160",
+          city: "Descartes",
+          latitude: 46.97,
+          longitude: 0.7,
+          geolocationPrecision: "EXACT"
+        }
+      ],
       organizerName: "Association",
       status: "DRAFT"
     });
@@ -365,16 +375,21 @@ describe("BackofficeEventCreatePage", () => {
       image: "/uploads/test.png",
       categoryId: "music",
       audienceId: "all",
-      eventStartAt: "2026-01-15T00:00:00.000Z",
-      eventEndAt: "2026-01-15T23:59:59.999Z",
-      allDay: true,
-      venueName: "Salle",
-      address: "1 rue du centre",
-      postalCode: "37160",
-      city: "Descartes",
-      latitude: null,
-      longitude: null,
-      geolocationPrecision: "UNRESOLVED",
+      occurrences: [
+        {
+          id: "occ-1",
+          eventStartAt: "2026-01-15T00:00:00.000Z",
+          eventEndAt: "2026-01-15T23:59:59.999Z",
+          allDay: true,
+          venueName: "Salle",
+          address: "1 rue du centre",
+          postalCode: "37160",
+          city: "Descartes",
+          latitude: null,
+          longitude: null,
+          geolocationPrecision: "UNRESOLVED"
+        }
+      ],
       organizerName: "Association",
       status: "DRAFT"
     });
@@ -419,16 +434,21 @@ describe("BackofficeEventCreatePage", () => {
       image: "/uploads/test.png",
       categoryId: "music",
       audienceId: "all",
-      eventStartAt: "2026-01-15T20:00:00.000Z",
-      eventEndAt: "2026-01-15T22:00:00.000Z",
-      allDay: false,
-      venueName: "Salle",
-      address: "1 rue du centre",
-      postalCode: "37160",
-      city: "Descartes",
-      latitude: 46.97,
-      longitude: 0.7,
-      geolocationPrecision: "APPROXIMATE",
+      occurrences: [
+        {
+          id: "occ-1",
+          eventStartAt: "2026-01-15T20:00:00.000Z",
+          eventEndAt: "2026-01-15T22:00:00.000Z",
+          allDay: false,
+          venueName: "Salle",
+          address: "1 rue du centre",
+          postalCode: "37160",
+          city: "Descartes",
+          latitude: 46.97,
+          longitude: 0.7,
+          geolocationPrecision: "APPROXIMATE"
+        }
+      ],
       organizerName: "Association",
       status: "DRAFT"
     });
@@ -650,5 +670,51 @@ describe("BackofficeEventCreatePage", () => {
 
     await fireEvent.click(screen.getByRole("button", { name: "Supprimer" }));
     expect(setup.editorStore.editorForm.socialLinks).toHaveLength(0);
+  });
+
+  it("adds and removes occurrences", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) }))
+    );
+
+    const setup = await setupPage();
+    setup.categoriesStore.hasLoaded = true;
+    renderPage(setup);
+
+    expect(await screen.findByTestId("occurrence-row-0")).toBeInTheDocument();
+    expect(screen.queryByTestId("occurrence-row-1")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Supprimer cette date" })).not.toBeInTheDocument();
+
+    await fireEvent.click(screen.getByRole("button", { name: "Ajouter une autre date" }));
+
+    expect(screen.getByTestId("occurrence-row-1")).toBeInTheDocument();
+    expect(setup.editorStore.editorForm.occurrences).toHaveLength(2);
+
+    const removeButtons = screen.getAllByRole("button", { name: "Supprimer cette date" });
+    await fireEvent.click(removeButtons[1]);
+
+    expect(screen.queryByTestId("occurrence-row-1")).not.toBeInTheDocument();
+    expect(setup.editorStore.editorForm.occurrences).toHaveLength(1);
+  });
+
+  it("toggles manual location independently per occurrence", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) }))
+    );
+
+    const setup = await setupPage();
+    setup.categoriesStore.hasLoaded = true;
+    renderPage(setup);
+
+    await fireEvent.click(await screen.findByRole("button", { name: "Ajouter une autre date" }));
+
+    const toggles = screen.getAllByRole("checkbox", { name: "Définir les coordonnées manuellement" });
+    expect(toggles).toHaveLength(2);
+
+    await fireEvent.click(toggles[1]);
+
+    expect(setup.editorStore.useManualLocation).toEqual([false, true]);
   });
 });

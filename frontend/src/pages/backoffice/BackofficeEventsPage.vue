@@ -99,7 +99,7 @@
                       {{ statusLabels[eventItem.status] }}
                     </span>
                     <span class="text-xs uppercase tracking-[0.24em] text-slate-400">
-                      {{ formatDate(eventItem.eventStartAt) }}
+                      {{ formatEventDateBadge(eventItem.occurrences) }}
                     </span>
                   </div>
                   <h4 class="mt-3 text-lg font-semibold text-slate-950">{{ eventItem.title }}</h4>
@@ -188,7 +188,7 @@
                       {{ statusLabels[eventItem.status] }}
                     </span>
                     <span class="text-xs uppercase tracking-[0.24em] text-slate-400">
-                      {{ formatDate(eventItem.eventStartAt) }}
+                      {{ formatEventDateBadge(eventItem.occurrences) }}
                     </span>
                   </div>
                   <h4 class="mt-3 text-lg font-semibold text-slate-950">{{ eventItem.title }}</h4>
@@ -271,7 +271,7 @@
                       {{ statusLabels[eventItem.status] }}
                     </span>
                     <span class="text-xs uppercase tracking-[0.24em] text-slate-400">
-                      {{ formatDate(eventItem.eventStartAt) }}
+                      {{ formatEventDateBadge(eventItem.occurrences) }}
                     </span>
                   </div>
                   <h4 class="mt-3 text-lg font-semibold text-slate-950">{{ eventItem.title }}</h4>
@@ -374,7 +374,7 @@
                       {{ statusLabels[eventItem.status] }}
                     </span>
                     <span class="text-xs uppercase tracking-[0.24em] text-slate-400">
-                      {{ formatDate(eventItem.eventStartAt) }}
+                      {{ formatEventDateBadge(eventItem.occurrences) }}
                     </span>
                   </div>
                   <h4 class="mt-3 text-lg font-semibold text-slate-950">{{ eventItem.title }}</h4>
@@ -485,7 +485,7 @@ import { useAuthStore } from "../../stores/auth";
 import { useEditorStore } from "../../stores/editor";
 import { useEventsStore } from "../../stores/events";
 import type { EventItem } from "../../api/events";
-import { getEventLocationLabel } from "../../utils/eventLocation";
+import { formatEventDateBadge, getEventLocationSummary } from "../../utils/occurrences";
 
 const router = useRouter();
 const route = useRoute();
@@ -507,7 +507,7 @@ const {
 } =
   storeToRefs(eventsStore);
 const { editorError } = storeToRefs(editorStore);
-const { handleDelete, formatDate, formatUpdatedAtLabel, handleUpdateFeatured } = eventsStore;
+const { handleDelete, formatUpdatedAtLabel, handleUpdateFeatured } = eventsStore;
 const { handleSubmitDraft } = editorStore;
 
 const statusLabels = computed<Record<string, string>>(() => ({
@@ -532,7 +532,7 @@ const isEditLocked = (eventItem: EventItem) =>
   eventItem.status === "PENDING" || eventItem.pendingRevision?.status === "PENDING";
 
 const canEditEvent = (eventItem: EventItem) => !isEditLocked(eventItem);
-const formatEventLocation = (eventItem: EventItem) => getEventLocationLabel(eventItem, eventItem.city);
+const formatEventLocation = (eventItem: EventItem) => getEventLocationSummary(eventItem.occurrences);
 
 const lastEditableEvent = computed(
   () =>

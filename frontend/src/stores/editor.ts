@@ -1,10 +1,33 @@
 import { computed, reactive, ref } from "vue";
 import { defineStore } from "pinia";
 import type { EventRevisionStatus, GeolocationPrecision } from "../api/events";
-import { CreateEventPayload, EventItem, SocialLink, SocialLinkType, createEvent, submitEvent, updateEvent } from "../api/events";
+import {
+  CreateEventPayload,
+  EventItem,
+  EventOccurrence,
+  EventOccurrenceInput,
+  SocialLink,
+  SocialLinkType,
+  createEvent,
+  submitEvent,
+  updateEvent
+} from "../api/events";
 import { uploadImage } from "../api/uploads";
+import { computePublicationEndAt } from "../utils/occurrences";
 import { useAuthStore } from "./auth";
 import { useEventsStore } from "./events";
+
+const defaultOccurrence = (): EventOccurrenceInput => ({
+  venueName: "",
+  address: "",
+  postalCode: "",
+  city: "",
+  latitude: null,
+  longitude: null,
+  eventStartAt: "",
+  eventEndAt: "",
+  allDay: true
+});
 
 const defaultEditorForm = (): CreateEventPayload => ({
   title: "",
@@ -12,15 +35,7 @@ const defaultEditorForm = (): CreateEventPayload => ({
   image: "",
   categoryId: "",
   audienceId: "",
-  eventStartAt: "",
-  eventEndAt: "",
-  allDay: true,
-  venueName: "",
-  address: "",
-  postalCode: "",
-  city: "",
-  latitude: null,
-  longitude: null,
+  occurrences: [defaultOccurrence()],
   organizerName: "",
   organizerUrl: "",
   contactEmail: "",
@@ -69,6 +84,16 @@ const normalizeDateBoundary = (value: string | null | undefined, endOfDay: boole
   return `${date}T${endOfDay ? "23:59:59.999" : "00:00:00.000"}Z`;
 };
 
+const isBlankOccurrence = (occurrence: EventOccurrenceInput) =>
+  !trimText(occurrence.venueName) &&
+  !trimText(occurrence.address) &&
+  !trimText(occurrence.postalCode) &&
+  !trimText(occurrence.city) &&
+  !occurrence.eventStartAt &&
+  !occurrence.eventEndAt &&
+  typeof occurrence.latitude !== "number" &&
+  typeof occurrence.longitude !== "number";
+
 export type EditorPreviewSnapshot = {
   token: string;
   event: EventItem;
@@ -104,8 +129,8 @@ export const useEditorStore = defineStore("editor", () => {
   const isSavingDraft = ref(false);
   const isSubmittingForModeration = ref(false);
   const isPersisting = computed(() => isSavingDraft.value || isSubmittingForModeration.value);
-  const useManualLocation = ref(false);
-  const lastGeolocationPrecision = ref<GeolocationPrecision | null>(null);
+  const useManualLocation = ref<boolean[]>([false]);
+  const lastGeolocationPrecision = ref<Array<GeolocationPrecision | null>>([null]);
 
   const resetEditorForm = () => {
     editorMode.value = "create";
@@ -113,13 +138,25 @@ export const useEditorStore = defineStore("editor", () => {
     editingPublishedEvent.value = false;
     editingPublishedRevisionStatus.value = null;
     imageFile.value = null;
-    useManualLocation.value = false;
-    lastGeolocationPrecision.value = null;
+    useManualLocation.value = [false];
+    lastGeolocationPrecision.value = [null];
     Object.assign(editorForm, defaultEditorForm());
   };
 
-  const setManualLocation = (value: boolean) => {
-    useManualLocation.value = value;
+  const setManualLocation = (index: number, value: boolean) => {
+    useManualLocation.value[index] = value;
+  };
+
+  const addOccurrence = () => {
+    editorForm.occurrences = [...editorForm.occurrences, defaultOccurrence()];
+    useManualLocation.value = [...useManualLocation.value, false];
+    lastGeolocationPrecision.value = [...lastGeolocationPrecision.value, null];
+  };
+
+  const removeOccurrence = (index: number) => {
+    editorForm.occurrences = editorForm.occurrences.filter((_, currentIndex) => currentIndex !== index);
+    useManualLocation.value = useManualLocation.value.filter((_, currentIndex) => currentIndex !== index);
+    lastGeolocationPrecision.value = lastGeolocationPrecision.value.filter((_, currentIndex) => currentIndex !== index);
   };
 
   const startEdit = (eventItem: EventItem) => {
@@ -134,17 +171,29 @@ export const useEditorStore = defineStore("editor", () => {
     editorForm.image = source.image ?? "";
     editorForm.categoryId = source.categoryId ?? "";
     editorForm.audienceId = source.audienceId ?? "";
-    editorForm.eventStartAt = formatDateInput(source.eventStartAt ?? "");
-    editorForm.eventEndAt = formatDateInput(source.eventEndAt ?? "");
-    editorForm.allDay = true;
-    editorForm.venueName = source.venueName ?? "";
-    editorForm.address = source.address ?? "";
-    editorForm.postalCode = source.postalCode ?? "";
-    editorForm.city = source.city ?? "";
-    editorForm.latitude = source.latitude ?? null;
-    editorForm.longitude = source.longitude ?? null;
-    lastGeolocationPrecision.value = source.geolocationPrecision ?? null;
-    useManualLocation.value = false;
+
+    const sourceOccurrences: EventOccurrence[] = source.occurrences && source.occurrences.length > 0
+      ? source.occurrences
+      : [];
+
+    editorForm.occurrences = sourceOccurrences.length > 0
+      ? sourceOccurrences.map((occurrence) => ({
+          venueName: occurrence.venueName ?? "",
+          address: occurrence.address ?? "",
+          postalCode: occurrence.postalCode ?? "",
+          city: occurrence.city ?? "",
+          latitude: occurrence.latitude ?? null,
+          longitude: occurrence.longitude ?? null,
+          eventStartAt: extractDateInput(occurrence.eventStartAt),
+          eventEndAt: extractDateInput(occurrence.eventEndAt),
+          allDay: true
+        }))
+      : [defaultOccurrence()];
+    useManualLocation.value = editorForm.occurrences.map(() => false);
+    lastGeolocationPrecision.value = sourceOccurrences.length > 0
+      ? sourceOccurrences.map((occurrence) => occurrence.geolocationPrecision ?? null)
+      : [null];
+
     editorForm.organizerName = source.organizerName ?? "";
     editorForm.organizerUrl = source.organizerUrl ?? "";
     editorForm.contactEmail = source.contactEmail ?? "";
@@ -159,24 +208,39 @@ export const useEditorStore = defineStore("editor", () => {
     imageFile.value = file;
   };
 
-  const hasManualCoordinates = () =>
-    useManualLocation.value &&
-    typeof editorForm.latitude === "number" &&
-    Number.isFinite(editorForm.latitude) &&
-    typeof editorForm.longitude === "number" &&
-    Number.isFinite(editorForm.longitude);
+  const hasManualCoordinates = (index: number) => {
+    const occurrence = editorForm.occurrences[index];
+    return (
+      useManualLocation.value[index] === true &&
+      typeof occurrence.latitude === "number" &&
+      Number.isFinite(occurrence.latitude) &&
+      typeof occurrence.longitude === "number" &&
+      Number.isFinite(occurrence.longitude)
+    );
+  };
 
-  const buildEditorPayload = (): CreateEventPayload => ({
+  const getRetainedOccurrenceIndices = () =>
+    editorForm.occurrences
+      .map((occurrence, index) => ({ occurrence, index }))
+      .filter(({ occurrence }) => !isBlankOccurrence(occurrence))
+      .map(({ index }) => index);
+
+  const buildEditorPayload = (retainedIndices: number[] = getRetainedOccurrenceIndices()): CreateEventPayload => ({
     ...editorForm,
-    eventStartAt: normalizeDateBoundary(editorForm.eventStartAt, false),
-    eventEndAt: normalizeDateBoundary(editorForm.eventEndAt, true),
-    allDay: true,
-    venueName: trimText(editorForm.venueName),
-    address: trimText(editorForm.address),
-    postalCode: trimText(editorForm.postalCode),
-    city: trimText(editorForm.city),
-    latitude: hasManualCoordinates() ? editorForm.latitude : undefined,
-    longitude: hasManualCoordinates() ? editorForm.longitude : undefined,
+    occurrences: retainedIndices.map((index) => {
+      const occurrence = editorForm.occurrences[index];
+      return {
+        eventStartAt: normalizeDateBoundary(occurrence.eventStartAt, false),
+        eventEndAt: normalizeDateBoundary(occurrence.eventEndAt, true),
+        allDay: true,
+        venueName: trimText(occurrence.venueName),
+        address: trimText(occurrence.address),
+        postalCode: trimText(occurrence.postalCode),
+        city: trimText(occurrence.city),
+        latitude: hasManualCoordinates(index) ? occurrence.latitude : undefined,
+        longitude: hasManualCoordinates(index) ? occurrence.longitude : undefined
+      };
+    }),
     organizerUrl: editorForm.organizerUrl || undefined,
     contactEmail: editorForm.contactEmail || undefined,
     contactPhone: editorForm.contactPhone || undefined,
@@ -189,39 +253,49 @@ export const useEditorStore = defineStore("editor", () => {
         .filter((link) => link.url.length > 0) ?? []
   });
 
-  const buildPreviewEvent = (): EventItem => ({
-    id: editingEventId.value ?? "preview-event",
-    title: editorForm.title || "Prévisualisation",
-    content: editorForm.content ?? null,
-    image: (imageFile.value ? URL.createObjectURL(imageFile.value) : editorForm.image) ?? null,
-    categoryId: editorForm.categoryId ?? null,
-    audienceId: editorForm.audienceId ?? null,
-    eventStartAt: normalizeDateBoundary(editorForm.eventStartAt, false) || new Date().toISOString(),
-    eventEndAt:
-      normalizeDateBoundary(editorForm.eventEndAt || editorForm.eventStartAt, true) || new Date().toISOString(),
-    allDay: true,
-    venueName: trimText(editorForm.venueName),
-    address: trimText(editorForm.address),
-    postalCode: trimText(editorForm.postalCode),
-    city: trimText(editorForm.city) || "Descartes",
-    latitude: 46.97,
-    longitude: 0.7,
-    organizerName: editorForm.organizerName ?? null,
-    organizerUrl: editorForm.organizerUrl ?? undefined,
-    contactEmail: editorForm.contactEmail ?? undefined,
-    contactPhone: editorForm.contactPhone ?? undefined,
-    ticketUrl: editorForm.ticketUrl ?? undefined,
-    pricingInfo: editorForm.pricingInfo ?? undefined,
-    websiteUrl: editorForm.websiteUrl ?? undefined,
-    socialLinks: cloneSocialLinks(editorForm.socialLinks),
-    status: "DRAFT",
-    publishedAt: null,
-    publicationEndAt:
-      normalizeDateBoundary(editorForm.eventEndAt || editorForm.eventStartAt, true) || new Date().toISOString(),
-    rejectionReason: null,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  });
+  const buildPreviewEvent = (): EventItem => {
+    const now = new Date().toISOString();
+    const previewOccurrences: EventOccurrence[] = (
+      editorForm.occurrences.length > 0 ? editorForm.occurrences : [defaultOccurrence()]
+    ).map((occurrence, index) => ({
+      id: `preview-occurrence-${index}`,
+      venueName: trimText(occurrence.venueName),
+      address: trimText(occurrence.address),
+      postalCode: trimText(occurrence.postalCode),
+      city: trimText(occurrence.city) || "Descartes",
+      latitude: 46.97,
+      longitude: 0.7,
+      eventStartAt: normalizeDateBoundary(occurrence.eventStartAt, false) || now,
+      eventEndAt: normalizeDateBoundary(occurrence.eventEndAt || occurrence.eventStartAt, true) || now,
+      allDay: true,
+      createdAt: now,
+      updatedAt: now
+    }));
+
+    return {
+      id: editingEventId.value ?? "preview-event",
+      title: editorForm.title || "Prévisualisation",
+      content: editorForm.content ?? null,
+      image: (imageFile.value ? URL.createObjectURL(imageFile.value) : editorForm.image) ?? null,
+      categoryId: editorForm.categoryId ?? null,
+      audienceId: editorForm.audienceId ?? null,
+      occurrences: previewOccurrences,
+      organizerName: editorForm.organizerName ?? null,
+      organizerUrl: editorForm.organizerUrl ?? undefined,
+      contactEmail: editorForm.contactEmail ?? undefined,
+      contactPhone: editorForm.contactPhone ?? undefined,
+      ticketUrl: editorForm.ticketUrl ?? undefined,
+      pricingInfo: editorForm.pricingInfo ?? undefined,
+      websiteUrl: editorForm.websiteUrl ?? undefined,
+      socialLinks: cloneSocialLinks(editorForm.socialLinks),
+      status: "DRAFT",
+      publishedAt: null,
+      publicationEndAt: computePublicationEndAt(previewOccurrences) ?? now,
+      rejectionReason: null,
+      createdAt: now,
+      updatedAt: now
+    };
+  };
 
   const savePreviewSnapshot = () => {
     const token = `${Date.now()}`;
@@ -241,7 +315,8 @@ export const useEditorStore = defineStore("editor", () => {
     editorError.value = null;
     const authStore = useAuthStore();
     if (!authStore.canEdit) return null;
-    const payload = buildEditorPayload();
+    const retainedIndices = getRetainedOccurrenceIndices();
+    const payload = buildEditorPayload(retainedIndices);
     const eventsStore = useEventsStore();
     try {
       if (imageFile.value) {
@@ -259,10 +334,16 @@ export const useEditorStore = defineStore("editor", () => {
       editingPublishedEvent.value = updated.status === "PUBLISHED";
       editingPublishedRevisionStatus.value = updated.pendingRevision?.status ?? null;
       editorForm.image = updated.image;
-      const resolvedLocation = updated.pendingRevision ?? updated;
-      editorForm.latitude = resolvedLocation.latitude ?? null;
-      editorForm.longitude = resolvedLocation.longitude ?? null;
-      lastGeolocationPrecision.value = resolvedLocation.geolocationPrecision ?? null;
+      const resolvedOccurrences = updated.pendingRevision?.occurrences ?? updated.occurrences;
+      retainedIndices.forEach((formIndex, resolvedIndex) => {
+        const resolved = resolvedOccurrences[resolvedIndex];
+        if (!resolved) {
+          return;
+        }
+        lastGeolocationPrecision.value[formIndex] = resolved.geolocationPrecision ?? null;
+        editorForm.occurrences[formIndex].latitude = resolved.latitude ?? null;
+        editorForm.occurrences[formIndex].longitude = resolved.longitude ?? null;
+      });
       return updated;
     } catch (err) {
       editorError.value = err instanceof Error ? err.message : "Erreur inconnue";
@@ -377,6 +458,8 @@ export const useEditorStore = defineStore("editor", () => {
     useManualLocation,
     lastGeolocationPrecision,
     setManualLocation,
+    addOccurrence,
+    removeOccurrence,
     resetEditorForm,
     startEdit,
     setImageFile,
@@ -388,6 +471,7 @@ export const useEditorStore = defineStore("editor", () => {
     addSocialLink,
     removeSocialLink,
     updateSocialLink,
+    formatDateInput,
     getEditorError,
     getEditorFormValues
   };
