@@ -20,6 +20,10 @@
         {{ adminError }}
       </div>
 
+      <div v-if="adminUserInviteMessage" class="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-700">
+        {{ adminUserInviteMessage }}
+      </div>
+
       <div v-if="adminLoading" class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-6 text-slate-500">
         <LoadingSpinner size="sm" />
         <span>{{ t("admin.loading") }}</span>
@@ -130,6 +134,7 @@ const roleLabels = computed<Record<string, string>>(() => ({
 }));
 
 const { isAdmin } = storeToRefs(authStore);
-const { adminError, adminLoading, adminUserEditingId, adminUserForm, adminUsers } = storeToRefs(adminStore);
+const { adminError, adminLoading, adminUserInviteMessage, adminUserEditingId, adminUserForm, adminUsers } =
+  storeToRefs(adminStore);
 const { resetAdminUserForm, handleSaveAdminUser, startAdminUserEdit, handleDeleteAdminUser } = adminStore;
 </script>

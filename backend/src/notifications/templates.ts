@@ -50,3 +50,11 @@ export const buildPasswordResetBody = (resetUrl: string, ttlMinutes: number) =>
   `Une demande de réinitialisation de mot de passe a été reçue pour votre compte R3ne.\n\n` +
   `Utilisez ce lien pour définir un nouveau mot de passe :\n${resetUrl}\n\n` +
   `Ce lien expire dans ${ttlMinutes} minutes. Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet email.`;
+
+export const buildUserInvitationSubject = () => "Votre compte R3ne a été créé";
+
+export const buildUserInvitationBody = (name: string, setPasswordUrl: string, ttlMinutes: number) =>
+  `Bonjour ${name},\n\n` +
+  `Un compte vous a été créé sur le backoffice R3ne.\n\n` +
+  `Utilisez ce lien pour définir votre mot de passe et vous connecter :\n${setPasswordUrl}\n\n` +
+  `Ce lien expire dans ${ttlMinutes} minutes. Passé ce délai, utilisez "Mot de passe oublié ?" sur la page de connexion pour en recevoir un nouveau.`;
