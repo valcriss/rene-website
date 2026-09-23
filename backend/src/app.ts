@@ -7,6 +7,7 @@ import { createAudiencesRouter } from "./audiences/routes";
 import { createAuthRouter } from "./auth/routes";
 import { createAuthRepository } from "./auth/repositoryFactory";
 import { createCategoriesRouter } from "./categories/routes";
+import { createContactRouter } from "./contact/routes";
 import { createEventRouter } from "./events/routes";
 import { createEventRepository } from "./events/repositoryFactory";
 import { createGeocodingRouter } from "./geocoding/routes";
@@ -43,6 +44,7 @@ export const createApp = () => {
   app.use("/api/categories", createCategoriesRouter(adminRepository));
   app.use("/api/audiences", createAudiencesRouter(adminRepository));
   app.use("/api/settings", createPublicSettingsRouter(adminRepository));
+  app.use("/api", createContactRouter(adminRepository));
 
   app.get("/api/health", (_req, res) => {
     res.json({ status: "ok" });

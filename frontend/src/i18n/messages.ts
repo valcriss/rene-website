@@ -43,7 +43,8 @@ export const messages = {
     },
     navigation: {
       title: "R3ne",
-      tagline: "Agenda culturel"
+      tagline: "Agenda culturel",
+      contact: "Contact"
     },
     home: {
       titleLead:
@@ -174,6 +175,18 @@ export const messages = {
       submit: "R\u00e9initialiser le mot de passe",
       backToLogin: "Retour \u00e0 la connexion",
       errorFallback: "R\u00e9initialisation impossible"
+    },
+    contact: {
+      eyebrow: "Nous \u00e9crire",
+      title: "Contact",
+      lead: "Une question, une suggestion ? Envoyez-nous un message, nous vous r\u00e9pondrons rapidement.",
+      name: "Nom",
+      email: "Email",
+      message: "Message",
+      submit: "Envoyer le message",
+      backToHome: "Retour \u00e0 l'accueil",
+      success: "Votre message a bien \u00e9t\u00e9 envoy\u00e9.",
+      errorFallback: "Envoi du message impossible"
     },
     backoffice: {
       title: "Backoffice",
@@ -516,7 +529,8 @@ export const messages = {
     },
     navigation: {
       title: "R3ne",
-      tagline: "Cultural agenda"
+      tagline: "Cultural agenda",
+      contact: "Contact"
     },
     home: {
       titleLead: "A platform dedicated to cultural events around Descartes and neighboring towns.",
@@ -646,6 +660,18 @@ export const messages = {
       submit: "Reset password",
       backToLogin: "Back to login",
       errorFallback: "Password reset failed"
+    },
+    contact: {
+      eyebrow: "Get in touch",
+      title: "Contact",
+      lead: "A question, a suggestion? Send us a message and we'll get back to you shortly.",
+      name: "Name",
+      email: "Email",
+      message: "Message",
+      submit: "Send message",
+      backToHome: "Back to home",
+      success: "Your message has been sent.",
+      errorFallback: "Sending the message failed"
     },
     backoffice: {
       title: "Back office",

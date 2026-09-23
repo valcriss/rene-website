@@ -51,6 +51,13 @@ export const buildPasswordResetBody = (resetUrl: string, ttlMinutes: number) =>
   `Utilisez ce lien pour définir un nouveau mot de passe :\n${resetUrl}\n\n` +
   `Ce lien expire dans ${ttlMinutes} minutes. Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet email.`;
 
+export const buildContactMessageSubject = (name: string) => `Nouveau message de contact de ${name}`;
+
+export const buildContactMessageBody = (name: string, email: string, message: string) =>
+  `Nouveau message envoyé depuis le formulaire de contact du site.\n\n` +
+  `De : ${name} <${email}>\n\n` +
+  `Message :\n${message}`;
+
 export const buildUserInvitationSubject = () => "Votre compte R3ne a été créé";
 
 export const buildUserInvitationBody = (name: string, setPasswordUrl: string, ttlMinutes: number) =>

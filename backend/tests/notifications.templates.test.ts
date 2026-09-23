@@ -1,4 +1,6 @@
 import {
+  buildContactMessageBody,
+  buildContactMessageSubject,
   buildDeletedBody,
   buildPublishedBody,
   buildRejectedBody,
@@ -124,5 +126,14 @@ describe("notification templates", () => {
 
     const body = buildDeletedBody(event);
     expect(body).toContain("Aucune date renseignée pour le moment.");
+  });
+
+  it("builds the contact message subject and body", () => {
+    const subject = buildContactMessageSubject("Marie");
+    const body = buildContactMessageBody("Marie", "marie@test", "Bonjour, une question.");
+
+    expect(subject).toBe("Nouveau message de contact de Marie");
+    expect(body).toContain("Marie <marie@test>");
+    expect(body).toContain("Bonjour, une question.");
   });
 });

@@ -4,6 +4,7 @@ jest.mock("../src/notifications/mailer", () => ({
 
 import { sendEmail } from "../src/notifications/mailer";
 import {
+  notifyContactMessage,
   notifyEventDeleted,
   notifyEventPublished,
   notifyPasswordResetRequested,
@@ -156,5 +157,20 @@ describe("notifications service", () => {
         subject: "Réinitialisation de votre mot de passe"
       })
     );
+  });
+
+  it("sends a contact message with reply-to set to the visitor's email", async () => {
+    await notifyContactMessage("contact@rene-website.test", {
+      name: "Marie",
+      email: "marie@test",
+      message: "Bonjour, une question."
+    });
+
+    expect(sendEmail).toHaveBeenCalledWith({
+      to: "contact@rene-website.test",
+      subject: "Nouveau message de contact de Marie",
+      text: expect.stringContaining("Bonjour, une question."),
+      replyTo: "marie@test"
+    });
   });
 });
