@@ -48,7 +48,7 @@
             @error="markImageError(currentCarouselEvent.id)"
           />
           <div class="pointer-events-none absolute inset-x-0 bottom-0 h-[44%] bg-gradient-to-t from-slate-950/74 via-slate-950/34 to-transparent"></div>
-          <div class="relative flex min-h-[420px] flex-col justify-between p-6 sm:p-8 xl:min-h-[520px]">
+          <div class="relative flex min-h-[300px] flex-col justify-between p-6 sm:min-h-[360px] sm:p-8 xl:min-h-[420px]">
             <div class="flex flex-wrap items-center gap-3">
               <span class="rounded-full bg-white/92 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-slate-900">
                 {{ t("home.featured") }}
@@ -121,7 +121,7 @@
 
         <div
           v-else
-          class="rounded-[2.25rem] border border-dashed border-sky-100 bg-white/80 p-8 text-slate-500 shadow-sm backdrop-blur xl:min-h-[520px]"
+          class="rounded-[2.25rem] border border-dashed border-sky-100 bg-white/80 p-8 text-slate-500 shadow-sm backdrop-blur sm:min-h-[360px] xl:min-h-[420px]"
         >
           {{ t("home.noFeatured") }}
         </div>
