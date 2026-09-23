@@ -1,5 +1,6 @@
 import { mount } from "@vue/test-utils";
 import Search from "../src/components/home/Search.vue";
+import Filters from "../src/components/home/Filters.vue";
 import DateFilter from "../src/components/home/filters/DateFilter.vue";
 import EventTypeFilter from "../src/components/home/filters/EventTypeFilter.vue";
 import Header from "../src/components/navigation/Header.vue";
@@ -35,6 +36,30 @@ describe("home components", () => {
     await wrapper.vm.$nextTick();
 
     expect(wrapper.emitted("update:modelValue")?.[0]).toEqual([""]);
+  });
+
+  it("Filters panel is collapsed by default and toggles open on mobile", async () => {
+    const wrapper = mount(Filters, {
+      props: {
+        modelValue: baseFilters(),
+        availableCities: [],
+        availableCategories: [],
+        availableAudiences: []
+      }
+    });
+
+    const panel = wrapper.find("#home-filters-panel");
+    const toggle = wrapper.find("button");
+    expect(panel.classes()).toContain("hidden");
+    expect(toggle.text()).toBe("Afficher les filtres▾");
+    expect(toggle.attributes("aria-expanded")).toBe("false");
+
+    await toggle.trigger("click");
+
+    expect(panel.classes()).toContain("grid");
+    expect(panel.classes()).not.toContain("hidden");
+    expect(toggle.text()).toBe("Masquer les filtres▴");
+    expect(toggle.attributes("aria-expanded")).toBe("true");
   });
 
   it("DateFilter emits range and preset changes", async () => {
