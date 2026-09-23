@@ -88,7 +88,9 @@ export const messages = {
       audiences: "Public concern\u00e9",
       noAudiences: "Aucun public concern\u00e9 disponible.",
       eventTypes: "Types d'\u00e9v\u00e9nements",
-      noTypes: "Aucun type disponible."
+      noTypes: "Aucun type disponible.",
+      showFilters: "Afficher les filtres",
+      hideFilters: "Masquer les filtres"
     },
     detail: {
       backToAgenda: "Retour \u00e0 l'agenda",
@@ -551,7 +553,9 @@ export const messages = {
       audiences: "Audience",
       noAudiences: "No audience available.",
       eventTypes: "Event types",
-      noTypes: "No type available."
+      noTypes: "No type available.",
+      showFilters: "Show filters",
+      hideFilters: "Hide filters"
     },
     detail: {
       backToAgenda: "Back to agenda",
