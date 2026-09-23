@@ -12,6 +12,7 @@ import {
   submitEvent,
   updateEvent
 } from "../api/events";
+import { publishEvent, type ModeratorRole } from "../api/moderation";
 import { uploadImage } from "../api/uploads";
 import { computePublicationEndAt } from "../utils/occurrences";
 import { useAuthStore } from "./auth";
@@ -128,7 +129,10 @@ export const useEditorStore = defineStore("editor", () => {
   const imageFile = ref<File | null>(null);
   const isSavingDraft = ref(false);
   const isSubmittingForModeration = ref(false);
-  const isPersisting = computed(() => isSavingDraft.value || isSubmittingForModeration.value);
+  const isPublishingDirectly = ref(false);
+  const isPersisting = computed(
+    () => isSavingDraft.value || isSubmittingForModeration.value || isPublishingDirectly.value
+  );
   const useManualLocation = ref<boolean[]>([false]);
   const lastGeolocationPrecision = ref<Array<GeolocationPrecision | null>>([null]);
 
@@ -416,6 +420,46 @@ export const useEditorStore = defineStore("editor", () => {
     }
   };
 
+  const publishDraft = async (id: string): Promise<boolean> => {
+    editorError.value = null;
+    const authStore = useAuthStore();
+    if (!authStore.canModerate) return false;
+    const eventsStore = useEventsStore();
+    try {
+      const updated = await publishEvent(id, authStore.role as ModeratorRole);
+      eventsStore.updateEventState(updated);
+      resetEditorForm();
+      return true;
+    } catch (err) {
+      editorError.value = err instanceof Error ? err.message : "Erreur inconnue";
+      return false;
+    }
+  };
+
+  const handleSaveAndPublish = async (): Promise<boolean> => {
+    if (isPersisting.value) return false;
+    const authStore = useAuthStore();
+    if (!authStore.canModerate) return false;
+    isPublishingDirectly.value = true;
+    try {
+      editorError.value = null;
+
+      const savedEvent = await persistDraft();
+      if (!savedEvent) {
+        return false;
+      }
+
+      const submitted = await submitDraft(savedEvent.id);
+      if (!submitted) {
+        return false;
+      }
+
+      return await publishDraft(savedEvent.id);
+    } finally {
+      isPublishingDirectly.value = false;
+    }
+  };
+
   const formatDateInput = (value: string) => extractDateInput(value);
 
   const addSocialLink = () => {
@@ -454,6 +498,7 @@ export const useEditorStore = defineStore("editor", () => {
     editorError,
     isSavingDraft,
     isSubmittingForModeration,
+    isPublishingDirectly,
     isPersisting,
     useManualLocation,
     lastGeolocationPrecision,
@@ -467,6 +512,7 @@ export const useEditorStore = defineStore("editor", () => {
     saveDraftAndReturn,
     handleSaveDraft,
     handleSaveAndSubmit,
+    handleSaveAndPublish,
     handleSubmitDraft,
     addSocialLink,
     removeSocialLink,

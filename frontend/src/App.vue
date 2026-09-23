@@ -60,6 +60,7 @@ defineExpose({
   startEdit: editorStore.startEdit,
   handleSaveDraft: editorStore.handleSaveDraft,
   handleSaveAndSubmit: editorStore.handleSaveAndSubmit,
+  handleSaveAndPublish: editorStore.handleSaveAndPublish,
   handleSubmitDraft: editorStore.handleSubmitDraft,
   getEditorError: editorStore.getEditorError,
   getEditorFormValues: editorStore.getEditorFormValues,

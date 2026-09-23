@@ -328,6 +328,7 @@ export const messages = {
       saveDraft: "Enregistrer le brouillon",
       updatePublished: "Enregistrer et renvoyer en mod\u00e9ration",
       submitForModeration: "Soumettre \u00e0 mod\u00e9ration",
+      publishDirectly: "Publier directement",
       editDescription:
         "Mettez \u00e0 jour une fiche existante, corrigez les retours \u00e9ventuels puis renvoyez-la si besoin.",
       editPublishedDescription:
@@ -786,6 +787,7 @@ export const messages = {
       saveDraft: "Save draft",
       updatePublished: "Save and resubmit for moderation",
       submitForModeration: "Submit for moderation",
+      publishDirectly: "Publish directly",
       editDescription: "Update an existing event sheet, address any feedback, then resubmit it if needed.",
       editPublishedDescription:
         "You are editing an event that is already published. You can save a new version as a draft, then submit it when it is ready, without removing the version currently online.",

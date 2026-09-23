@@ -383,6 +383,16 @@
               <LoadingSpinner v-if="isSubmittingForModeration" size="sm" />
               <span>{{ t("editor.submitForModeration") }}</span>
             </button>
+            <button
+              v-if="canModerate"
+              type="button"
+              class="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-emerald-500"
+              :disabled="isPersisting || !hasTitle"
+              @click="handlePublishAndRedirect"
+            >
+              <LoadingSpinner v-if="isPublishingDirectly" size="sm" />
+              <span>{{ t("editor.publishDirectly") }}</span>
+            </button>
           </div>
         </div>
       </div>
@@ -416,7 +426,7 @@ const audiencesStore = useAudiencesStore();
 const editorStore = useEditorStore();
 const eventsStore = useEventsStore();
 
-const { canEdit } = storeToRefs(authStore);
+const { canEdit, canModerate } = storeToRefs(authStore);
 const { categories, loading: categoriesLoading } = storeToRefs(categoriesStore);
 const { audiences, loading: audiencesLoading } = storeToRefs(audiencesStore);
 const {
@@ -428,6 +438,7 @@ const {
   isPersisting,
   isSavingDraft,
   isSubmittingForModeration,
+  isPublishingDirectly,
   useManualLocation,
   lastGeolocationPrecision
 } = storeToRefs(editorStore);
@@ -436,6 +447,7 @@ const {
   resetEditorForm,
   saveDraftAndReturn,
   handleSaveAndSubmit,
+  handleSaveAndPublish,
   savePreviewSnapshot,
   setImageFile,
   addSocialLink,
@@ -573,6 +585,13 @@ const handleSaveAndRedirect = async () => {
 
 const handleSubmitAndRedirect = async () => {
   const ok = await handleSaveAndSubmit();
+  if (ok) {
+    router.push("/backoffice/events");
+  }
+};
+
+const handlePublishAndRedirect = async () => {
+  const ok = await handleSaveAndPublish();
   if (ok) {
     router.push("/backoffice/events");
   }
