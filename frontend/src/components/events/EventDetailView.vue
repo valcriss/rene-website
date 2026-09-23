@@ -217,7 +217,19 @@
                     </p>
                     <p class="flex items-center gap-3">
                       <font-awesome-icon class="h-4 w-4 text-sky-700" :icon="faGlobe" />
-                      <span><span class="font-medium text-slate-700">{{ t("detail.organizerWebsite") }}:</span> {{ formatOptional(detailEvent.organizerUrl) }}</span>
+                      <span>
+                        <span class="font-medium text-slate-700">{{ t("detail.organizerWebsite") }}:</span>
+                        <a
+                          v-if="organizerWebsiteUrl"
+                          :href="organizerWebsiteUrl"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          class="text-sky-700 underline decoration-sky-300 underline-offset-2 hover:text-sky-800"
+                        >
+                          {{ t("detail.openOrganizerWebsite") }}
+                        </a>
+                        <template v-else>{{ formatOptional(detailEvent.organizerUrl) }}</template>
+                      </span>
                     </p>
                   </div>
 
@@ -237,11 +249,35 @@
                     <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">{{ t("detail.usefulLinks") }}</p>
                     <p class="flex items-center gap-3">
                       <font-awesome-icon class="h-4 w-4 text-sky-700" :icon="faTicket" />
-                      <span><span class="font-medium text-slate-700">{{ t("common.ticketing") }}:</span> {{ formatOptional(detailEvent.ticketUrl) }}</span>
+                      <span>
+                        <span class="font-medium text-slate-700">{{ t("common.ticketing") }}:</span>
+                        <a
+                          v-if="ticketingUrl"
+                          :href="ticketingUrl"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          class="text-sky-700 underline decoration-sky-300 underline-offset-2 hover:text-sky-800"
+                        >
+                          {{ t("detail.openTicketing") }}
+                        </a>
+                        <template v-else>{{ formatOptional(detailEvent.ticketUrl) }}</template>
+                      </span>
                     </p>
                     <p class="flex items-center gap-3">
                       <font-awesome-icon class="h-4 w-4 text-sky-700" :icon="faArrowUpRightFromSquare" />
-                      <span><span class="font-medium text-slate-700">{{ t("common.website") }}:</span> {{ formatOptional(detailEvent.websiteUrl) }}</span>
+                      <span>
+                        <span class="font-medium text-slate-700">{{ t("common.website") }}:</span>
+                        <a
+                          v-if="websiteLinkUrl"
+                          :href="websiteLinkUrl"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          class="text-sky-700 underline decoration-sky-300 underline-offset-2 hover:text-sky-800"
+                        >
+                          {{ t("detail.openWebsite") }}
+                        </a>
+                        <template v-else>{{ formatOptional(detailEvent.websiteUrl) }}</template>
+                      </span>
                     </p>
                   </div>
                 </div>
@@ -364,6 +400,21 @@ const optionalAddress = computed(() => {
   }
   return getEventAddressLabel(detailPrimaryOccurrence.value ?? {}, t("common.notProvided"));
 });
+
+const normalizeExternalUrl = (value?: string | null) => {
+  const trimmed = value?.trim() ?? "";
+  if (!trimmed) {
+    return "";
+  }
+  if (/^(https?|mailto|tel):/i.test(trimmed)) {
+    return trimmed;
+  }
+  return `https://${trimmed}`;
+};
+
+const organizerWebsiteUrl = computed(() => normalizeExternalUrl(detailEvent.value?.organizerUrl));
+const ticketingUrl = computed(() => normalizeExternalUrl(detailEvent.value?.ticketUrl));
+const websiteLinkUrl = computed(() => normalizeExternalUrl(detailEvent.value?.websiteUrl));
 
 const categoryName = computed(() => {
   return categoryNames.value.get(detailEvent.value?.categoryId ?? "") ?? "";

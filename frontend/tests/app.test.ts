@@ -414,9 +414,13 @@ describe("App", () => {
     expect(await screen.findByText("37100")).toBeInTheDocument();
     expect(await screen.findByText("contact@test.fr")).toBeInTheDocument();
     expect(await screen.findByText("01 02 03 04 05")).toBeInTheDocument();
-    expect(await screen.findByText("https://organisateur.test")).toBeInTheDocument();
-    expect(await screen.findByText("https://billetterie.test")).toBeInTheDocument();
-    expect(await screen.findByText("https://evenement.test")).toBeInTheDocument();
+    const visitSiteLinks = await screen.findAllByRole("link", { name: "Visiter le site" });
+    expect(visitSiteLinks[0]).toHaveAttribute("href", "https://organisateur.test");
+    expect(visitSiteLinks[1]).toHaveAttribute("href", "https://evenement.test");
+    expect(await screen.findByRole("link", { name: "Voir la billetterie" })).toHaveAttribute(
+      "href",
+      "https://billetterie.test"
+    );
 
     const directionsLink = await screen.findByRole("link", { name: "Itinéraire" });
     const calendarLink = await screen.findByRole("link", { name: /Ajouter au calendrier/i });

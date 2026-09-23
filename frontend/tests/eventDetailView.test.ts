@@ -227,6 +227,75 @@ describe("EventDetailView", () => {
     expect(wrapper.html()).not.toContain("<script>");
     expect(wrapper.find("[data-testid='detail-social-links']").exists()).toBe(true);
     expect(wrapper.find("a[title='Facebook']").attributes("href")).toBe("https://facebook.com/rene");
+    const ticketingLink = wrapper.find("a[href='https://tickets.example.com']");
+    expect(ticketingLink.exists()).toBe(true);
+    expect(ticketingLink.attributes("target")).toBe("_blank");
+    expect(ticketingLink.attributes("rel")).toBe("noopener noreferrer");
+    expect(ticketingLink.text()).toBe("Voir la billetterie");
+  });
+
+  it("renders organizer, ticketing and website links as clickable labels, normalizing missing protocols", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const categoriesStore = useCategoriesStore();
+    categoriesStore.categories = [{ id: "music", name: "Musique", createdAt: "", updatedAt: "" }];
+
+    const wrapper = mount(EventDetailView, {
+      props: {
+        eventId: "1",
+        event: {
+          id: "1",
+          title: "Concert",
+          content: "<p>Texte</p>",
+          image: "img",
+          categoryId: "music",
+          audienceId: null,
+          occurrences: [
+            {
+              id: "occ-1",
+              eventStartAt: "2026-01-15T20:00:00.000Z",
+              eventEndAt: "2026-01-15T22:00:00.000Z",
+              allDay: false,
+              venueName: "Salle",
+              address: "",
+              postalCode: "",
+              city: "Descartes",
+              latitude: 46.97,
+              longitude: 0.7
+            }
+          ],
+          organizerName: "Org",
+          organizerUrl: "exemple-organisateur.fr",
+          websiteUrl: "www.exemple-site.fr",
+          status: "PUBLISHED",
+          publishedAt: null,
+          publicationEndAt: "2026-01-15T22:00:00.000Z",
+          rejectionReason: null,
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z"
+        }
+      },
+      global: {
+        plugins: [pinia],
+        stubs: {
+          EventMap: { template: "<div></div>" }
+        }
+      }
+    });
+
+    await wrapper.vm.$nextTick();
+
+    const organizerLink = wrapper.find("a[href='https://exemple-organisateur.fr']");
+    expect(organizerLink.exists()).toBe(true);
+    expect(organizerLink.text()).toBe("Visiter le site");
+    expect(organizerLink.attributes("target")).toBe("_blank");
+
+    const websiteLink = wrapper.find("a[href='https://www.exemple-site.fr']");
+    expect(websiteLink.exists()).toBe(true);
+    expect(websiteLink.text()).toBe("Visiter le site");
+
+    expect(wrapper.find("a[href='https://tickets.example.com']").exists()).toBe(false);
+    expect(wrapper.text()).toContain("Non renseigné");
   });
 
   it("renders citywide events without an empty venue separator", async () => {
