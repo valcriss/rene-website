@@ -27,24 +27,8 @@
             class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
           />
         </label>
-        <label class="text-sm text-slate-600">
-          {{ t("login.password") }}
-          <input
-            v-model="signupPassword"
-            type="password"
-            placeholder="********"
-            class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-          />
-        </label>
-        <label class="text-sm text-slate-600">
-          {{ t("signup.passwordConfirmation") }}
-          <input
-            v-model="signupPasswordConfirmation"
-            type="password"
-            placeholder="********"
-            class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-          />
-        </label>
+        <PasswordField v-model="signupPassword" :label="t('login.password')" />
+        <PasswordField v-model="signupPasswordConfirmation" :label="t('signup.passwordConfirmation')" />
       </div>
 
       <div class="mt-6 flex flex-wrap gap-3">
@@ -84,6 +68,7 @@ import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import NavigationHeader from "../components/navigation/Header.vue";
+import PasswordField from "../components/form/PasswordField.vue";
 import { useAuthStore } from "../stores/auth";
 
 const router = useRouter();

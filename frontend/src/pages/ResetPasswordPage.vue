@@ -10,24 +10,8 @@
       </p>
 
       <div class="mt-6 grid gap-4">
-        <label class="text-sm text-slate-600">
-          {{ t("resetPassword.password") }}
-          <input
-            v-model="passwordResetNewPassword"
-            type="password"
-            placeholder="********"
-            class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-          />
-        </label>
-        <label class="text-sm text-slate-600">
-          {{ t("resetPassword.passwordConfirmation") }}
-          <input
-            v-model="passwordResetPasswordConfirmation"
-            type="password"
-            placeholder="********"
-            class="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-          />
-        </label>
+        <PasswordField v-model="passwordResetNewPassword" :label="t('resetPassword.password')" />
+        <PasswordField v-model="passwordResetPasswordConfirmation" :label="t('resetPassword.passwordConfirmation')" />
       </div>
 
       <div class="mt-6 flex flex-wrap gap-3">
@@ -57,6 +41,7 @@ import { watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute, useRouter } from "vue-router";
 import NavigationHeader from "../components/navigation/Header.vue";
+import PasswordField from "../components/form/PasswordField.vue";
 import { useAuthStore } from "../stores/auth";
 
 const route = useRoute();
