@@ -559,6 +559,54 @@ describe("BackofficeEventCreatePage", () => {
     expect(await screen.findByRole("button", { name: "Soumettre à modération" })).toBeInTheDocument();
   });
 
+  it("hides the direct publish button for editors", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) }))
+    );
+
+    const setup = await setupPage();
+    setup.categoriesStore.hasLoaded = true;
+    renderPage(setup);
+
+    await screen.findByRole("button", { name: "Soumettre à modération" });
+    expect(screen.queryByRole("button", { name: "Publier directement" })).not.toBeInTheDocument();
+  });
+
+  it("shows the direct publish button for moderators and admins", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) }))
+    );
+
+    const setup = await setupPage();
+    setup.categoriesStore.hasLoaded = true;
+    useAuthStore(setup.pinia).setRole("MODERATOR");
+    renderPage(setup);
+
+    expect(await screen.findByRole("button", { name: "Publier directement" })).toBeInTheDocument();
+  });
+
+  it("publishes directly and redirects when a moderator confirms", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) }))
+    );
+
+    const setup = await setupPage();
+    setup.categoriesStore.hasLoaded = true;
+    useAuthStore(setup.pinia).setRole("MODERATOR");
+    const handleSaveAndPublish = vi.spyOn(setup.editorStore, "handleSaveAndPublish").mockResolvedValue(true);
+    const pushSpy = vi.spyOn(setup.router, "push");
+    renderPage(setup);
+
+    await fireEvent.update(screen.getByPlaceholderText("Titre de l'événement"), "Concert");
+    await fireEvent.click(await screen.findByRole("button", { name: "Publier directement" }));
+
+    expect(handleSaveAndPublish).toHaveBeenCalledOnce();
+    expect(pushSpy).toHaveBeenCalledWith("/backoffice/events");
+  });
+
   it("adapts actions when editing a published event revision", async () => {
     vi.stubGlobal(
       "fetch",

@@ -20,6 +20,7 @@ vi.mock("../src/components/EventMap.vue", () => ({
 const submitMock = vi.fn();
 const createMock = vi.fn();
 const updateMock = vi.fn();
+const publishMock = vi.fn();
 
 vi.mock("../src/api/events", async () => {
   const actual = await vi.importActual<typeof import("../src/api/events")>("../src/api/events");
@@ -28,6 +29,14 @@ vi.mock("../src/api/events", async () => {
     submitEvent: (...args: unknown[]) => submitMock(...args),
     createEvent: (...args: unknown[]) => createMock(...args),
     updateEvent: (...args: unknown[]) => updateMock(...args)
+  };
+});
+
+vi.mock("../src/api/moderation", async () => {
+  const actual = await vi.importActual<typeof import("../src/api/moderation")>("../src/api/moderation");
+  return {
+    ...actual,
+    publishEvent: (...args: unknown[]) => publishMock(...args)
   };
 });
 
@@ -45,6 +54,7 @@ describe("editor handlers", () => {
     setRole: (value: "VISITOR" | "EDITOR" | "MODERATOR" | "ADMIN") => void;
     handleSaveDraft: () => Promise<boolean>;
     handleSaveAndSubmit: () => Promise<boolean>;
+    handleSaveAndPublish: () => Promise<boolean>;
     handleSubmitDraft: (id?: string) => Promise<boolean>;
     getEditorFormValues: () => CreateEventPayload;
     startEdit: (event: EventItem) => void;
@@ -67,6 +77,7 @@ describe("editor handlers", () => {
     submitMock.mockReset();
     createMock.mockReset();
     updateMock.mockReset();
+    publishMock.mockReset();
     vi.stubGlobal(
       "fetch",
       vi.fn((input: FetchInput) => {
@@ -251,6 +262,93 @@ describe("editor handlers", () => {
 
     expect(createMock).toHaveBeenCalledOnce();
     expect(submitMock).toHaveBeenCalledWith("created-1", "EDITOR");
+  });
+
+  it("does not publish directly when role cannot moderate", async () => {
+    createMock.mockResolvedValue(buildEditEvent({ id: "created-1" }));
+
+    const { wrapper } = await mountWithRouter();
+    await nextTick();
+
+    const vm = wrapper.vm as unknown as Exposed;
+    const editorStore = useEditorStore();
+    editorStore.editorForm.title = "Concert";
+    vm.setRole("EDITOR");
+
+    const ok = await vm.handleSaveAndPublish();
+
+    expect(ok).toBe(false);
+    expect(createMock).not.toHaveBeenCalled();
+    expect(submitMock).not.toHaveBeenCalled();
+    expect(publishMock).not.toHaveBeenCalled();
+  });
+
+  it("creates, submits then publishes directly when a moderator saves and publishes", async () => {
+    createMock.mockResolvedValue(buildEditEvent({ id: "created-1" }));
+    submitMock.mockResolvedValue(buildEditEvent({ id: "created-1", status: "PENDING" }));
+    publishMock.mockResolvedValue(buildEditEvent({ id: "created-1", status: "PUBLISHED" }));
+
+    const { wrapper } = await mountWithRouter();
+    await nextTick();
+
+    const vm = wrapper.vm as unknown as Exposed;
+    const editorStore = useEditorStore();
+    editorStore.editorForm.image = "/uploads/test.png";
+    editorStore.editorForm.title = "Concert";
+    editorStore.editorForm.categoryId = "music";
+    editorStore.editorForm.occurrences[0].eventStartAt = "2026-01-15";
+    editorStore.editorForm.occurrences[0].eventEndAt = "2026-01-15";
+    editorStore.editorForm.occurrences[0].venueName = "Salle";
+    editorStore.editorForm.occurrences[0].city = "Descartes";
+    vm.setRole("MODERATOR");
+
+    const ok = await vm.handleSaveAndPublish();
+
+    expect(ok).toBe(true);
+    expect(createMock).toHaveBeenCalledOnce();
+    expect(submitMock).toHaveBeenCalledWith("created-1", "MODERATOR");
+    expect(publishMock).toHaveBeenCalledWith("created-1", "MODERATOR");
+  });
+
+  it("does not publish when the submit step fails in save and publish flow", async () => {
+    createMock.mockResolvedValue(buildEditEvent({ id: "created-1" }));
+    submitMock.mockRejectedValue(new Error("Soumission impossible"));
+
+    const { wrapper } = await mountWithRouter();
+    await nextTick();
+
+    const vm = wrapper.vm as unknown as Exposed & { getEditorError: () => string | null };
+    const editorStore = useEditorStore();
+    editorStore.editorForm.image = "/uploads/test.png";
+    vm.setRole("ADMIN");
+
+    const ok = await vm.handleSaveAndPublish();
+
+    expect(ok).toBe(false);
+    expect(createMock).toHaveBeenCalledOnce();
+    expect(publishMock).not.toHaveBeenCalled();
+    expect(vm.getEditorError()).toBe("Soumission impossible");
+  });
+
+  it("surfaces the publish error while keeping the created and submitted event", async () => {
+    createMock.mockResolvedValue(buildEditEvent({ id: "created-1" }));
+    submitMock.mockResolvedValue(buildEditEvent({ id: "created-1", status: "PENDING" }));
+    publishMock.mockRejectedValue(new Error("Publication impossible"));
+
+    const { wrapper } = await mountWithRouter();
+    await nextTick();
+
+    const vm = wrapper.vm as unknown as Exposed & { getEditorError: () => string | null };
+    const editorStore = useEditorStore();
+    editorStore.editorForm.image = "/uploads/test.png";
+    vm.setRole("ADMIN");
+
+    const ok = await vm.handleSaveAndPublish();
+
+    expect(ok).toBe(false);
+    expect(submitMock).toHaveBeenCalledWith("created-1", "ADMIN");
+    expect(publishMock).toHaveBeenCalledWith("created-1", "ADMIN");
+    expect(vm.getEditorError()).toBe("Publication impossible");
   });
 
   it("keeps editor state after saving a new draft", async () => {
