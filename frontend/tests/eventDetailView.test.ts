@@ -9,6 +9,60 @@ describe("EventDetailView", () => {
     setActivePinia(createPinia());
   });
 
+  it("treats an archived event as not found when resolved from the store", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const eventsStore = useEventsStore();
+    const categoriesStore = useCategoriesStore();
+    categoriesStore.categories = [{ id: "music", name: "Musique", createdAt: "", updatedAt: "" }];
+    eventsStore.isLoading = false;
+    eventsStore.events = [
+      {
+        id: "1",
+        title: "Concert archivé",
+        content: "",
+        image: "img",
+        categoryId: "music",
+        audienceId: null,
+        occurrences: [
+          {
+            id: "occ-1",
+            eventStartAt: "2026-01-15T20:00:00.000Z",
+            eventEndAt: "2026-01-15T22:00:00.000Z",
+            allDay: false,
+            venueName: "Salle",
+            address: "",
+            postalCode: "",
+            city: "Descartes",
+            latitude: 46.97,
+            longitude: 0.7
+          }
+        ],
+        organizerName: "Org",
+        status: "PUBLISHED",
+        publishedAt: null,
+        publicationEndAt: "2099-01-15T22:00:00.000Z",
+        archivedAt: "2026-02-01T00:00:00.000Z",
+        rejectionReason: null,
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z"
+      }
+    ];
+
+    const wrapper = mount(EventDetailView, {
+      props: { eventId: "1" },
+      global: {
+        plugins: [pinia],
+        stubs: { EventMap: { template: "<div></div>" } }
+      }
+    });
+
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.text()).not.toContain("Concert archivé");
+    expect(wrapper.text()).toContain("Événement introuvable.");
+  });
+
   it("renders fallback content and emits selection", async () => {
     const pinia = createPinia();
     setActivePinia(pinia);
@@ -41,7 +95,7 @@ describe("EventDetailView", () => {
         organizerName: "Org",
         status: "PUBLISHED",
         publishedAt: null,
-        publicationEndAt: "2026-01-15T22:00:00.000Z",
+        publicationEndAt: "2099-01-15T22:00:00.000Z",
         rejectionReason: null,
         createdAt: "2026-01-01T00:00:00.000Z",
         updatedAt: "2026-01-01T00:00:00.000Z"
@@ -108,7 +162,7 @@ describe("EventDetailView", () => {
         organizerName: "Org",
         status: "PUBLISHED",
         publishedAt: null,
-        publicationEndAt: "2026-01-15T22:00:00.000Z",
+        publicationEndAt: "2099-01-15T22:00:00.000Z",
         rejectionReason: null,
         createdAt: "2026-01-01T00:00:00.000Z",
         updatedAt: "2026-01-01T00:00:00.000Z"
@@ -137,7 +191,7 @@ describe("EventDetailView", () => {
         organizerName: "Org",
         status: "PUBLISHED",
         publishedAt: null,
-        publicationEndAt: "2026-01-16T22:00:00.000Z",
+        publicationEndAt: "2099-01-16T22:00:00.000Z",
         rejectionReason: null,
         createdAt: "2026-01-01T00:00:00.000Z",
         updatedAt: "2026-01-01T00:00:00.000Z"

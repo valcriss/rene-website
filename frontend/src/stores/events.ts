@@ -3,7 +3,7 @@ import { defineStore } from "pinia";
 import { EventItem, EventOccurrence, deleteEvent, fetchEvents } from "../api/events";
 import { filterEvents, type EventFilters } from "../events/filterEvents";
 import placeholderEvent from "../assets/event-placeholder.svg";
-import { publishEventWithFeatured, rejectEvent, updateEventFeatured, type ModeratorRole } from "../api/moderation";
+import { archiveEvent, publishEventWithFeatured, rejectEvent, unarchiveEvent, updateEventFeatured, type ModeratorRole } from "../api/moderation";
 import {
   formatDate,
   formatDateRange,
@@ -20,6 +20,7 @@ import {
   hasSubmittableGeolocation
 } from "../utils/occurrences";
 import { buildEventMapPins } from "../utils/mapPins";
+import { isEventArchived } from "../utils/eventArchive";
 import { useAuthStore } from "./auth";
 
 const pad = (value: number) => value.toString().padStart(2, "0");
@@ -114,7 +115,9 @@ export const useEventsStore = defineStore("events", () => {
     };
   };
 
-  const publishedEvents = computed(() => events.value.filter((event) => event.status === "PUBLISHED"));
+  const publishedEvents = computed(() =>
+    events.value.filter((event) => event.status === "PUBLISHED" && !isEventArchived(event))
+  );
   const pendingEvents = computed(() =>
     events.value
       .filter((event) => event.status === "PENDING" || event.pendingRevision?.status === "PENDING")
@@ -441,6 +444,30 @@ export const useEventsStore = defineStore("events", () => {
     }
   };
 
+  const handleArchive = async (id: string) => {
+    moderationError.value = null;
+    const authStore = useAuthStore();
+    if (!authStore.canModerate) return;
+    try {
+      const updated = await archiveEvent(id, authStore.role as ModeratorRole);
+      updateEventState(updated);
+    } catch (err) {
+      moderationError.value = err instanceof Error ? err.message : "Erreur inconnue";
+    }
+  };
+
+  const handleUnarchive = async (id: string) => {
+    moderationError.value = null;
+    const authStore = useAuthStore();
+    if (!authStore.canModerate) return;
+    try {
+      const updated = await unarchiveEvent(id, authStore.role as ModeratorRole);
+      updateEventState(updated);
+    } catch (err) {
+      moderationError.value = err instanceof Error ? err.message : "Erreur inconnue";
+    }
+  };
+
   const handleReject = async (id: string) => {
     moderationError.value = null;
     const authStore = useAuthStore();
@@ -533,6 +560,8 @@ export const useEventsStore = defineStore("events", () => {
     getEventMapPins,
     handlePublish,
     handleUpdateFeatured,
+    handleArchive,
+    handleUnarchive,
     handleReject,
     handleDelete,
     setFeaturedEvent,

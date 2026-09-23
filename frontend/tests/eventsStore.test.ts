@@ -4,7 +4,7 @@ import { useEventsStore } from "../src/stores/events";
 import { useAuthStore } from "../src/stores/auth";
 import type { EventItem, EventOccurrence } from "../src/api/events";
 import { deleteEvent, fetchEvents } from "../src/api/events";
-import { publishEventWithFeatured, updateEventFeatured } from "../src/api/moderation";
+import { archiveEvent, publishEventWithFeatured, unarchiveEvent, updateEventFeatured } from "../src/api/moderation";
 
 vi.mock("../src/api/events", () => ({
   fetchEvents: vi.fn(),
@@ -14,7 +14,9 @@ vi.mock("../src/api/events", () => ({
 vi.mock("../src/api/moderation", () => ({
   publishEventWithFeatured: vi.fn(),
   updateEventFeatured: vi.fn(),
-  rejectEvent: vi.fn()
+  rejectEvent: vi.fn(),
+  archiveEvent: vi.fn(),
+  unarchiveEvent: vi.fn()
 }));
 
 const buildOccurrence = (overrides: Partial<EventOccurrence> = {}): EventOccurrence => ({
@@ -42,7 +44,7 @@ const buildEvent = (overrides: Partial<EventItem> = {}): EventItem => ({
   organizerName: "Org",
   status: "PUBLISHED",
   publishedAt: null,
-  publicationEndAt: "2026-01-15T23:59:59.999Z",
+  publicationEndAt: "2099-01-15T23:59:59.999Z",
   rejectionReason: null,
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z",
@@ -61,6 +63,19 @@ describe("events store", () => {
     store.events = [buildEvent({ categoryId: "music" }), buildEvent({ id: "2", categoryId: "art", status: "DRAFT" })];
 
     expect(store.availableTypes).toEqual(["music"]);
+  });
+
+  it("never exposes archived events as published", () => {
+    const store = useEventsStore();
+    store.events = [
+      buildEvent({ id: "1", archivedAt: "2026-02-01T00:00:00.000Z" }),
+      buildEvent({ id: "2", publicationEndAt: "2020-01-01T00:00:00.000Z" }),
+      buildEvent({ id: "3" })
+    ];
+    store.filters.dateRange = { start: "", end: "" };
+
+    expect(store.publishedEvents.map((event) => event.id)).toEqual(["3"]);
+    expect(store.filteredEvents.map((event) => event.id)).toEqual(["3"]);
   });
 
   it("exposes available cities gathered from all occurrences", () => {
@@ -211,5 +226,51 @@ describe("events store", () => {
 
     expect(updateFeaturedMock).toHaveBeenCalledWith("1", "ADMIN", true);
     expect(store.events[0].featured).toBe(true);
+  });
+
+  it("archives and unarchives an event", async () => {
+    const store = useEventsStore();
+    const authStore = useAuthStore();
+    authStore.setRole("MODERATOR");
+    store.events = [buildEvent({ id: "1", archivedAt: null })];
+
+    const archiveMock = vi.mocked(archiveEvent);
+    archiveMock.mockResolvedValue(buildEvent({ id: "1", archivedAt: "2026-02-01T00:00:00.000Z" }));
+
+    await store.handleArchive("1");
+
+    expect(archiveMock).toHaveBeenCalledWith("1", "MODERATOR");
+    expect(store.events[0].archivedAt).toBe("2026-02-01T00:00:00.000Z");
+
+    const unarchiveMock = vi.mocked(unarchiveEvent);
+    unarchiveMock.mockResolvedValue(buildEvent({ id: "1", archivedAt: null }));
+
+    await store.handleUnarchive("1");
+
+    expect(unarchiveMock).toHaveBeenCalledWith("1", "MODERATOR");
+    expect(store.events[0].archivedAt).toBeNull();
+  });
+
+  it("skips archive and unarchive when role cannot moderate and captures errors", async () => {
+    const store = useEventsStore();
+    const authStore = useAuthStore();
+    authStore.setRole("VISITOR");
+
+    const archiveMock = vi.mocked(archiveEvent);
+    const unarchiveMock = vi.mocked(unarchiveEvent);
+
+    await store.handleArchive("1");
+    await store.handleUnarchive("1");
+    expect(archiveMock).not.toHaveBeenCalled();
+    expect(unarchiveMock).not.toHaveBeenCalled();
+
+    authStore.setRole("ADMIN");
+    archiveMock.mockRejectedValue(new Error("Erreur archivage"));
+    await store.handleArchive("1");
+    expect(store.moderationError).toBe("Erreur archivage");
+
+    unarchiveMock.mockRejectedValue("oops");
+    await store.handleUnarchive("1");
+    expect(store.moderationError).toBe("Erreur inconnue");
   });
 });

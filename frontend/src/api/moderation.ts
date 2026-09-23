@@ -30,6 +30,12 @@ export const publishEventWithFeatured = (
   featured: boolean
 ): Promise<EventItem> => callModerationEndpoint<EventItem>(`/api/events/${id}/publish`, role, { featured });
 
+export const archiveEvent = (id: string, role: ModeratorRole): Promise<EventItem> =>
+  callModerationEndpoint<EventItem>(`/api/events/${id}/archive`, role);
+
+export const unarchiveEvent = (id: string, role: ModeratorRole): Promise<EventItem> =>
+  callModerationEndpoint<EventItem>(`/api/events/${id}/unarchive`, role);
+
 export const rejectEvent = (
   id: string,
   role: ModeratorRole,

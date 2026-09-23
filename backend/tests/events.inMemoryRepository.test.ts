@@ -78,6 +78,25 @@ describe("inMemoryEventRepository", () => {
     await expect(repo.updateFeatured("missing", true)).resolves.toBeNull();
   });
 
+  it("archives and unarchives an existing event", async () => {
+    const repo = createInMemoryEventRepository();
+    const created = await repo.create(payload);
+    expect(created.archivedAt).toBeNull();
+
+    const archived = await repo.archiveEvent(created.id, "2026-02-01T00:00:00.000Z");
+    expect(archived?.archivedAt).toBe("2026-02-01T00:00:00.000Z");
+
+    const unarchived = await repo.unarchiveEvent(created.id);
+    expect(unarchived?.archivedAt).toBeNull();
+  });
+
+  it("returns null when archiving or unarchiving a missing event", async () => {
+    const repo = createInMemoryEventRepository();
+
+    await expect(repo.archiveEvent("missing", "2026-02-01T00:00:00.000Z")).resolves.toBeNull();
+    await expect(repo.unarchiveEvent("missing")).resolves.toBeNull();
+  });
+
   it("returns null for missing ids", async () => {
     const repo = createInMemoryEventRepository();
     const updated = await repo.update("missing", payload);

@@ -1,4 +1,4 @@
-import { createEvent, deleteEvent, getEvent, listEvents, publishEvent, rejectEvent, submitEvent, updateEvent, updateEventFeatured } from "../src/events/service";
+import { archiveEvent, createEvent, deleteEvent, getEvent, listEvents, publishEvent, rejectEvent, submitEvent, unarchiveEvent, updateEvent, updateEventFeatured } from "../src/events/service";
 import { EventRepository } from "../src/events/repository";
 import { Event, EventOccurrence, EventOccurrenceInput } from "../src/events/types";
 import { deleteUploadIfLocal } from "../src/uploads/storage";
@@ -46,6 +46,7 @@ const fallbackEvent: Event = {
   publishedAt: null,
   publicationEndAt: "2026-01-15T23:59:59.999Z",
   rejectionReason: null,
+  archivedAt: null,
   pendingRevision: null,
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z"
@@ -61,6 +62,8 @@ const createRepo = (event: Event | null, overrides: Partial<EventRepository> = {
   rejectPendingRevision: async () => event,
   publishPendingRevision: async () => event,
   updateFeatured: async () => event,
+  archiveEvent: async () => event,
+  unarchiveEvent: async () => event,
   delete: async () => Boolean(event),
   updateStatus: async () => event,
   ...overrides
@@ -107,6 +110,7 @@ describe("event services", () => {
     publishedAt: null,
     publicationEndAt: "2026-01-15T23:59:59.999Z",
     rejectionReason: null,
+    archivedAt: null,
     pendingRevision: null,
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000Z"
@@ -463,6 +467,79 @@ describe("event services", () => {
       updateFeatured: async () => null
     });
     const result = await updateEventFeatured(repo, "id", true);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContain("Événement introuvable.");
+    }
+  });
+
+  it("archives a published event", async () => {
+    const repo = createRepo({ ...baseEvent, status: "PUBLISHED" }, {
+      archiveEvent: async () => ({ ...baseEvent, status: "PUBLISHED", archivedAt: "2026-02-01T00:00:00.000Z" })
+    });
+    const result = await archiveEvent(repo, "id");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.archivedAt).toBe("2026-02-01T00:00:00.000Z");
+    }
+  });
+
+  it("returns not found when archiving a missing event", async () => {
+    const repo = createRepo(null);
+    const result = await archiveEvent(repo, "missing");
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContain("Événement introuvable.");
+    }
+  });
+
+  it("rejects archiving a non-published event", async () => {
+    const repo = createRepo(baseEvent);
+    const result = await archiveEvent(repo, "id");
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContain("Seuls les événements publiés peuvent être archivés.");
+    }
+  });
+
+  it("returns not found when archive repository call fails", async () => {
+    const repo = createRepo({ ...baseEvent, status: "PUBLISHED" }, {
+      archiveEvent: async () => null
+    });
+    const result = await archiveEvent(repo, "id");
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContain("Événement introuvable.");
+    }
+  });
+
+  it("unarchives an event", async () => {
+    const repo = createRepo(
+      { ...baseEvent, status: "PUBLISHED", archivedAt: "2026-02-01T00:00:00.000Z" },
+      { unarchiveEvent: async () => ({ ...baseEvent, status: "PUBLISHED", archivedAt: null }) }
+    );
+    const result = await unarchiveEvent(repo, "id");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.archivedAt).toBeNull();
+    }
+  });
+
+  it("returns not found when unarchiving a missing event", async () => {
+    const repo = createRepo(null);
+    const result = await unarchiveEvent(repo, "missing");
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContain("Événement introuvable.");
+    }
+  });
+
+  it("returns not found when unarchive repository call fails", async () => {
+    const repo = createRepo(
+      { ...baseEvent, status: "PUBLISHED", archivedAt: "2026-02-01T00:00:00.000Z" },
+      { unarchiveEvent: async () => null }
+    );
+    const result = await unarchiveEvent(repo, "id");
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.errors).toContain("Événement introuvable.");

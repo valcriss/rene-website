@@ -441,6 +441,47 @@ describe("BackofficeEventsPage", () => {
     expect(submitSpy).toHaveBeenCalledWith("1");
     expect(deleteSpy).toHaveBeenCalledWith("2");
   });
+
+  it("hides archived published events by default and reveals them via the archived toggle", async () => {
+    const { router, pinia } = await setup("/backoffice/events", "ADMIN");
+    const eventsStore = useEventsStore(pinia);
+    const archiveSpy = vi.spyOn(eventsStore, "handleArchive").mockResolvedValue();
+    const unarchiveSpy = vi.spyOn(eventsStore, "handleUnarchive").mockResolvedValue();
+    eventsStore.events = [
+      buildEvent({ id: "1", title: "Mon événement archivé", publicationEndAt: "2020-01-01T00:00:00.000Z" }),
+      buildEvent({
+        id: "2",
+        title: "Événement externe archivé",
+        createdByUserId: "other-user",
+        publicationEndAt: "2020-01-01T00:00:00.000Z"
+      })
+    ];
+
+    render(BackofficeEventsPage, {
+      global: {
+        plugins: [pinia, router]
+      }
+    });
+
+    expect(screen.queryByText("Mon événement archivé")).not.toBeInTheDocument();
+    expect(screen.queryByText("Événement externe archivé")).not.toBeInTheDocument();
+
+    const toggles = screen.getAllByLabelText("Afficher les événements archivés");
+    await fireEvent.click(toggles[0]);
+
+    expect(screen.getByText("Mon événement archivé")).toBeInTheDocument();
+    expect(screen.getByText("Événement externe archivé")).toBeInTheDocument();
+    expect(screen.getAllByText("Archivé").length).toBeGreaterThan(0);
+
+    const unarchiveButtons = screen.getAllByText("Désarchiver");
+    await fireEvent.click(unarchiveButtons[0]);
+    expect(unarchiveSpy).toHaveBeenCalledWith("1");
+
+    eventsStore.events = [buildEvent({ id: "1", title: "Mon événement" })];
+    const archiveButtons = await screen.findAllByText("Archiver");
+    await fireEvent.click(archiveButtons[0]);
+    expect(archiveSpy).toHaveBeenCalledWith("1");
+  });
 });
 
 describe("BackofficeEventCreatePage", () => {

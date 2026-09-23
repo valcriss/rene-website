@@ -250,16 +250,21 @@
           </span>
         </div>
 
+        <label class="mt-4 flex items-center gap-2 text-sm text-slate-600">
+          <input v-model="showArchivedBackoffice" type="checkbox" data-testid="backoffice-show-archived" />
+          {{ t("editor.showArchived") }}
+        </label>
+
         <p v-if="deleteError" class="mt-5 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           {{ deleteError }}
         </p>
 
-        <div v-if="myPublishedEvents.length === 0" class="mt-6 rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-6 text-sm text-slate-500">
+        <div v-if="visibleMyPublishedEvents.length === 0" class="mt-6 rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-6 text-sm text-slate-500">
           {{ t("editor.noPublished") }}
         </div>
         <ul v-else class="mt-6 grid gap-4">
           <li
-            v-for="eventItem in myPublishedEvents"
+            v-for="eventItem in visibleMyPublishedEvents"
             :key="eventItem.id"
             class="rounded-[1.5rem] border border-slate-200 bg-white p-5"
           >
@@ -269,6 +274,9 @@
                   <div class="flex flex-wrap items-center gap-2">
                     <span class="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em]" :class="statusClasses(eventItem.status)">
                       {{ statusLabels[eventItem.status] }}
+                    </span>
+                    <span v-if="isEventArchived(eventItem)" class="rounded-full border border-slate-300 bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-slate-600">
+                      {{ t("editor.archived") }}
                     </span>
                     <span class="text-xs uppercase tracking-[0.24em] text-slate-400">
                       {{ formatEventDateBadge(eventItem.occurrences) }}
@@ -296,6 +304,14 @@
                     @click="toggleFeatured(eventItem)"
                   >
                     {{ eventItem.featured ? t("moderation.removeFeatured") : t("moderation.markAsFeatured") }}
+                  </button>
+                  <button
+                    v-if="canModerate && eventItem.status === 'PUBLISHED'"
+                    type="button"
+                    class="rounded-full border border-slate-300 bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-200"
+                    @click="toggleArchived(eventItem)"
+                  >
+                    {{ isEventArchived(eventItem) ? t("editor.unarchive") : t("editor.archive") }}
                   </button>
                   <button
                     v-if="canModerate"
@@ -353,16 +369,21 @@
           </span>
         </div>
 
+        <label class="mt-4 flex items-center gap-2 text-sm text-slate-600">
+          <input v-model="showArchivedBackoffice" type="checkbox" />
+          {{ t("editor.showArchived") }}
+        </label>
+
         <p v-if="deleteError" class="mt-5 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           {{ deleteError }}
         </p>
 
-        <div v-if="otherEditableEvents.length === 0" class="mt-6 rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-6 text-sm text-slate-500">
+        <div v-if="visibleOtherEditableEvents.length === 0" class="mt-6 rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-6 text-sm text-slate-500">
           {{ t("editor.noOtherArticles") }}
         </div>
         <ul v-else class="mt-6 grid gap-4">
           <li
-            v-for="eventItem in otherEditableEvents"
+            v-for="eventItem in visibleOtherEditableEvents"
             :key="eventItem.id"
             class="rounded-[1.5rem] border border-slate-200 bg-white p-5"
           >
@@ -372,6 +393,9 @@
                   <div class="flex flex-wrap items-center gap-2">
                     <span class="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em]" :class="statusClasses(eventItem.status)">
                       {{ statusLabels[eventItem.status] }}
+                    </span>
+                    <span v-if="eventItem.status === 'PUBLISHED' && isEventArchived(eventItem)" class="rounded-full border border-slate-300 bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-slate-600">
+                      {{ t("editor.archived") }}
                     </span>
                     <span class="text-xs uppercase tracking-[0.24em] text-slate-400">
                       {{ formatEventDateBadge(eventItem.occurrences) }}
@@ -418,6 +442,14 @@
                       @click="toggleFeatured(eventItem)"
                     >
                       {{ eventItem.featured ? t("moderation.removeFeatured") : t("moderation.markAsFeatured") }}
+                    </button>
+                    <button
+                      v-if="canModerate"
+                      type="button"
+                      class="rounded-full border border-slate-300 bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-200"
+                      @click="toggleArchived(eventItem)"
+                    >
+                      {{ isEventArchived(eventItem) ? t("editor.unarchive") : t("editor.archive") }}
                     </button>
                     <button
                       type="button"
@@ -477,7 +509,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 import { useRoute, useRouter } from "vue-router";
@@ -486,6 +518,7 @@ import { useEditorStore } from "../../stores/editor";
 import { useEventsStore } from "../../stores/events";
 import type { EventItem } from "../../api/events";
 import { formatEventDateBadge, getEventLocationSummary } from "../../utils/occurrences";
+import { isEventArchived } from "../../utils/eventArchive";
 
 const router = useRouter();
 const route = useRoute();
@@ -507,8 +540,22 @@ const {
 } =
   storeToRefs(eventsStore);
 const { editorError } = storeToRefs(editorStore);
-const { handleDelete, formatUpdatedAtLabel, handleUpdateFeatured } = eventsStore;
+const { handleDelete, formatUpdatedAtLabel, handleUpdateFeatured, handleArchive, handleUnarchive } = eventsStore;
 const { handleSubmitDraft } = editorStore;
+
+const showArchivedBackoffice = ref(false);
+const isHiddenByArchiveFilter = (eventItem: EventItem) =>
+  !showArchivedBackoffice.value && eventItem.status === "PUBLISHED" && isEventArchived(eventItem);
+const visibleMyPublishedEvents = computed(() => myPublishedEvents.value.filter((eventItem) => !isHiddenByArchiveFilter(eventItem)));
+const visibleOtherEditableEvents = computed(() => otherEditableEvents.value.filter((eventItem) => !isHiddenByArchiveFilter(eventItem)));
+
+const toggleArchived = (eventItem: EventItem) => {
+  if (isEventArchived(eventItem)) {
+    handleUnarchive(eventItem.id);
+    return;
+  }
+  handleArchive(eventItem.id);
+};
 
 const statusLabels = computed<Record<string, string>>(() => ({
   DRAFT: t("editor.status.DRAFT"),

@@ -39,6 +39,8 @@ describe("events routes delete errors", () => {
       rejectPendingRevision: async () => null,
       publishPendingRevision: async () => null,
       updateFeatured: async () => null,
+      archiveEvent: async () => null,
+      unarchiveEvent: async () => null,
       delete: async () => false,
       updateStatus: async () => null
     };
@@ -67,6 +69,8 @@ describe("events routes delete errors", () => {
       rejectPendingRevision: async () => null,
       publishPendingRevision: async () => null,
       updateFeatured: async () => null,
+      archiveEvent: async () => null,
+      unarchiveEvent: async () => null,
       delete: async () => false,
       updateStatus: async () => null
     };

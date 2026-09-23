@@ -2,7 +2,7 @@ import { Request, Response, Router } from "express";
 import { requireRole } from "../auth/roles";
 import { AuthRepository } from "../auth/repository";
 import { EventRepository } from "./repository";
-import { createEvent, deleteEvent, getEvent, listEvents, publishEvent, rejectEvent, submitEvent, updateEvent, updateEventFeatured } from "./service";
+import { archiveEvent, createEvent, deleteEvent, getEvent, listEvents, publishEvent, rejectEvent, submitEvent, unarchiveEvent, updateEvent, updateEventFeatured } from "./service";
 import {
   notifyEventDeleted,
   notifyEventPublished,
@@ -124,6 +124,25 @@ export const createEventRouter = (repo: EventRepository, authRepo: AuthRepositor
     if (!notification.ok) {
       // eslint-disable-next-line no-console
       console.warn("Notifications publish failed", notification.errors);
+    }
+    res.json(result.value);
+  }));
+
+  router.post("/events/:id/archive", requireRole(["MODERATOR", "ADMIN"]), withErrorHandling(async (req, res) => {
+    const result = await archiveEvent(repo, req.params.id);
+    if (!result.ok) {
+      const status = result.errors.includes("Événement introuvable.") ? 404 : 400;
+      res.status(status).json({ errors: result.errors });
+      return;
+    }
+    res.json(result.value);
+  }));
+
+  router.post("/events/:id/unarchive", requireRole(["MODERATOR", "ADMIN"]), withErrorHandling(async (req, res) => {
+    const result = await unarchiveEvent(repo, req.params.id);
+    if (!result.ok) {
+      res.status(404).json({ errors: result.errors });
+      return;
     }
     res.json(result.value);
   }));

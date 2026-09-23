@@ -57,6 +57,7 @@ type PrismaEvent = {
   publishedAt: Date | null;
   publicationEndAt: Date;
   rejectionReason: string | null;
+  archivedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
   occurrences: PrismaEventOccurrence[];
@@ -166,6 +167,7 @@ const toEvent = (data: PrismaEvent): Event => ({
   publishedAt: data.publishedAt ? data.publishedAt.toISOString() : null,
   publicationEndAt: data.publicationEndAt.toISOString(),
   rejectionReason: data.rejectionReason,
+  archivedAt: data.archivedAt ? data.archivedAt.toISOString() : null,
   pendingRevision: data.pendingRevision ? toRevision(data.pendingRevision) : null,
   createdAt: data.createdAt.toISOString(),
   updatedAt: data.updatedAt.toISOString()
@@ -442,6 +444,30 @@ export const createPrismaEventRepository = (): EventRepository => ({
         where: { id },
         include: includeOccurrencesAndRevision,
         data: { featured }
+      });
+      return toEvent(updated);
+    } catch {
+      return null;
+    }
+  },
+  archiveEvent: async (id, archivedAt) => {
+    try {
+      const updated = await prismaClient.event.update({
+        where: { id },
+        include: includeOccurrencesAndRevision,
+        data: { archivedAt: new Date(archivedAt) }
+      });
+      return toEvent(updated);
+    } catch {
+      return null;
+    }
+  },
+  unarchiveEvent: async (id) => {
+    try {
+      const updated = await prismaClient.event.update({
+        where: { id },
+        include: includeOccurrencesAndRevision,
+        data: { archivedAt: null }
       });
       return toEvent(updated);
     } catch {
