@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createEvent, deleteEvent, fetchEvents, submitEvent, updateEvent } from "../src/api/events";
+import { setSessionExpiredHandler } from "../src/api/authHeaders";
+
+const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 const occurrenceInput = {
   eventStartAt: "2026-01-15T20:00:00.000Z",
@@ -14,6 +17,7 @@ const occurrenceInput = {
 describe("events api", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    setSessionExpiredHandler(() => {});
   });
 
   it("fetches events", async () => {
@@ -263,5 +267,42 @@ describe("events api", () => {
     );
 
     await expect(deleteEvent("1", "EDITOR")).rejects.toThrow("Impossible de supprimer l'événement");
+  });
+
+  it("triggers the session-expired handler instead of throwing on a 401, for every authenticated call", async () => {
+    const handler = vi.fn();
+    setSessionExpiredHandler(handler);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: false, status: 401, json: () => Promise.resolve({}) }))
+    );
+
+    const payload = {
+      title: "Concert",
+      content: "Desc",
+      image: "img",
+      categoryId: "music",
+      occurrences: [occurrenceInput],
+      audienceId: "all",
+      organizerName: "Asso"
+    };
+    const calls = [
+      createEvent(payload, "EDITOR"),
+      updateEvent("1", payload, "EDITOR"),
+      submitEvent("1", "EDITOR"),
+      deleteEvent("1", "EDITOR")
+    ];
+    const settledFlags = calls.map(() => false);
+    calls.forEach((call, index) => {
+      call.then(
+        () => (settledFlags[index] = true),
+        () => (settledFlags[index] = true)
+      );
+    });
+
+    await flushPromises();
+
+    expect(handler).toHaveBeenCalledTimes(calls.length);
+    expect(settledFlags.every((settled) => settled === false)).toBe(true);
   });
 });

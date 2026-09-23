@@ -163,6 +163,24 @@ describe("App", () => {
     expect(screen.queryByRole("button", { name: "Se déconnecter" })).not.toBeInTheDocument();
   });
 
+  it("redirects to login without an error message when a backoffice call expires the session", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: FetchInput) => {
+        const url = typeof input === "string" ? input : input.url;
+        if (url === "/api/admin/users") {
+          return Promise.resolve({ ok: false, status: 401, json: () => Promise.resolve({}) });
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+      })
+    );
+
+    const router = await loginAsRole("ADMIN");
+
+    await waitFor(() => expect(router.currentRoute.value.path).toBe("/login"));
+    expect(screen.queryByText(/Impossible de charger/)).not.toBeInTheDocument();
+  });
+
   it("shows account access instead of login on home when authenticated", async () => {
     window.localStorage.setItem("rene-auth-role", "EDITOR");
     window.localStorage.setItem("rene-auth-token", "token");

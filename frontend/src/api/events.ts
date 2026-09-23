@@ -1,4 +1,4 @@
-import { buildAuthHeaders } from "./authHeaders";
+import { buildAuthHeaders, handleSessionExpired } from "./authHeaders";
 
 export type EventStatus = "DRAFT" | "PENDING" | "PUBLISHED" | "REJECTED";
 
@@ -132,6 +132,9 @@ export const createEvent = async (payload: CreateEventPayload, role: string): Pr
     body: JSON.stringify(payload)
   });
   if (!response.ok) {
+    if (response.status === 401) {
+      return handleSessionExpired();
+    }
     throw new Error(await parseApiError(response, "Impossible de créer l'événement"));
   }
   return response.json() as Promise<EventItem>;
@@ -148,6 +151,9 @@ export const updateEvent = async (
     body: JSON.stringify(payload)
   });
   if (!response.ok) {
+    if (response.status === 401) {
+      return handleSessionExpired();
+    }
     throw new Error(await parseApiError(response, "Impossible de mettre à jour l'événement"));
   }
   return response.json() as Promise<EventItem>;
@@ -159,6 +165,9 @@ export const submitEvent = async (id: string, role: string): Promise<EventItem> 
     headers: buildAuthHeaders(role)
   });
   if (!response.ok) {
+    if (response.status === 401) {
+      return handleSessionExpired();
+    }
     throw new Error(await parseApiError(response, "Impossible de soumettre l'événement"));
   }
   return response.json() as Promise<EventItem>;
@@ -170,6 +179,9 @@ export const deleteEvent = async (id: string, role: string): Promise<{ id: strin
     headers: buildAuthHeaders(role)
   });
   if (!response.ok) {
+    if (response.status === 401) {
+      return handleSessionExpired();
+    }
     throw new Error(await parseApiError(response, "Impossible de supprimer l'événement"));
   }
   return response.json() as Promise<{ id: string }>;
