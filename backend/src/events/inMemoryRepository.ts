@@ -75,6 +75,7 @@ export const createInMemoryEventRepository = (): EventRepository => {
         publishedAt: null,
         publicationEndAt: computePublicationEndAt(input.occurrences).toISOString(),
         rejectionReason: null,
+        archivedAt: null,
         pendingRevision: null,
         createdAt: now,
         updatedAt: now
@@ -171,6 +172,32 @@ export const createInMemoryEventRepository = (): EventRepository => {
       const updated: Event = {
         ...existing,
         featured,
+        updatedAt: new Date().toISOString()
+      };
+      events.set(id, updated);
+      return updated;
+    },
+    archiveEvent: async (id, archivedAt) => {
+      const existing = events.get(id);
+      if (!existing) {
+        return null;
+      }
+      const updated: Event = {
+        ...existing,
+        archivedAt,
+        updatedAt: new Date().toISOString()
+      };
+      events.set(id, updated);
+      return updated;
+    },
+    unarchiveEvent: async (id) => {
+      const existing = events.get(id);
+      if (!existing) {
+        return null;
+      }
+      const updated: Event = {
+        ...existing,
+        archivedAt: null,
         updatedAt: new Date().toISOString()
       };
       events.set(id, updated);

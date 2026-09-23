@@ -38,6 +38,7 @@ const baseEvent: Event = {
   publishedAt: null,
   publicationEndAt: "2026-01-15T22:00:00.000Z",
   rejectionReason: null,
+  archivedAt: null,
   pendingRevision: null,
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z"

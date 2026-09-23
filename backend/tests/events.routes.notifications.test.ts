@@ -44,6 +44,7 @@ const baseEvent: Event = {
   publishedAt: null,
   publicationEndAt: "2026-01-15T23:59:59.999Z",
   rejectionReason: null,
+  archivedAt: null,
   pendingRevision: null,
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z"
@@ -78,6 +79,8 @@ const buildRepo = (event: Event): EventRepository => ({
   rejectPendingRevision: async () => event,
   publishPendingRevision: async () => event,
   updateFeatured: async () => event,
+  archiveEvent: async () => event,
+  unarchiveEvent: async () => event,
   delete: async () => true,
   updateStatus: async (_id, status, data) => ({
     ...event,

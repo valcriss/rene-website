@@ -1,5 +1,5 @@
 import { vi } from "vitest";
-import { publishEvent, publishEventWithFeatured, rejectEvent, updateEventFeatured } from "../src/api/moderation";
+import { archiveEvent, publishEvent, publishEventWithFeatured, rejectEvent, unarchiveEvent, updateEventFeatured } from "../src/api/moderation";
 
 const mockFetch = (ok: boolean) =>
   vi.fn(() => Promise.resolve({ ok, json: () => Promise.resolve({ id: "1" }) }));
@@ -49,6 +49,24 @@ describe("moderation api", () => {
       "/api/events/1/featured",
       expect.objectContaining({ method: "PATCH", body: JSON.stringify({ featured: false }) })
     );
+  });
+
+  it("archives event", async () => {
+    const fetchMock = mockFetch(true);
+    vi.stubGlobal("fetch", fetchMock);
+
+    await archiveEvent("1", "MODERATOR");
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/events/1/archive", expect.any(Object));
+  });
+
+  it("unarchives event", async () => {
+    const fetchMock = mockFetch(true);
+    vi.stubGlobal("fetch", fetchMock);
+
+    await unarchiveEvent("1", "ADMIN");
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/events/1/unarchive", expect.any(Object));
   });
 
   it("throws on errors", async () => {

@@ -166,4 +166,5 @@ describe("filterEvents", () => {
     const result = filterEvents([multiOccurrenceEvent], { ...baseFilters, cities: ["descartes"] });
     expect(result).toHaveLength(1);
   });
+
 });

@@ -329,6 +329,35 @@ export const updateEventFeatured = async (
   return { ok: true, value: updated };
 };
 
+export const archiveEvent = async (repo: EventRepository, id: string): Promise<ServiceResult<Event>> => {
+  const current = await repo.getById(id);
+  if (!current) {
+    return { ok: false, errors: ["Événement introuvable."] };
+  }
+  if (current.status !== "PUBLISHED") {
+    return { ok: false, errors: ["Seuls les événements publiés peuvent être archivés."] };
+  }
+
+  const updated = await repo.archiveEvent(id, new Date().toISOString());
+  if (!updated) {
+    return { ok: false, errors: ["Événement introuvable."] };
+  }
+  return { ok: true, value: updated };
+};
+
+export const unarchiveEvent = async (repo: EventRepository, id: string): Promise<ServiceResult<Event>> => {
+  const current = await repo.getById(id);
+  if (!current) {
+    return { ok: false, errors: ["Événement introuvable."] };
+  }
+
+  const updated = await repo.unarchiveEvent(id);
+  if (!updated) {
+    return { ok: false, errors: ["Événement introuvable."] };
+  }
+  return { ok: true, value: updated };
+};
+
 export const rejectEvent = async (
   repo: EventRepository,
   id: string,

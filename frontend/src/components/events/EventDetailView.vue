@@ -322,6 +322,7 @@ import { useCategoriesStore } from "../../stores/categories";
 import { useEventsStore } from "../../stores/events";
 import { getEventAddressLabel, getEventLocationLabel } from "../../utils/eventLocation";
 import { formatPhoneNumber } from "../../utils/formatters";
+import { isEventArchived } from "../../utils/eventArchive";
 import { formatEventDateBadge, getEarliestOccurrence, getEventLocationSummary, sortOccurrences } from "../../utils/occurrences";
 import { buildEventMapPins } from "../../utils/mapPins";
 
@@ -352,7 +353,13 @@ const { isLoading, imageErrorById } = storeToRefs(eventsStore);
 const { categories } = storeToRefs(categoriesStore);
 const { audiences } = storeToRefs(audiencesStore);
 
-const detailEvent = computed(() => props.event ?? eventsStore.getEventById(props.eventId));
+const detailEvent = computed(() => {
+  if (props.event) {
+    return props.event;
+  }
+  const event = eventsStore.getEventById(props.eventId);
+  return event && !isEventArchived(event) ? event : null;
+});
 const categoryNames = computed(() =>
   new Map(categories.value.map((category) => [category.id, category.name]))
 );

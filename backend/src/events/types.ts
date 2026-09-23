@@ -73,6 +73,7 @@ export type Event = Omit<CreateEventInput, "occurrences"> & {
   publishedAt: string | null;
   publicationEndAt: string;
   rejectionReason: string | null;
+  archivedAt: string | null;
   pendingRevision: EventRevision | null;
   createdAt: string;
   updatedAt: string;

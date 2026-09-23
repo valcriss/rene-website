@@ -81,6 +81,8 @@ describe("events routes", () => {
       rejectPendingRevision: async () => null,
       publishPendingRevision: async () => null,
       updateFeatured: async () => null,
+      archiveEvent: async () => null,
+      unarchiveEvent: async () => null,
       delete: async () => false,
       updateStatus: async () => null
     };
@@ -430,6 +432,79 @@ describe("events routes", () => {
       .send({ featured: true });
 
     expect(response.status).toBe(404);
+  });
+
+  it("archives and unarchives a published event", async () => {
+    const app = createApp();
+    const createResponse = await request(app)
+      .post("/api/events")
+      .set("x-user-role", "EDITOR")
+      .send(validPayload);
+    const id = createResponse.body.id;
+
+    await request(app).post(`/api/events/${id}/submit`).set("x-user-role", "EDITOR");
+    await request(app).post(`/api/events/${id}/publish`).set("x-user-role", "MODERATOR").send({});
+
+    const archiveResponse = await request(app)
+      .post(`/api/events/${id}/archive`)
+      .set("x-user-role", "MODERATOR");
+
+    expect(archiveResponse.status).toBe(200);
+    expect(typeof archiveResponse.body.archivedAt).toBe("string");
+
+    const unarchiveResponse = await request(app)
+      .post(`/api/events/${id}/unarchive`)
+      .set("x-user-role", "ADMIN");
+
+    expect(unarchiveResponse.status).toBe(200);
+    expect(unarchiveResponse.body.archivedAt).toBeNull();
+  });
+
+  it("returns 400 when archiving a non-published event", async () => {
+    const app = createApp();
+    const createResponse = await request(app)
+      .post("/api/events")
+      .set("x-user-role", "EDITOR")
+      .send(validPayload);
+    const id = createResponse.body.id;
+
+    const response = await request(app)
+      .post(`/api/events/${id}/archive`)
+      .set("x-user-role", "MODERATOR");
+
+    expect(response.status).toBe(400);
+  });
+
+  it("returns 404 for archive/unarchive on a missing event", async () => {
+    const app = createApp();
+    const archiveResponse = await request(app)
+      .post("/api/events/missing/archive")
+      .set("x-user-role", "MODERATOR");
+    const unarchiveResponse = await request(app)
+      .post("/api/events/missing/unarchive")
+      .set("x-user-role", "MODERATOR");
+
+    expect(archiveResponse.status).toBe(404);
+    expect(unarchiveResponse.status).toBe(404);
+  });
+
+  it("forbids editors from archiving or unarchiving events", async () => {
+    const app = createApp();
+    const createResponse = await request(app)
+      .post("/api/events")
+      .set("x-user-role", "EDITOR")
+      .send(validPayload);
+    const id = createResponse.body.id;
+
+    const archiveResponse = await request(app)
+      .post(`/api/events/${id}/archive`)
+      .set("x-user-role", "EDITOR");
+    const unarchiveResponse = await request(app)
+      .post(`/api/events/${id}/unarchive`)
+      .set("x-user-role", "EDITOR");
+
+    expect(archiveResponse.status).toBe(403);
+    expect(unarchiveResponse.status).toBe(403);
   });
 
   it("returns 400 for reject without reason", async () => {

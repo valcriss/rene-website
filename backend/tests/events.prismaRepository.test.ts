@@ -718,6 +718,52 @@ describe("createPrismaEventRepository", () => {
     expect(result).toBeNull();
   });
 
+  it("archives an event", async () => {
+    const repo = createPrismaEventRepository();
+    prismaMocks.update.mockResolvedValue(buildEvent({ archivedAt: new Date("2026-02-01T00:00:00.000Z") }));
+
+    const result = await repo.archiveEvent("1", "2026-02-01T00:00:00.000Z");
+
+    expect(prismaMocks.update).toHaveBeenCalledWith({
+      where: { id: "1" },
+      include: includeOccurrencesAndRevision,
+      data: { archivedAt: new Date("2026-02-01T00:00:00.000Z") }
+    });
+    expect(result?.archivedAt).toBe("2026-02-01T00:00:00.000Z");
+  });
+
+  it("returns null when archiving fails", async () => {
+    const repo = createPrismaEventRepository();
+    prismaMocks.update.mockRejectedValue(new Error("boom"));
+
+    const result = await repo.archiveEvent("1", "2026-02-01T00:00:00.000Z");
+
+    expect(result).toBeNull();
+  });
+
+  it("unarchives an event", async () => {
+    const repo = createPrismaEventRepository();
+    prismaMocks.update.mockResolvedValue(buildEvent({ archivedAt: null }));
+
+    const result = await repo.unarchiveEvent("1");
+
+    expect(prismaMocks.update).toHaveBeenCalledWith({
+      where: { id: "1" },
+      include: includeOccurrencesAndRevision,
+      data: { archivedAt: null }
+    });
+    expect(result?.archivedAt).toBeNull();
+  });
+
+  it("returns null when unarchiving fails", async () => {
+    const repo = createPrismaEventRepository();
+    prismaMocks.update.mockRejectedValue(new Error("boom"));
+
+    const result = await repo.unarchiveEvent("1");
+
+    expect(result).toBeNull();
+  });
+
   it("returns null when pending revision is missing during publish", async () => {
     const repo = createPrismaEventRepository();
     prismaMocks.findUnique.mockResolvedValue(buildEvent());

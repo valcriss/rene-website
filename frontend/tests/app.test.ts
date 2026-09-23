@@ -235,6 +235,76 @@ describe("App", () => {
     expect((await screen.findAllByText("Concert")).length).toBeGreaterThan(0);
   });
 
+  it("never shows archived events, or any filter to reveal them, on the public homepage", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve(
+              toEventsPayload([
+                {
+                  id: "1",
+                  title: "Concert archivé",
+                  eventStartAt: "2026-01-15T20:00:00.000Z",
+                  eventEndAt: "2026-01-15T22:00:00.000Z",
+                  venueName: "Salle",
+                  city: "Descartes",
+                  image: "https://example.com",
+                  categoryId: "music",
+                  latitude: 46.97,
+                  longitude: 0.7,
+                  status: "PUBLISHED",
+                  publicationEndAt: "2020-01-01T00:00:00.000Z"
+                }
+              ])
+            )
+        })
+      )
+    );
+    await renderWithRouter();
+
+    await setDateRange("2020-01-01", "2026-12-31");
+
+    expect(screen.queryByText("Concert archivé")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("filter-show-archived")).not.toBeInTheDocument();
+    expect(screen.queryByText("Afficher les événements archivés")).not.toBeInTheDocument();
+  });
+
+  it("treats a direct link to an archived event as not found on the public detail page", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve(
+              toEventsPayload([
+                {
+                  id: "1",
+                  title: "Concert archivé",
+                  eventStartAt: "2026-01-15T20:00:00.000Z",
+                  eventEndAt: "2026-01-15T22:00:00.000Z",
+                  venueName: "Salle",
+                  city: "Descartes",
+                  image: "https://example.com",
+                  categoryId: "music",
+                  latitude: 46.97,
+                  longitude: 0.7,
+                  status: "PUBLISHED",
+                  publicationEndAt: "2020-01-01T00:00:00.000Z"
+                }
+              ])
+            )
+        })
+      )
+    );
+    await renderWithRouter("/event/1");
+
+    expect(await screen.findByText("Événement introuvable.")).toBeInTheDocument();
+  });
+
   it("uses placeholder when image is missing", async () => {
     vi.stubGlobal(
       "fetch",

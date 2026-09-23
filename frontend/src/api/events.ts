@@ -79,6 +79,7 @@ export type EventItem = {
   publishedAt?: string | null;
   publicationEndAt?: string;
   rejectionReason?: string | null;
+  archivedAt?: string | null;
   pendingRevision?: EventPendingRevision | null;
   createdAt?: string;
   updatedAt?: string;
