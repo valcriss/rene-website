@@ -13,7 +13,9 @@ import {
   buildRejectedBody,
   buildRejectedSubject,
   buildDeletedBody,
-  buildDeletedSubject
+  buildDeletedSubject,
+  buildUserInvitationBody,
+  buildUserInvitationSubject
 } from "./templates";
 
 const sendToMany = async (emails: string[], subject: string, text: string): Promise<MailResult> => {
@@ -82,4 +84,16 @@ export const notifyPasswordResetRequested = async (
     to: email,
     subject: buildPasswordResetSubject(),
     text: buildPasswordResetBody(resetUrl, ttlMinutes)
+  });
+
+export const notifyUserInvited = async (
+  email: string,
+  name: string,
+  setPasswordUrl: string,
+  ttlMinutes: number
+): Promise<MailResult> =>
+  sendEmail({
+    to: email,
+    subject: buildUserInvitationSubject(),
+    text: buildUserInvitationBody(name, setPasswordUrl, ttlMinutes)
   });

@@ -1,5 +1,13 @@
 import { Router } from "express";
 import { requireRole } from "../auth/roles";
+import { AuthRepository } from "../auth/repository";
+import {
+  buildPasswordResetUrl,
+  generatePasswordResetToken,
+  hashPasswordResetToken,
+  passwordResetTokenTtlMinutes
+} from "../auth/resetToken";
+import { notifyUserInvited } from "../notifications/service";
 import { AdminRepository } from "./repository";
 import {
   createAdminAudience,
@@ -18,7 +26,26 @@ import {
   updateAdminUser
 } from "./service";
 
-export const createAdminRouter = (repo: AdminRepository) => {
+const sendUserInvitation = async (authRepo: AuthRepository, user: { id: string; name: string; email: string }) => {
+  const token = generatePasswordResetToken();
+  const tokenHash = hashPasswordResetToken(token);
+  const expiresAt = new Date(Date.now() + passwordResetTokenTtlMinutes * 60 * 1000);
+
+  await authRepo.createPasswordResetToken(user.id, tokenHash, expiresAt);
+
+  const notification = await notifyUserInvited(
+    user.email,
+    user.name,
+    buildPasswordResetUrl(token),
+    passwordResetTokenTtlMinutes
+  );
+  if (!notification.ok) {
+    // eslint-disable-next-line no-console
+    console.warn("Notifications invite failed", notification.errors);
+  }
+};
+
+export const createAdminRouter = (repo: AdminRepository, authRepo: AuthRepository) => {
   const router = Router();
 
   router.use(requireRole(["ADMIN"]));
@@ -34,6 +61,7 @@ export const createAdminRouter = (repo: AdminRepository) => {
       res.status(400).json({ errors: result.errors });
       return;
     }
+    await sendUserInvitation(authRepo, result.value);
     res.status(201).json(result.value);
   });
 

@@ -1647,6 +1647,9 @@ describe("App", () => {
     await fireEvent.click(userForm.getByRole("button", { name: "Créer" }));
 
     expect(await screen.findByText("Marie")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Un email d'invitation a été envoyé à marie@test pour définir son mot de passe.")
+    ).toBeInTheDocument();
 
     const userCard = screen.getByText("Marie").closest("li");
     if (!userCard) {

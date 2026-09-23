@@ -39,7 +39,7 @@ export const createApp = () => {
   app.use("/uploads", express.static(getUploadDir()));
 
   const adminRepository = createAdminRepository();
-  app.use("/api/admin", createAdminRouter(adminRepository));
+  app.use("/api/admin", createAdminRouter(adminRepository, authRepository));
   app.use("/api/categories", createCategoriesRouter(adminRepository));
   app.use("/api/audiences", createAudiencesRouter(adminRepository));
   app.use("/api/settings", createPublicSettingsRouter(adminRepository));

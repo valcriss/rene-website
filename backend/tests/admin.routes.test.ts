@@ -3,6 +3,9 @@ import request from "supertest";
 import { createApp } from "../src/app";
 import { createAdminRouter } from "../src/admin/routes";
 import { AdminRepository } from "../src/admin/repository";
+import { AuthRepository } from "../src/auth/repository";
+
+const stubAuthRepo = {} as AuthRepository;
 
 describe("admin routes", () => {
   it("denies access without role", async () => {
@@ -191,7 +194,7 @@ describe("admin routes", () => {
     } as unknown as AdminRepository;
     const app = express();
     app.use(express.json());
-    app.use("/api/admin", createAdminRouter(repo));
+    app.use("/api/admin", createAdminRouter(repo, stubAuthRepo));
 
     const response = await request(app)
       .delete("/api/admin/categories/active")
@@ -270,7 +273,7 @@ describe("admin routes", () => {
     } as unknown as AdminRepository;
     const app = express();
     app.use(express.json());
-    app.use("/api/admin", createAdminRouter(repo));
+    app.use("/api/admin", createAdminRouter(repo, stubAuthRepo));
 
     const response = await request(app)
       .delete("/api/admin/audiences/active")

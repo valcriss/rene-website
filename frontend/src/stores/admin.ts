@@ -22,6 +22,7 @@ import {
 } from "../api/admin";
 import { useAuthStore } from "./auth";
 import { useCategoriesStore } from "./categories";
+import { i18n } from "../i18n";
 
 export const useAdminStore = defineStore("admin", () => {
   const adminUsers = ref<AdminUser[]>([]);
@@ -30,6 +31,7 @@ export const useAdminStore = defineStore("admin", () => {
   const adminSettings = ref<AdminSettings | null>(null);
   const adminError = ref<string | null>(null);
   const adminLoading = ref(false);
+  const adminUserInviteMessage = ref<string | null>(null);
 
   const adminUserEditingId = ref<string | null>(null);
   const adminCategoryEditingId = ref<string | null>(null);
@@ -57,6 +59,7 @@ export const useAdminStore = defineStore("admin", () => {
     adminUserForm.name = "";
     adminUserForm.email = "";
     adminUserForm.role = "EDITOR";
+    adminUserInviteMessage.value = null;
   };
 
   const resetAdminCategoryForm = () => {
@@ -74,6 +77,7 @@ export const useAdminStore = defineStore("admin", () => {
     adminUserForm.name = user.name;
     adminUserForm.email = user.email;
     adminUserForm.role = user.role;
+    adminUserInviteMessage.value = null;
   };
 
   const startAdminCategoryEdit = (category: AdminCategory) => {
@@ -91,6 +95,7 @@ export const useAdminStore = defineStore("admin", () => {
     const authStore = useAuthStore();
     if (!authStore.isAdmin) return;
     try {
+      const isCreating = !adminUserEditingId.value;
       const payload = {
         name: adminUserForm.name,
         email: adminUserForm.email,
@@ -101,6 +106,9 @@ export const useAdminStore = defineStore("admin", () => {
         : await createAdminUser(authStore.role, payload);
       adminUsers.value = [updated, ...adminUsers.value.filter((user) => user.id !== updated.id)];
       resetAdminUserForm();
+      if (isCreating) {
+        adminUserInviteMessage.value = i18n.global.t("admin.inviteSent", { email: updated.email });
+      }
     } catch (err) {
       adminError.value = err instanceof Error ? err.message : "Erreur inconnue";
     }
@@ -242,6 +250,7 @@ export const useAdminStore = defineStore("admin", () => {
     adminSettings,
     adminError,
     adminLoading,
+    adminUserInviteMessage,
     adminUserEditingId,
     adminCategoryEditingId,
     adminAudienceEditingId,
