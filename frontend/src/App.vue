@@ -11,6 +11,7 @@ import { useAuthStore } from "./stores/auth";
 import { useEventsStore } from "./stores/events";
 import { useEditorStore } from "./stores/editor";
 import { useAdminStore } from "./stores/admin";
+import { setSessionExpiredHandler } from "./api/authHeaders";
 
 const router = useRouter();
 const route = useRoute();
@@ -19,6 +20,10 @@ const authStore = useAuthStore();
 const eventsStore = useEventsStore();
 const editorStore = useEditorStore();
 const adminStore = useAdminStore();
+
+setSessionExpiredHandler(() => {
+  authStore.logout();
+});
 
 watch(
   [() => route.path, () => authStore.isAuthenticated],

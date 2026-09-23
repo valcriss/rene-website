@@ -1,5 +1,5 @@
 import type { EventItem } from "./events";
-import { buildAuthHeaders } from "./authHeaders";
+import { buildAuthHeaders, handleSessionExpired } from "./authHeaders";
 
 export type ModeratorRole = "MODERATOR" | "ADMIN";
 
@@ -15,6 +15,9 @@ const callModerationEndpoint = async <T>(
   });
 
   if (!response.ok) {
+    if (response.status === 401) {
+      return handleSessionExpired();
+    }
     throw new Error("Action de modération impossible");
   }
 
@@ -55,6 +58,9 @@ export const updateEventFeatured = async (
   });
 
   if (!response.ok) {
+    if (response.status === 401) {
+      return handleSessionExpired();
+    }
     throw new Error("Action de modération impossible");
   }
 

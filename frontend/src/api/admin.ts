@@ -1,4 +1,4 @@
-import { buildAuthHeaders } from "./authHeaders";
+import { buildAuthHeaders, handleSessionExpired } from "./authHeaders";
 
 export type AdminUserRole = "EDITOR" | "MODERATOR" | "ADMIN";
 
@@ -31,6 +31,9 @@ const jsonHeaders = (role: string) => buildAuthHeaders(role);
 export const fetchAdminUsers = async (role: string): Promise<AdminUser[]> => {
   const response = await fetch("/api/admin/users", { headers: jsonHeaders(role) });
   if (!response.ok) {
+    if (response.status === 401) {
+      return handleSessionExpired();
+    }
     throw new Error("Impossible de charger les utilisateurs");
   }
   return response.json() as Promise<AdminUser[]>;
@@ -43,6 +46,9 @@ export const createAdminUser = async (role: string, payload: Omit<AdminUser, "id
     body: JSON.stringify(payload)
   });
   if (!response.ok) {
+    if (response.status === 401) {
+      return handleSessionExpired();
+    }
     throw new Error("Impossible de créer l'utilisateur");
   }
   return response.json() as Promise<AdminUser>;
@@ -59,6 +65,9 @@ export const updateAdminUser = async (
     body: JSON.stringify(payload)
   });
   if (!response.ok) {
+    if (response.status === 401) {
+      return handleSessionExpired();
+    }
     throw new Error("Impossible de mettre à jour l'utilisateur");
   }
   return response.json() as Promise<AdminUser>;
@@ -70,6 +79,9 @@ export const deleteAdminUser = async (role: string, id: string): Promise<void> =
     headers: jsonHeaders(role)
   });
   if (!response.ok) {
+    if (response.status === 401) {
+      return handleSessionExpired();
+    }
     throw new Error("Impossible de supprimer l'utilisateur");
   }
 };
@@ -77,6 +89,9 @@ export const deleteAdminUser = async (role: string, id: string): Promise<void> =
 export const fetchAdminCategories = async (role: string): Promise<AdminCategory[]> => {
   const response = await fetch("/api/admin/categories", { headers: jsonHeaders(role) });
   if (!response.ok) {
+    if (response.status === 401) {
+      return handleSessionExpired();
+    }
     throw new Error("Impossible de charger les catégories");
   }
   return response.json() as Promise<AdminCategory[]>;
@@ -92,6 +107,9 @@ export const createAdminCategory = async (
     body: JSON.stringify(payload)
   });
   if (!response.ok) {
+    if (response.status === 401) {
+      return handleSessionExpired();
+    }
     throw new Error("Impossible de créer la catégorie");
   }
   return response.json() as Promise<AdminCategory>;
@@ -108,6 +126,9 @@ export const updateAdminCategory = async (
     body: JSON.stringify(payload)
   });
   if (!response.ok) {
+    if (response.status === 401) {
+      return handleSessionExpired();
+    }
     throw new Error("Impossible de mettre à jour la catégorie");
   }
   return response.json() as Promise<AdminCategory>;
@@ -119,6 +140,9 @@ export const deleteAdminCategory = async (role: string, id: string): Promise<voi
     headers: jsonHeaders(role)
   });
   if (!response.ok) {
+    if (response.status === 401) {
+      return handleSessionExpired();
+    }
     throw new Error("Impossible de supprimer la catégorie");
   }
 };
@@ -126,6 +150,9 @@ export const deleteAdminCategory = async (role: string, id: string): Promise<voi
 export const fetchAdminSettings = async (role: string): Promise<AdminSettings> => {
   const response = await fetch("/api/admin/settings", { headers: jsonHeaders(role) });
   if (!response.ok) {
+    if (response.status === 401) {
+      return handleSessionExpired();
+    }
     throw new Error("Impossible de charger les réglages");
   }
   return response.json() as Promise<AdminSettings>;
@@ -138,6 +165,9 @@ export const updateAdminSettings = async (role: string, payload: AdminSettings):
     body: JSON.stringify(payload)
   });
   if (!response.ok) {
+    if (response.status === 401) {
+      return handleSessionExpired();
+    }
     throw new Error("Impossible de mettre à jour les réglages");
   }
   return response.json() as Promise<AdminSettings>;
@@ -146,6 +176,9 @@ export const updateAdminSettings = async (role: string, payload: AdminSettings):
 export const fetchAdminAudiences = async (role: string): Promise<AdminAudience[]> => {
   const response = await fetch("/api/admin/audiences", { headers: jsonHeaders(role) });
   if (!response.ok) {
+    if (response.status === 401) {
+      return handleSessionExpired();
+    }
     throw new Error("Impossible de charger les publics concernés");
   }
   return response.json() as Promise<AdminAudience[]>;
@@ -161,6 +194,9 @@ export const createAdminAudience = async (
     body: JSON.stringify(payload)
   });
   if (!response.ok) {
+    if (response.status === 401) {
+      return handleSessionExpired();
+    }
     throw new Error("Impossible de créer le public concerné");
   }
   return response.json() as Promise<AdminAudience>;
@@ -177,6 +213,9 @@ export const updateAdminAudience = async (
     body: JSON.stringify(payload)
   });
   if (!response.ok) {
+    if (response.status === 401) {
+      return handleSessionExpired();
+    }
     throw new Error("Impossible de mettre à jour le public concerné");
   }
   return response.json() as Promise<AdminAudience>;
@@ -188,6 +227,9 @@ export const deleteAdminAudience = async (role: string, id: string): Promise<voi
     headers: jsonHeaders(role)
   });
   if (!response.ok) {
+    if (response.status === 401) {
+      return handleSessionExpired();
+    }
     throw new Error("Impossible de supprimer le public concerné");
   }
 };

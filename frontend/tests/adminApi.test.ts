@@ -1,20 +1,28 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  createAdminAudience,
   createAdminCategory,
   createAdminUser,
+  deleteAdminAudience,
   deleteAdminCategory,
   deleteAdminUser,
+  fetchAdminAudiences,
   fetchAdminCategories,
   fetchAdminSettings,
   fetchAdminUsers,
+  updateAdminAudience,
   updateAdminCategory,
   updateAdminSettings,
   updateAdminUser
 } from "../src/api/admin";
+import { setSessionExpiredHandler } from "../src/api/authHeaders";
+
+const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 describe("admin api", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    setSessionExpiredHandler(() => {});
   });
 
   it("fetches users, categories, settings", async () => {
@@ -126,5 +134,72 @@ describe("admin api", () => {
     await expect(
       updateAdminSettings("ADMIN", { contactEmail: "c", contactPhone: "p", homepageIntro: "i", homepageSubtitle: "s" })
     ).rejects.toThrow("Impossible de mettre à jour les réglages");
+  });
+
+  it("fetches, creates, updates and deletes admin audiences", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve([]) })
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ id: "1", name: "Adultes" }) })
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ id: "1", name: "Jeunes" }) })
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({}) });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(fetchAdminAudiences("ADMIN")).resolves.toEqual([]);
+    await expect(createAdminAudience("ADMIN", { name: "Adultes" })).resolves.toMatchObject({ id: "1" });
+    await expect(updateAdminAudience("ADMIN", "1", { name: "Jeunes" })).resolves.toMatchObject({ id: "1" });
+    await expect(deleteAdminAudience("ADMIN", "1")).resolves.toBeUndefined();
+  });
+
+  it("fails to fetch or mutate admin audiences", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false, json: () => Promise.resolve({}) });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(fetchAdminAudiences("ADMIN")).rejects.toThrow("Impossible de charger les publics concernés");
+    await expect(createAdminAudience("ADMIN", { name: "Adultes" })).rejects.toThrow(
+      "Impossible de créer le public concerné"
+    );
+    await expect(updateAdminAudience("ADMIN", "1", { name: "Jeunes" })).rejects.toThrow(
+      "Impossible de mettre à jour le public concerné"
+    );
+    await expect(deleteAdminAudience("ADMIN", "1")).rejects.toThrow("Impossible de supprimer le public concerné");
+  });
+
+  it("triggers the session-expired handler instead of throwing on a 401, for every admin endpoint", async () => {
+    const handler = vi.fn();
+    setSessionExpiredHandler(handler);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: false, status: 401, json: () => Promise.resolve({}) }))
+    );
+
+    const calls = [
+      fetchAdminUsers("ADMIN"),
+      createAdminUser("ADMIN", { name: "A", email: "a", role: "EDITOR" }),
+      updateAdminUser("ADMIN", "1", { name: "A", email: "a", role: "EDITOR" }),
+      deleteAdminUser("ADMIN", "1"),
+      fetchAdminCategories("ADMIN"),
+      createAdminCategory("ADMIN", { name: "Musique" }),
+      updateAdminCategory("ADMIN", "1", { name: "Musique" }),
+      deleteAdminCategory("ADMIN", "1"),
+      fetchAdminSettings("ADMIN"),
+      updateAdminSettings("ADMIN", { contactEmail: "c", contactPhone: "p", homepageIntro: "i", homepageSubtitle: "s" }),
+      fetchAdminAudiences("ADMIN"),
+      createAdminAudience("ADMIN", { name: "Adultes" }),
+      updateAdminAudience("ADMIN", "1", { name: "Adultes" }),
+      deleteAdminAudience("ADMIN", "1")
+    ];
+    const settledFlags = calls.map(() => false);
+    calls.forEach((call, index) => {
+      call.then(
+        () => (settledFlags[index] = true),
+        () => (settledFlags[index] = true)
+      );
+    });
+
+    await flushPromises();
+
+    expect(handler).toHaveBeenCalledTimes(calls.length);
+    expect(settledFlags.every((settled) => settled === false)).toBe(true);
   });
 });
