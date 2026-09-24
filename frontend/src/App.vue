@@ -5,7 +5,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, watch } from "vue";
+import { watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useAuthStore } from "./stores/auth";
 import { useEventsStore } from "./stores/events";
@@ -49,9 +49,16 @@ watch(
   { immediate: true }
 );
 
-onMounted(async () => {
-  await eventsStore.fetchEvents();
-});
+// Re-fetch on every role change (login, logout, role switch in tests) so the store always
+// holds the data set the current visitor is allowed to see: the public, published-only list
+// for anonymous visitors, or the full backoffice list once authenticated.
+watch(
+  () => authStore.isAuthenticated,
+  () => {
+    eventsStore.fetchEvents();
+  },
+  { immediate: true }
+);
 
 defineExpose({
   handlePublish: eventsStore.handlePublish,

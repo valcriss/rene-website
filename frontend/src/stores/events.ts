@@ -1,6 +1,6 @@
 import { computed, reactive, ref } from "vue";
 import { defineStore } from "pinia";
-import { EventItem, EventOccurrence, deleteEvent, fetchEvents } from "../api/events";
+import { EventItem, EventOccurrence, deleteEvent, fetchEvents, fetchPublicEvents } from "../api/events";
 import { filterEvents, type EventFilters } from "../events/filterEvents";
 import placeholderEvent from "../assets/event-placeholder.svg";
 import { archiveEvent, publishEventWithFeatured, rejectEvent, unarchiveEvent, updateEventFeatured, type ModeratorRole } from "../api/moderation";
@@ -254,7 +254,7 @@ export const useEventsStore = defineStore("events", () => {
     isLoading.value = true;
     error.value = null;
     try {
-      events.value = await fetchEvents();
+      events.value = authStore.isAuthenticated ? await fetchEvents(authStore.role) : await fetchPublicEvents();
     } catch (err) {
       error.value = err instanceof Error ? err.message : "Erreur inconnue";
     } finally {

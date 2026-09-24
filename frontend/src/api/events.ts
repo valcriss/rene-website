@@ -117,9 +117,20 @@ const parseApiError = async (response: Response, fallback: string) => {
   return fallback;
 };
 
-export const fetchEvents = async (): Promise<EventItem[]> => {
-  const response = await fetch("/api/events");
+export const fetchPublicEvents = async (): Promise<EventItem[]> => {
+  const response = await fetch("/api/public/events");
   if (!response.ok) {
+    throw new Error("Impossible de charger les événements");
+  }
+  return response.json() as Promise<EventItem[]>;
+};
+
+export const fetchEvents = async (role: string): Promise<EventItem[]> => {
+  const response = await fetch("/api/events", { headers: buildAuthHeaders(role) });
+  if (!response.ok) {
+    if (response.status === 401) {
+      return handleSessionExpired();
+    }
     throw new Error("Impossible de charger les événements");
   }
   return response.json() as Promise<EventItem[]>;

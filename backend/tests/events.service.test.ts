@@ -1,4 +1,4 @@
-import { archiveEvent, createEvent, deleteEvent, getEvent, listEvents, publishEvent, rejectEvent, submitEvent, unarchiveEvent, updateEvent, updateEventFeatured } from "../src/events/service";
+import { archiveEvent, createEvent, deleteEvent, getEvent, getPublicEvent, listEvents, listPublicEvents, publishEvent, rejectEvent, submitEvent, unarchiveEvent, updateEvent, updateEventFeatured } from "../src/events/service";
 import { EventRepository } from "../src/events/repository";
 import { Event, EventOccurrence, EventOccurrenceInput } from "../src/events/types";
 import { deleteUploadIfLocal } from "../src/uploads/storage";
@@ -121,6 +121,102 @@ describe("event services", () => {
 
     await expect(listEvents(repo)).resolves.toEqual([baseEvent]);
     await expect(getEvent(repo, "id")).resolves.toEqual(baseEvent);
+  });
+
+  describe("public events", () => {
+    const publishedEvent: Event = {
+      ...baseEvent,
+      id: "published",
+      status: "PUBLISHED",
+      createdByUserId: "user-1",
+      rejectionReason: "some internal note",
+      pendingRevision: {
+        id: "rev-1",
+        eventId: "published",
+        title: "Draft title",
+        content: null,
+        image: null,
+        createdByUserId: null,
+        categoryId: "music",
+        audienceId: "all",
+        occurrences: [baseOccurrence],
+        organizerName: null,
+        status: "DRAFT",
+        rejectionReason: null,
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z"
+      }
+    };
+
+    it("lists only published, non-archived events without internal fields", async () => {
+      const draftEvent: Event = { ...baseEvent, id: "draft", status: "DRAFT" };
+      const archivedEvent: Event = { ...publishedEvent, id: "archived", archivedAt: "2026-02-01T00:00:00.000Z" };
+      const repo: EventRepository = {
+        ...createRepo(null),
+        list: async () => [draftEvent, publishedEvent, archivedEvent]
+      };
+
+      const result = await listPublicEvents(repo);
+
+      expect(result).toEqual([
+        {
+          id: "published",
+          title: "Concert",
+          content: "Soirée",
+          image: "img",
+          categoryId: "music",
+          audienceId: "all",
+          occurrences: [baseOccurrence],
+          organizerName: "Association",
+          organizerUrl: undefined,
+          contactEmail: undefined,
+          contactPhone: undefined,
+          ticketUrl: undefined,
+          pricingInfo: undefined,
+          websiteUrl: undefined,
+          socialLinks: undefined,
+          featured: false,
+          status: "PUBLISHED",
+          publishedAt: null,
+          publicationEndAt: "2026-01-15T23:59:59.999Z",
+          archivedAt: null,
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z"
+        }
+      ]);
+      expect(result[0]).not.toHaveProperty("createdByUserId");
+      expect(result[0]).not.toHaveProperty("rejectionReason");
+      expect(result[0]).not.toHaveProperty("pendingRevision");
+    });
+
+    it("returns the public shape of a published event", async () => {
+      const repo = createRepo(publishedEvent);
+
+      const result = await getPublicEvent(repo, "published");
+
+      expect(result?.id).toBe("published");
+      expect(result).not.toHaveProperty("createdByUserId");
+      expect(result).not.toHaveProperty("rejectionReason");
+      expect(result).not.toHaveProperty("pendingRevision");
+    });
+
+    it("returns null for a non-published event", async () => {
+      const repo = createRepo(baseEvent);
+
+      await expect(getPublicEvent(repo, "id")).resolves.toBeNull();
+    });
+
+    it("returns null for an archived event", async () => {
+      const repo = createRepo({ ...publishedEvent, archivedAt: "2026-02-01T00:00:00.000Z" });
+
+      await expect(getPublicEvent(repo, "published")).resolves.toBeNull();
+    });
+
+    it("returns null for a missing event", async () => {
+      const repo = createRepo(null);
+
+      await expect(getPublicEvent(repo, "missing")).resolves.toBeNull();
+    });
   });
 
   it("updateEvent returns not found", async () => {

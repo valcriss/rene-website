@@ -11,6 +11,7 @@ import { createCommunesRouter } from "./communes/routes";
 import { createCommuneRepository } from "./communes/repositoryFactory";
 import { createContactRouter } from "./contact/routes";
 import { createEventRouter } from "./events/routes";
+import { createPublicEventsRouter } from "./events/publicRoutes";
 import { createEventRepository } from "./events/repositoryFactory";
 import { createGeocodingRouter } from "./geocoding/routes";
 import { createModerationReminderRouter } from "./moderationReminders/routes";
@@ -44,6 +45,7 @@ export const createApp = () => {
   const communeRepository = createCommuneRepository();
   app.use("/api", createAuthRouter(authRepository));
   app.use("/api", createEventRouter(eventRepository, authRepository, categorySubscriptionRepository));
+  app.use("/api/public", createPublicEventsRouter(eventRepository));
   app.use("/api", createGeocodingRouter());
   app.use("/api", createCommunesRouter(communeRepository));
   app.use("/api", createUploadRouter());

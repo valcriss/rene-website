@@ -105,6 +105,12 @@ describe("App", () => {
       if (url.includes("/api/auth/login")) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve(loginResponse) });
       }
+      // The anonymous events fetch that happens while the login page is still mounted (before
+      // the credentials are submitted) is unrelated to what the test itself is verifying, so it
+      // is absorbed here rather than consuming the first entry of the test's own fetch sequence.
+      if (url.includes("/api/public/events")) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+      }
       if (previousFetch) {
         return (previousFetch as unknown as (i: FetchInput, n?: FetchInit) => Promise<unknown>)(
           input,
