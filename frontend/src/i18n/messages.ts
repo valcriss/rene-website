@@ -344,6 +344,10 @@ export const messages = {
       manualLocationToggle: "D\u00e9finir les coordonn\u00e9es manuellement",
       manualLocationHint:
         "\u00c0 utiliser si la localisation automatique \u00e9choue ou est impr\u00e9cise. Laissez cette case d\u00e9coch\u00e9e pour laisser le lieu/la ville la d\u00e9terminer automatiquement.",
+      enterPostalCodeFirst: "Saisissez d'abord un code postal",
+      selectCity: "S\u00e9lectionnez une commune",
+      communesLoading: "Recherche des communes\u2026",
+      communesNoMatch: "Aucune commune ne correspond \u00e0 ce code postal.",
       organizerEyebrow: "Organisateur",
       organizerTitle: "Contacts et structure",
       usefulLinksEyebrow: "Liens utiles",
@@ -397,6 +401,7 @@ export const messages = {
         venue: "Salle, m\u00e9diath\u00e8que... (optionnel)",
         address: "12 rue... (optionnel)",
         city: "Descartes",
+        postalCode: "37160",
         organizer: "Nom de l'organisateur",
         phone: "06 00 00 00 00"
       }
@@ -854,6 +859,10 @@ export const messages = {
       manualLocationToggle: "Set coordinates manually",
       manualLocationHint:
         "Use this if automatic location fails or is inaccurate. Leave unchecked to let the venue/city determine it automatically.",
+      enterPostalCodeFirst: "Enter a postal code first",
+      selectCity: "Select a city",
+      communesLoading: "Looking up cities…",
+      communesNoMatch: "No city matches this postal code.",
       organizerEyebrow: "Organizer",
       organizerTitle: "Contacts and organization",
       usefulLinksEyebrow: "Useful links",
@@ -905,6 +914,7 @@ export const messages = {
         venue: "Hall, media library... (optional)",
         address: "12 Main St... (optional)",
         city: "Descartes",
+        postalCode: "37160",
         organizer: "Organizer name",
         phone: "06 00 00 00 00"
       }
