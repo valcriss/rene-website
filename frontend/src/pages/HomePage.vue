@@ -279,6 +279,7 @@ import { useEventsStore } from "../stores/events";
 import { useSettingsStore } from "../stores/settings";
 import { formatEventDateBadge, getEarliestOccurrence, getEventLocationSummary, isMultisiteEvent } from "../utils/occurrences";
 import { usePageSeo } from "../composables/usePageSeo";
+import { useWebsiteStructuredData } from "../composables/useStructuredData";
 import { buildPlainTextDescription } from "../utils/seo";
 import { getEventDetailPath } from "../utils/eventLinks";
 
@@ -317,6 +318,8 @@ usePageSeo({
   title: () => `${t("navigation.title")} — ${t("navigation.tagline")}`,
   description: () => buildPlainTextDescription(introText.value)
 });
+
+useWebsiteStructuredData(() => t("navigation.title"));
 
 const categoryNames = computed(() =>
   new Map(categories.value.map((category) => [category.id, category.name]))
