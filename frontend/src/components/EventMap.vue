@@ -64,7 +64,7 @@ const openSelectedMarker = () => {
   mapInstance.value.setView(marker.getLatLng(), 13);
 };
 
-onMounted(async () => {
+const initMap = async () => {
   L = await import("leaflet");
   markerIcon = L.icon({
     iconUrl: "/mark.png",
@@ -85,6 +85,32 @@ onMounted(async () => {
   updateMarkers(props.pins);
   fitToMarkers(props.pins);
   openSelectedMarker();
+};
+
+let intersectionObserver: IntersectionObserver | null = null;
+
+// Leaflet (and its tile requests) are only worth the network/CPU cost once the map is actually
+// about to be seen — this keeps it out of the critical path for events far below the fold.
+// rootMargin starts loading slightly ahead of the viewport so the map is ready by the time it
+// scrolls into view, rather than popping in empty.
+onMounted(() => {
+  if (typeof IntersectionObserver === "undefined" || !mapContainer.value) {
+    void initMap();
+    return;
+  }
+
+  intersectionObserver = new IntersectionObserver(
+    (entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) {
+        return;
+      }
+      intersectionObserver?.disconnect();
+      intersectionObserver = null;
+      void initMap();
+    },
+    { rootMargin: "200px" }
+  );
+  intersectionObserver.observe(mapContainer.value);
 });
 
 watch(
@@ -102,6 +128,7 @@ watch(
 );
 
 onBeforeUnmount(() => {
+  intersectionObserver?.disconnect();
   if (mapInstance.value) {
     mapInstance.value.remove();
   }

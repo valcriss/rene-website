@@ -8,7 +8,8 @@
     "build": "vite build && vite build --ssr src/entry-server.ts",
     "preview": "vite preview",
     "lint": "eslint .",
-    "test": "vitest run --coverage"
+    "test": "vitest run --coverage",
+    "check:bundle-size": "node scripts/checkBundleSize.mjs"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^7.2.0",

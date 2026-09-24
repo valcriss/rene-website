@@ -1,3 +1,4 @@
+import compression from "compression";
 import express from "express";
 import { createAdminRouter } from "./admin/routes";
 import { createPublicSettingsRouter } from "./admin/publicRoutes";
@@ -26,6 +27,10 @@ export const createApp = () => {
   const app = express();
   const authRepository = createAuthRepository();
 
+  // Compresses every response (API JSON, SSR HTML, robots.txt/sitemap.xml, static assets) that
+  // negotiates it via Accept-Encoding. Already-compressed content (uploaded WebP images) is left
+  // alone by the middleware's own default filter, which skips non-compressible content types.
+  app.use(compression());
   app.use(express.json());
   app.use(createAuthenticationMiddleware(authRepository));
   app.use(csrfProtection);

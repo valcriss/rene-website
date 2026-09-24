@@ -3,6 +3,9 @@ import { cleanupExpiredPendingUploads, persistProcessedUpload } from "./storage"
 
 export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 export const MAX_UPLOAD_PIXELS = 20_000_000;
+// Public event images are never displayed wider than this in the UI; capping upload width bounds
+// the encoded payload weight regardless of what a contributor's camera or phone produces.
+export const MAX_UPLOAD_WIDTH = 1600;
 
 type SupportedFormat = "jpeg" | "png" | "webp";
 
@@ -20,6 +23,7 @@ type ImageMetadata = {
 type ImagePipeline = {
   metadata: () => Promise<ImageMetadata>;
   rotate: () => ImagePipeline;
+  resize: (options: { width: number; withoutEnlargement: boolean }) => ImagePipeline;
   webp: (options: { quality: number; effort: number }) => ImagePipeline;
   toBuffer: () => Promise<Buffer>;
 };
@@ -120,7 +124,12 @@ export const processAndPersistUpload = async (
     }
 
     // Re-encoding strips EXIF/XMP metadata and any unused trailing or active content.
-    const sanitized = await image.rotate().webp({ quality: 85, effort: 4 }).toBuffer();
+    // withoutEnlargement keeps smaller originals untouched — this only ever shrinks.
+    const sanitized = await image
+      .rotate()
+      .resize({ width: MAX_UPLOAD_WIDTH, withoutEnlargement: true })
+      .webp({ quality: 85, effort: 4 })
+      .toBuffer();
     await cleanupExpiredPendingUploads();
     return persistProcessedUpload(sanitized);
   } catch {

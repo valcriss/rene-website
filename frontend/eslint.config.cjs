@@ -48,5 +48,13 @@ module.exports = [
         ...globals.browser
       }
     }
+  },
+  {
+    // Node CLI scripts (e.g. the bundle size budget check), not browser code.
+    files: ["scripts/**/*.mjs"],
+    languageOptions: {
+      sourceType: "module",
+      globals: globals.node
+    }
   }
 ];

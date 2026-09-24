@@ -27,6 +27,8 @@
               class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
               :src="getEventImage(eventItem)"
               :alt="eventItem.title"
+              loading="lazy"
+              decoding="async"
               @error="markImageError(eventItem.id)"
             />
             <div class="absolute left-4 top-4 flex flex-wrap gap-2">
