@@ -125,4 +125,47 @@ describe("HomePage", () => {
 
     expect(wrapper.find("[data-testid='featured-card-2']").exists()).toBe(true);
   });
+
+  it("shows the multisite badge only when occurrences are at distinct addresses", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const eventsStore = useEventsStore();
+    const categoriesStore = useCategoriesStore();
+    eventsStore.isLoading = false;
+    eventsStore.error = null;
+    eventsStore.events = [
+      buildEvent({ id: "single-site" }),
+      buildEvent({
+        id: "multi-site",
+        title: "Festival",
+        occurrences: [
+          buildOccurrence({ id: "occ-a", address: "1 rue du Centre" }),
+          buildOccurrence({ id: "occ-b", address: "8 place de la Mairie", eventStartAt: "2030-01-16T20:00:00.000Z" })
+        ]
+      })
+    ];
+    categoriesStore.hasLoaded = true;
+
+    const router = createTestRouter("/");
+    await router.isReady();
+
+    const wrapper = mount(HomePage, {
+      global: {
+        plugins: [pinia, router],
+        stubs: {
+          HomeFilters: { template: "<div></div>" },
+          HomeSearch: { template: "<div></div>" },
+          HomeTitle: { template: "<div></div>" },
+          EventMap: { template: "<div></div>" },
+          NavigationHeader: { template: "<div></div>" }
+        }
+      }
+    });
+
+    const singleSiteCard = wrapper.get("[data-testid='event-card-single-site']");
+    expect(singleSiteCard.text()).not.toContain("Multisite");
+
+    const multiSiteCard = wrapper.get("[data-testid='event-card-multi-site']");
+    expect(multiSiteCard.text()).toContain("Multisite");
+  });
 });

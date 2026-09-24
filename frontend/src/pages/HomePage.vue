@@ -231,7 +231,12 @@
 
                   <div class="flex items-center justify-between gap-4 border-t border-sky-100 pt-4">
                     <span class="text-sm font-semibold text-slate-900">{{ t("home.viewEvent") }}</span>
-                    <span class="text-xs font-medium uppercase tracking-[0.22em] text-sky-700/70">{{ t("home.localProgram") }}</span>
+                    <span
+                      v-if="isMultisiteEvent(eventItem.occurrences)"
+                      class="text-xs font-medium uppercase tracking-[0.22em] text-sky-700/70"
+                    >
+                      {{ t("home.multisite") }}
+                    </span>
                   </div>
                 </div>
               </li>
@@ -273,7 +278,7 @@ import { useAudiencesStore } from "../stores/audiences";
 import { useCategoriesStore } from "../stores/categories";
 import { useEventsStore } from "../stores/events";
 import { useSettingsStore } from "../stores/settings";
-import { formatEventDateBadge, getEarliestOccurrence, getEventLocationSummary } from "../utils/occurrences";
+import { formatEventDateBadge, getEarliestOccurrence, getEventLocationSummary, isMultisiteEvent } from "../utils/occurrences";
 
 type CategoryTheme = {
   backgroundColor: string;

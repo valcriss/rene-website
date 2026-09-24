@@ -68,7 +68,7 @@ export const messages = {
       loading: "Chargement des \u00e9v\u00e9nements...",
       noPublished: "Aucun \u00e9v\u00e9nement n'est encore publi\u00e9.",
       noFiltered: "Aucun \u00e9v\u00e9nement ne correspond aux filtres.",
-      localProgram: "Programme local",
+      multisite: "Multisite",
       mapEyebrow: "Explorer la zone",
       mapTitle: "Carte des \u00e9v\u00e9nements",
       mapLead: "Rep\u00e8re g\u00e9ographique compl\u00e9mentaire"
@@ -579,7 +579,7 @@ export const messages = {
       loading: "Loading events...",
       noPublished: "No event has been published yet.",
       noFiltered: "No event matches the current filters.",
-      localProgram: "Local program",
+      multisite: "Multisite",
       mapEyebrow: "Explore the area",
       mapTitle: "Event map",
       mapLead: "Complementary geographic reference"

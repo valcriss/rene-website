@@ -10,6 +10,7 @@ import {
   hasResolvedCoordinates,
   hasSubmittableGeolocation,
   isCompleteOccurrence,
+  isMultisiteEvent,
   isOccurrenceGeolocated,
   sortOccurrences
 } from "../src/utils/occurrences";
@@ -99,6 +100,47 @@ describe("occurrences utils", () => {
     expect(
       getEventLocationSummary([buildOccurrence(), buildOccurrence({ id: "occ-2", city: "Tours" })])
     ).toBe("Salle · Descartes (+1)");
+  });
+
+  it("does not flag a single occurrence as multisite", () => {
+    expect(isMultisiteEvent([])).toBe(false);
+    expect(isMultisiteEvent([buildOccurrence()])).toBe(false);
+  });
+
+  it("does not flag several occurrences at the same address as multisite", () => {
+    expect(
+      isMultisiteEvent([
+        buildOccurrence({ address: "1 rue du Centre", postalCode: "37160" }),
+        buildOccurrence({ id: "occ-2", address: "1 rue du Centre", postalCode: "37160" })
+      ])
+    ).toBe(false);
+  });
+
+  it("flags occurrences with different addresses in the same city as multisite", () => {
+    expect(
+      isMultisiteEvent([
+        buildOccurrence({ address: "1 rue du Centre" }),
+        buildOccurrence({ id: "occ-2", address: "8 place de la Mairie" })
+      ])
+    ).toBe(true);
+  });
+
+  it("flags occurrences with the same address in different cities as multisite", () => {
+    expect(
+      isMultisiteEvent([
+        buildOccurrence({ address: "1 rue du Centre", city: "Descartes" }),
+        buildOccurrence({ id: "occ-2", address: "1 rue du Centre", city: "Tours" })
+      ])
+    ).toBe(true);
+  });
+
+  it("ignores occurrences with no location information when detecting multisite", () => {
+    expect(
+      isMultisiteEvent([
+        buildOccurrence({ address: null, postalCode: null, city: null }),
+        buildOccurrence({ id: "occ-2", address: null, postalCode: null, city: null })
+      ])
+    ).toBe(false);
   });
 
   it("computes the publication end date as the latest occurrence end, or undefined when none", () => {
