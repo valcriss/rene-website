@@ -5,6 +5,7 @@ import { createEventRouter } from "../src/events/routes";
 import { EventRepository } from "../src/events/repository";
 import { AuthRepository } from "../src/auth/repository";
 import { signUserToken } from "../src/auth/jwt";
+import { authenticateOptional } from "../src/auth/middleware";
 import { authHeader } from "./authTestUtils";
 
 const validPayload = {
@@ -60,10 +61,19 @@ describe("events routes", () => {
 
   it("lists events", async () => {
     const app = createApp();
-    const response = await request(app).get("/api/events");
+    const response = await request(app).get("/api/events").set("Authorization", authHeader("EDITOR"));
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual([]);
+  });
+
+  it("returns 401 when listing or reading events without a role", async () => {
+    const app = createApp();
+    const listResponse = await request(app).get("/api/events");
+    const getResponse = await request(app).get("/api/events/unknown");
+
+    expect(listResponse.status).toBe(401);
+    expect(getResponse.status).toBe(401);
   });
 
   it("returns 500 and logs when list fails", async () => {
@@ -89,9 +99,10 @@ describe("events routes", () => {
     };
     const app = express();
     app.use(express.json());
+    app.use(authenticateOptional);
     app.use("/api", createEventRouter(repo, authRepo));
 
-    const response = await request(app).get("/api/events");
+    const response = await request(app).get("/api/events").set("Authorization", authHeader("EDITOR"));
 
     expect(response.status).toBe(500);
     expect(response.body).toEqual({ message: "Erreur interne du serveur." });
@@ -102,10 +113,10 @@ describe("events routes", () => {
 
   it("returns 404 for missing event", async () => {
     const app = createApp();
-    const response = await request(app).get("/api/events/unknown");
+    const response = await request(app).get("/api/events/unknown").set("Authorization", authHeader("EDITOR"));
 
     expect(response.status).toBe(404);
-    expect(response.body).toEqual({ message: "Événement introuvable." });
+    expect(response.body).toEqual({ errors: ["Événement introuvable."] });
   });
 
   it("creates and fetches event", async () => {
@@ -119,10 +130,12 @@ describe("events routes", () => {
     expect(createResponse.body.id).toBeDefined();
     expect(createResponse.body.status).toBe("DRAFT");
 
-    const listResponse = await request(app).get("/api/events");
+    const listResponse = await request(app).get("/api/events").set("Authorization", authHeader("EDITOR"));
     expect(listResponse.body).toHaveLength(1);
 
-    const getResponse = await request(app).get(`/api/events/${createResponse.body.id}`);
+    const getResponse = await request(app)
+      .get(`/api/events/${createResponse.body.id}`)
+      .set("Authorization", authHeader("EDITOR"));
     expect(getResponse.status).toBe(200);
     expect(getResponse.body.id).toBe(createResponse.body.id);
   });

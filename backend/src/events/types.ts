@@ -78,3 +78,7 @@ export type Event = Omit<CreateEventInput, "occurrences"> & {
   createdAt: string;
   updatedAt: string;
 };
+
+// The public contract intentionally excludes creator identity, moderation rejection reasons and
+// any in-progress revision, none of which are meant to ever reach an anonymous visitor or a crawler.
+export type PublicEvent = Omit<Event, "createdByUserId" | "rejectionReason" | "pendingRevision">;

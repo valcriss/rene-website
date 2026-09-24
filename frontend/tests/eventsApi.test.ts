@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createEvent, deleteEvent, fetchEvents, submitEvent, updateEvent } from "../src/api/events";
+import { createEvent, deleteEvent, fetchEvents, fetchPublicEvents, submitEvent, updateEvent } from "../src/api/events";
 import { setSessionExpiredHandler } from "../src/api/authHeaders";
 
 const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -20,22 +20,45 @@ describe("events api", () => {
     setSessionExpiredHandler(() => {});
   });
 
-  it("fetches events", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) }))
-    );
+  it("fetches the public events", async () => {
+    const fetchMock = vi.fn((url: string) => {
+      expect(url).toBe("/api/public/events");
+      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+    });
+    vi.stubGlobal("fetch", fetchMock);
 
-    await expect(fetchEvents()).resolves.toEqual([]);
+    await expect(fetchPublicEvents()).resolves.toEqual([]);
   });
 
-  it("fails when fetching events", async () => {
+  it("fails when fetching the public events", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(() => Promise.resolve({ ok: false, json: () => Promise.resolve([]) }))
     );
 
-    await expect(fetchEvents()).rejects.toThrow("Impossible de charger les événements");
+    await expect(fetchPublicEvents()).rejects.toThrow("Impossible de charger les événements");
+  });
+
+  it("fetches the backoffice events with the authenticated identity", async () => {
+    window.localStorage.setItem("rene-auth-token", "token-1");
+    const fetchMock = vi.fn((url: string, init?: { headers?: Record<string, string> }) => {
+      expect(url).toBe("/api/events");
+      expect(init?.headers?.Authorization).toBe("Bearer token-1");
+      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(fetchEvents("EDITOR")).resolves.toEqual([]);
+    window.localStorage.clear();
+  });
+
+  it("fails when fetching the backoffice events", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: false, json: () => Promise.resolve([]) }))
+    );
+
+    await expect(fetchEvents("EDITOR")).rejects.toThrow("Impossible de charger les événements");
   });
 
   it("creates an event", async () => {
@@ -287,6 +310,7 @@ describe("events api", () => {
       organizerName: "Asso"
     };
     const calls = [
+      fetchEvents("EDITOR"),
       createEvent(payload, "EDITOR"),
       updateEvent("1", payload, "EDITOR"),
       submitEvent("1", "EDITOR"),

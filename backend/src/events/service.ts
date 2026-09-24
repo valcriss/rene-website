@@ -1,6 +1,6 @@
 import { EventRepository } from "./repository";
 import { validateCreateEvent, validateEventCompleteness } from "./validation";
-import { Event, EventOccurrenceInput, GeolocationPrecision } from "./types";
+import { Event, EventOccurrenceInput, GeolocationPrecision, PublicEvent } from "./types";
 import { geocodeEventLocation } from "../geocoding/photon";
 import { deleteUploadIfLocal } from "../uploads/storage";
 import { AuthenticatedActor } from "../auth/types";
@@ -136,6 +136,48 @@ export const listEvents = async (repo: EventRepository, actor?: EventActor): Pro
 };
 
 export const getEvent = (repo: EventRepository, id: string): Promise<Event | null> => repo.getById(id);
+
+// An event is safe to show to an anonymous visitor once it is published and has not been
+// withdrawn from public view; archiving an event pulls it back out of the public API.
+const isPubliclyVisible = (event: Event) => event.status === "PUBLISHED" && !event.archivedAt;
+
+const toPublicEvent = (event: Event): PublicEvent => ({
+  id: event.id,
+  title: event.title,
+  content: event.content,
+  image: event.image,
+  categoryId: event.categoryId,
+  audienceId: event.audienceId,
+  occurrences: event.occurrences,
+  organizerName: event.organizerName,
+  organizerUrl: event.organizerUrl,
+  contactEmail: event.contactEmail,
+  contactPhone: event.contactPhone,
+  ticketUrl: event.ticketUrl,
+  pricingInfo: event.pricingInfo,
+  websiteUrl: event.websiteUrl,
+  socialLinks: event.socialLinks,
+  featured: event.featured,
+  status: event.status,
+  publishedAt: event.publishedAt,
+  publicationEndAt: event.publicationEndAt,
+  archivedAt: event.archivedAt,
+  createdAt: event.createdAt,
+  updatedAt: event.updatedAt
+});
+
+export const listPublicEvents = async (repo: EventRepository): Promise<PublicEvent[]> => {
+  const events = await repo.list();
+  return events.filter(isPubliclyVisible).map(toPublicEvent);
+};
+
+export const getPublicEvent = async (repo: EventRepository, id: string): Promise<PublicEvent | null> => {
+  const event = await repo.getById(id);
+  if (!event || !isPubliclyVisible(event)) {
+    return null;
+  }
+  return toPublicEvent(event);
+};
 
 export const getEventForActor = async (
   repo: EventRepository,

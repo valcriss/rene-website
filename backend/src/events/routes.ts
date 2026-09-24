@@ -52,27 +52,18 @@ export const createEventRouter = (
 ) => {
   const router = Router();
 
-  router.get("/events", withErrorHandling(async (req, res) => {
-    const events = await listEvents(repo, req.user);
+  router.get("/events", requireRole(["EDITOR", "MODERATOR", "ADMIN"]), withErrorHandling(async (req, res) => {
+    const events = await listEvents(repo, getAuthenticatedUser(req));
     res.json(events);
   }));
 
-  router.get("/events/:id", withErrorHandling(async (req, res) => {
-    if (req.user) {
-      const result = await getEventForActor(repo, req.params.id, req.user);
-      if (!result.ok) {
-        res.status(result.status).json({ errors: result.errors });
-        return;
-      }
-      res.json(result.value);
+  router.get("/events/:id", requireRole(["EDITOR", "MODERATOR", "ADMIN"]), withErrorHandling(async (req, res) => {
+    const result = await getEventForActor(repo, req.params.id, getAuthenticatedUser(req));
+    if (!result.ok) {
+      res.status(result.status).json({ errors: result.errors });
       return;
     }
-    const event = await getEvent(repo, req.params.id);
-    if (!event) {
-      res.status(404).json({ message: "Événement introuvable." });
-      return;
-    }
-    res.json(event);
+    res.json(result.value);
   }));
 
   router.post("/events", requireRole(["EDITOR", "MODERATOR", "ADMIN"]), withErrorHandling(async (req, res) => {

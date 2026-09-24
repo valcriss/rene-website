@@ -8,6 +8,7 @@ import { archiveEvent, publishEventWithFeatured, unarchiveEvent, updateEventFeat
 
 vi.mock("../src/api/events", () => ({
   fetchEvents: vi.fn(),
+  fetchPublicEvents: vi.fn().mockResolvedValue([]),
   deleteEvent: vi.fn()
 }));
 
@@ -191,6 +192,8 @@ describe("events store", () => {
     expect(store.getModerationError()).toBe("Erreur modération");
     expect(store.getDeleteError()).toBe("Erreur suppression");
 
+    const authStore = useAuthStore();
+    authStore.setRole("EDITOR");
     const fetchEventsMock = vi.mocked(fetchEvents);
     fetchEventsMock.mockResolvedValue([buildEvent()]);
     await store.fetchEvents();
