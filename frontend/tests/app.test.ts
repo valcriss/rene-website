@@ -396,7 +396,7 @@ describe("App", () => {
     await setDateRange("2026-01-01", "2026-12-31");
 
     const image = await screen.findByRole("img", { name: "Concert" });
-    expect(image.getAttribute("src")).toContain("event-placeholder");
+    expect(image.getAttribute("src")).toMatch(/^data:image\/svg\+xml;base64,/);
   });
 
   it("falls back to placeholder on image error", async () => {
@@ -433,7 +433,7 @@ describe("App", () => {
     const image = await screen.findByRole("img", { name: "Concert" });
     await fireEvent.error(image);
 
-    expect(image.getAttribute("src")).toContain("event-placeholder");
+    expect(image.getAttribute("src")).toMatch(/^data:image\/svg\+xml;base64,/);
   });
 
   it("navigates to detail when clicking a card", async () => {

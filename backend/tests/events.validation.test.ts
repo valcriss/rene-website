@@ -318,13 +318,18 @@ describe("validateCreateEvent", () => {
   it("sanitizes content", () => {
     const result = validateCreateEvent({
       ...validPayload,
-      content: "<h1>Title</h1><p><strong>Ok</strong> <script>alert(1)</script></p>"
+      content:
+        '<h1>Title</h1><p><strong>Ok</strong></p><a href="javascript:alert(1)" onclick="alert(2)">link</a><svg><g onload="alert(3)"></g></svg><script>alert(4)</script>'
     });
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.value.content).toContain("<strong>Ok</strong>");
       expect(result.value.content).not.toContain("<h1>");
       expect(result.value.content).not.toContain("<script>");
+      expect(result.value.content).not.toContain("javascript:");
+      expect(result.value.content).not.toContain("onclick");
+      expect(result.value.content).not.toContain("onload");
+      expect(result.value.content).not.toContain("<svg");
     }
   });
 

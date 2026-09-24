@@ -311,7 +311,8 @@ describe("EventDetailView", () => {
           organizerName: "Org",
           socialLinks: [{ type: "FACEBOOK", url: "https://facebook.com/rene" }],
           ticketUrl: "https://tickets.example.com",
-          pricingInfo: "<ul><li><strong>Plein tarif</strong> : 12 €</li></ul><script>alert(1)</script>",
+          pricingInfo:
+            '<ul><li><strong>Plein tarif</strong> : 12 €</li></ul><a href="javascript:alert(1)" onclick="alert(2)">lien</a><svg><g onload="alert(3)"></g></svg><script>alert(4)</script>',
           status: "PUBLISHED",
           publishedAt: null,
           publicationEndAt: "2026-01-15T22:00:00.000Z",
@@ -331,8 +332,13 @@ describe("EventDetailView", () => {
     await wrapper.vm.$nextTick();
 
     expect(wrapper.html()).toContain("Horaires et tarifs");
-    expect(wrapper.html()).toContain("<strong>Plein tarif</strong>");
-    expect(wrapper.html()).not.toContain("<script>");
+    const sanitizedPricing = wrapper.find("[data-testid='sanitized-pricing-info']").html();
+    expect(sanitizedPricing).toContain("<strong>Plein tarif</strong>");
+    expect(sanitizedPricing).not.toContain("<script>");
+    expect(sanitizedPricing).not.toContain("javascript:");
+    expect(sanitizedPricing).not.toContain("onclick");
+    expect(sanitizedPricing).not.toContain("onload");
+    expect(sanitizedPricing).not.toContain("<svg");
     expect(wrapper.find("[data-testid='detail-social-links']").exists()).toBe(true);
     expect(wrapper.find("a[title='Facebook']").attributes("href")).toBe("https://facebook.com/rene");
     const ticketingLink = wrapper.find("a[href='https://tickets.example.com']");

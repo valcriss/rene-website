@@ -12,13 +12,9 @@ if (typeof window !== "undefined") {
 
   window.scrollTo = () => {};
 
-  // jsdom does not implement the Blob URL APIs used for local image previews.
-  if (!URL.createObjectURL) {
-    URL.createObjectURL = () => "blob:mock-url";
-  }
-  if (!URL.revokeObjectURL) {
-    URL.revokeObjectURL = () => {};
-  }
+  // jsdom's Blob implementation is not compatible with Node's Blob URL APIs.
+  URL.createObjectURL = () => "blob:mock-url";
+  URL.revokeObjectURL = () => {};
 }
 
 beforeEach(() => {

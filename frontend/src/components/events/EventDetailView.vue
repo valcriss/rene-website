@@ -152,7 +152,7 @@
                     {{ t("detail.pricingInfo") }}
                   </p>
                   <!-- eslint-disable-next-line vue/no-v-html -->
-                  <div class="prose prose-slate mt-3 max-w-none text-sm prose-p:my-2 prose-p:text-slate-700 prose-ul:my-2 prose-ol:my-2 prose-li:my-1 prose-a:text-amber-800 prose-strong:text-slate-900" v-html="sanitizedPricingInfo"></div>
+                  <div data-testid="sanitized-pricing-info" class="prose prose-slate mt-3 max-w-none text-sm prose-p:my-2 prose-p:text-slate-700 prose-ul:my-2 prose-ol:my-2 prose-li:my-1 prose-a:text-amber-800 prose-strong:text-slate-900" v-html="sanitizedPricingInfo"></div>
                 </div>
 
                 <!-- eslint-disable-next-line vue/no-v-html -->
