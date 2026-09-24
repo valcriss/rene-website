@@ -17,8 +17,7 @@ import { createModerationReminderRouter } from "./moderationReminders/routes";
 import { createModerationReminderRepository } from "./moderationReminders/repositoryFactory";
 import { createSubscriptionsRouter } from "./subscriptions/routes";
 import { createCategorySubscriptionRepository } from "./subscriptions/repositoryFactory";
-import { createUploadRouter } from "./uploads/routes";
-import { getUploadDir } from "./uploads/storage";
+import { createUploadedAssetRouter, createUploadRouter } from "./uploads/routes";
 import { registerStatic } from "./static";
 
 export const createApp = () => {
@@ -48,7 +47,7 @@ export const createApp = () => {
   app.use("/api", createCommunesRouter(communeRepository));
   app.use("/api", createUploadRouter());
   app.use("/api", createModerationReminderRouter(eventRepository, moderationReminderRepository, authRepository));
-  app.use("/uploads", express.static(getUploadDir()));
+  app.use("/uploads", createUploadedAssetRouter());
 
   const adminRepository = createAdminRepository();
   app.use("/api/admin", createAdminRouter(adminRepository, authRepository));

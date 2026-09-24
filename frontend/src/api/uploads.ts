@@ -1,3 +1,5 @@
+import { buildAuthHeaders } from "./authHeaders";
+
 const parseApiError = async (response: Response, fallback: string) => {
   try {
     const data = (await response.json()) as { errors?: string[]; message?: string };
@@ -18,6 +20,7 @@ export const uploadImage = async (file: File): Promise<string> => {
   formData.append("image", file);
   const response = await fetch("/api/uploads", {
     method: "POST",
+    headers: buildAuthHeaders(undefined, false),
     body: formData
   });
   if (!response.ok) {

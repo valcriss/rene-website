@@ -2,7 +2,12 @@ import { EventRepository } from "./repository";
 import { validateCreateEvent, validateEventCompleteness } from "./validation";
 import { Event, EventOccurrenceInput, GeolocationPrecision } from "./types";
 import { geocodeEventLocation } from "../geocoding/photon";
-import { deleteUploadIfLocal } from "../uploads/storage";
+import {
+  claimLocalUploads,
+  deleteLocalUploads,
+  deleteUnreferencedLocalUploads,
+  releaseClaimedUploads
+} from "../uploads/storage";
 import { AuthenticatedActor } from "../auth/types";
 
 type ServiceResult<T> =
@@ -180,8 +185,10 @@ export const createEvent = async (
   }
 
   const occurrences = await prepareOccurrences(validation.value.occurrences);
+  let claimedUploads: string[] = [];
 
   try {
+    claimedUploads = await claimLocalUploads([validation.value.image, validation.value.content]);
     const created = await repo.create({
       ...validation.value,
       occurrences,
@@ -189,6 +196,7 @@ export const createEvent = async (
     });
     return { ok: true, value: created };
   } catch (error) {
+    await releaseClaimedUploads(claimedUploads);
     const message = error instanceof Error ? error.message : "Erreur inconnue";
     return badRequest([message]);
   }
@@ -215,8 +223,10 @@ export const updateEvent = async (
   }
 
   const occurrences = await prepareOccurrences(validation.value.occurrences);
+  let claimedUploads: string[] = [];
 
   try {
+    claimedUploads = await claimLocalUploads([validation.value.image, validation.value.content]);
     if (current.status === "PUBLISHED") {
       const updated = await repo.upsertPendingRevision(id, {
         ...validation.value,
@@ -225,10 +235,14 @@ export const updateEvent = async (
         createdByUserId: current.createdByUserId
       }, "DRAFT");
       if (!updated) {
+        await releaseClaimedUploads(claimedUploads);
         return notFound();
       }
-      if (current.pendingRevision && current.pendingRevision.image !== updated.pendingRevision?.image) {
-        await deleteUploadIfLocal(current.pendingRevision.image);
+      if (current.pendingRevision) {
+        await deleteUnreferencedLocalUploads(
+          [current.pendingRevision.image, current.pendingRevision.content],
+          [updated.pendingRevision?.image, updated.pendingRevision?.content]
+        );
       }
       return { ok: true, value: updated };
     }
@@ -239,13 +253,13 @@ export const updateEvent = async (
       featured: current.featured
     });
     if (!updated) {
+      await releaseClaimedUploads(claimedUploads);
       return notFound();
     }
-    if (current.image !== updated.image) {
-      await deleteUploadIfLocal(current.image);
-    }
+    await deleteUnreferencedLocalUploads([current.image, current.content], [updated.image, updated.content]);
     return { ok: true, value: updated };
   } catch (error) {
+    await releaseClaimedUploads(claimedUploads);
     const message = error instanceof Error ? error.message : "Erreur inconnue";
     return badRequest([message]);
   }
@@ -330,9 +344,10 @@ export const publishEvent = async (
     if (!updatedRevision) {
       return notFound("Révision introuvable.");
     }
-    if (current.image !== updatedRevision.image) {
-      await deleteUploadIfLocal(current.image);
-    }
+    await deleteUnreferencedLocalUploads(
+      [current.image, current.content],
+      [updatedRevision.image, updatedRevision.content]
+    );
     return { ok: true, value: updatedRevision };
   }
 
@@ -481,6 +496,11 @@ export const deleteEvent = async (
     return notFound();
   }
 
-  await deleteUploadIfLocal(current.image);
+  await deleteLocalUploads([
+    current.image,
+    current.content,
+    current.pendingRevision?.image,
+    current.pendingRevision?.content
+  ]);
   return { ok: true, value: { id } };
 };
