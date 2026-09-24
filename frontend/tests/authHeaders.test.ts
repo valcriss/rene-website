@@ -5,17 +5,19 @@ describe("authHeaders", () => {
   afterEach(() => {
     window.localStorage.clear();
     setSessionExpiredHandler(() => {});
+    document.cookie = "rene_csrf=; Max-Age=0; Path=/";
   });
 
-  it("builds headers exclusively from the stored token", () => {
+  it("builds headers with the CSRF cookie but no exposed credential", () => {
     window.localStorage.setItem("rene-auth-token", "token-1");
     window.localStorage.setItem("rene-auth-user-id", "user-1");
+    document.cookie = "rene_csrf=csrf%20token; Path=/";
 
     const headers = buildAuthHeaders("ADMIN");
 
     expect(headers).toEqual({
       "Content-Type": "application/json",
-      Authorization: "Bearer token-1"
+      "X-CSRF-Token": "csrf token"
     });
   });
 

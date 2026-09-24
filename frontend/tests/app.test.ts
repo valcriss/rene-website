@@ -4,6 +4,7 @@ import { createPinia } from "pinia";
 import { vi } from "vitest";
 import App from "../src/App.vue";
 import { useCategoriesStore } from "../src/stores/categories";
+import { useAuthStore } from "../src/stores/auth";
 import { createTestRouter } from "./testRouter";
 
 type FetchInput = string | { url: string };
@@ -77,11 +78,19 @@ const toEventPayload = (fixture: FlatEventFixture): Record<string, unknown> => {
 const toEventsPayload = (fixtures: FlatEventFixture[]) => fixtures.map(toEventPayload);
 
 describe("App", () => {
-  const renderWithRouter = async (path = "/") => {
+  const renderWithRouter = async (path = "/", initialRole?: "EDITOR" | "MODERATOR" | "ADMIN") => {
     const router = createTestRouter(path);
     await router.isReady();
     const pinia = createPinia();
     const categoriesStore = useCategoriesStore(pinia);
+    const authStore = useAuthStore(pinia);
+    authStore.sessionInitialized = true;
+    if (initialRole) {
+      authStore.setRole(initialRole);
+      authStore.userId = "user-1";
+      authStore.userName = "User";
+      authStore.userEmail = "user@test";
+    }
     categoriesStore.categories = [
       { id: "music", name: "Musique", createdAt: "2026-01-01", updatedAt: "2026-01-01" },
       { id: "art", name: "Art", createdAt: "2026-01-01", updatedAt: "2026-01-01" },
@@ -97,7 +106,6 @@ describe("App", () => {
   const loginAsRole = async (role: "EDITOR" | "MODERATOR" | "ADMIN") => {
     const previousFetch = globalThis.fetch;
     const loginResponse = {
-      token: "token",
       user: { id: "user-1", name: "User", email: "user@test", role }
     };
     const fetchMock = vi.fn((input: FetchInput, init?: FetchInit) => {
@@ -188,14 +196,9 @@ describe("App", () => {
   });
 
   it("shows account access instead of login on home when authenticated", async () => {
-    window.localStorage.setItem("rene-auth-role", "EDITOR");
-    window.localStorage.setItem("rene-auth-token", "token");
-    window.localStorage.setItem("rene-auth-user-id", "user-1");
-    window.localStorage.setItem("rene-auth-user-name", "User");
-    window.localStorage.setItem("rene-auth-user-email", "user@test");
     vi.stubGlobal("fetch", vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) })));
 
-    await renderWithRouter("/");
+    await renderWithRouter("/", "EDITOR");
 
     expect(screen.queryByRole("button", { name: "Me connecter" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Compte" })).toBeInTheDocument();
@@ -213,14 +216,9 @@ describe("App", () => {
   });
 
   it("redirects authenticated users away from signup", async () => {
-    window.localStorage.setItem("rene-auth-role", "EDITOR");
-    window.localStorage.setItem("rene-auth-token", "token");
-    window.localStorage.setItem("rene-auth-user-id", "user-1");
-    window.localStorage.setItem("rene-auth-user-name", "User");
-    window.localStorage.setItem("rene-auth-user-email", "user@test");
     vi.stubGlobal("fetch", vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) })));
 
-    const router = await renderWithRouter("/signup");
+    const router = await renderWithRouter("/signup", "EDITOR");
 
     await waitFor(() => expect(router.currentRoute.value.path).toBe("/backoffice/events"));
   });

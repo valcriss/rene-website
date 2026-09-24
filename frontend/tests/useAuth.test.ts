@@ -11,6 +11,7 @@ describe("useAuth", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     setupStorage();
+    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({}) })));
   });
 
   it("defaults to visitor", () => {
@@ -19,23 +20,23 @@ describe("useAuth", () => {
     expect(auth.isAuthenticated).toBe(false);
   });
 
-  it("loads stored role", () => {
+  it("ignores forged roles from Web Storage", () => {
     window.localStorage.setItem("rene-auth-role", "ADMIN");
     const auth = useAuthStore();
-    expect(auth.role).toBe("ADMIN");
-    expect(auth.isAuthenticated).toBe(true);
+    expect(auth.role).toBe("VISITOR");
+    expect(auth.isAuthenticated).toBe(false);
   });
 
-  it("login updates storage", () => {
+  it("login never writes credentials to storage", () => {
     const auth = useAuthStore();
     auth.login("MODERATOR");
-    expect(window.localStorage.getItem("rene-auth-role")).toBe("MODERATOR");
+    expect(window.localStorage.length).toBe(0);
   });
 
-  it("logout clears storage", () => {
+  it("logout clears storage", async () => {
     const auth = useAuthStore();
     auth.login("EDITOR");
-    auth.logout();
+    await auth.logout();
     expect(auth.role).toBe("VISITOR");
     expect(window.localStorage.getItem("rene-auth-role")).toBeNull();
   });
@@ -49,13 +50,12 @@ describe("useAuth", () => {
     expect(auth.password).toBe("");
   });
 
-  it("signup updates session storage", async () => {
+  it("signup keeps the session only in memory", async () => {
     const fetchMock = vi.fn(() =>
       Promise.resolve({
         ok: true,
         json: () =>
           Promise.resolve({
-            token: "signup-token",
             user: { id: "user-1", name: "Writer", email: "writer@example.com", role: "EDITOR" }
           })
       })
@@ -71,7 +71,8 @@ describe("useAuth", () => {
     await auth.signupWithPassword();
 
     expect(auth.role).toBe("EDITOR");
-    expect(window.localStorage.getItem("rene-auth-user-email")).toBe("writer@example.com");
+    expect(auth.userEmail).toBe("writer@example.com");
+    expect(window.localStorage.length).toBe(0);
     vi.unstubAllGlobals();
   });
 
@@ -122,5 +123,30 @@ describe("useAuth", () => {
     const auth = useAuth();
     auth.login("ADMIN");
     expect(useAuthStore().role).toBe("ADMIN");
+  });
+
+  it("restores a server session and marks initialization complete", async () => {
+    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({
+        user: { id: "user-1", name: "Writer", email: "writer@test", role: "EDITOR" }
+      })
+    })));
+    const auth = useAuthStore();
+    await auth.restoreSession();
+    expect(auth).toMatchObject({ role: "EDITOR", userId: "user-1", sessionInitialized: true });
+  });
+
+  it("falls back to a visitor when session restoration or server logout fails", async () => {
+    vi.stubGlobal("fetch", vi.fn(() => Promise.reject(new Error("offline"))));
+    const auth = useAuthStore();
+    auth.login("ADMIN");
+    await auth.restoreSession();
+    expect(auth.role).toBe("VISITOR");
+    expect(auth.sessionInitialized).toBe(true);
+    auth.login("EDITOR");
+    await expect(auth.logout()).resolves.toBeUndefined();
+    expect(auth.role).toBe("VISITOR");
   });
 });

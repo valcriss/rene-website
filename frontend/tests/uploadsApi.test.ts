@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { uploadImage } from "../src/api/uploads";
-import { TOKEN_STORAGE_KEY } from "../src/api/authHeaders";
 
 describe("uploads api", () => {
   afterEach(() => {
@@ -9,7 +8,6 @@ describe("uploads api", () => {
   });
 
   it("uploads an image", async () => {
-    window.localStorage.setItem(TOKEN_STORAGE_KEY, "signed-token");
     const fetchMock = vi.fn(() =>
       Promise.resolve({ ok: true, json: () => Promise.resolve({ url: "/uploads/test.webp" }) })
     );
@@ -19,7 +17,7 @@ describe("uploads api", () => {
     await expect(uploadImage(file)).resolves.toBe("/uploads/test.webp");
     expect(fetchMock).toHaveBeenCalledWith("/api/uploads", expect.objectContaining({
       method: "POST",
-      headers: { Authorization: "Bearer signed-token" }
+      headers: {}
     }));
   });
 

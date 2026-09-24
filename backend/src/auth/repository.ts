@@ -1,4 +1,11 @@
-import { AuthPasswordResetToken, AuthUser, AuthUserWithPassword, CreateAuthUserInput } from "./types";
+import {
+  AuthPasswordResetToken,
+  AuthSession,
+  AuthUser,
+  AuthUserWithPassword,
+  CreateAuthSessionInput,
+  CreateAuthUserInput
+} from "./types";
 import { UserRole } from "./roles";
 
 export type AuthRepository = {
@@ -10,4 +17,10 @@ export type AuthRepository = {
   createPasswordResetToken: (userId: string, tokenHash: string, expiresAt: Date) => Promise<void>;
   getPasswordResetTokenByHash: (tokenHash: string) => Promise<AuthPasswordResetToken | null>;
   deletePasswordResetTokensByUserId: (userId: string) => Promise<void>;
+  createSession?: (input: CreateAuthSessionInput) => Promise<void>;
+  getSessionById?: (id: string) => Promise<AuthSession | null>;
+  getSessionByRefreshTokenHash?: (refreshTokenHash: string) => Promise<AuthSession | null>;
+  rotateSession?: (currentSessionId: string, nextSession: CreateAuthSessionInput) => Promise<void>;
+  revokeSessionFamily?: (familyId: string) => Promise<void>;
+  invalidateUserSessions?: (userId: string) => Promise<void>;
 };

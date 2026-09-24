@@ -5,6 +5,7 @@ export type AuthUser = {
   name: string;
   email: string;
   role: UserRole;
+  sessionVersion?: number;
 };
 
 export type AuthenticatedActor = Pick<AuthUser, "id" | "role">;
@@ -24,3 +25,17 @@ export type CreateAuthUserInput = {
   email: string;
   passwordHash: string;
 };
+
+export type AuthSession = {
+  id: string;
+  userId: string;
+  familyId: string;
+  refreshTokenHash: string;
+  sessionVersion: number;
+  createdAt: Date;
+  lastUsedAt: Date;
+  expiresAt: Date;
+  revokedAt: Date | null;
+};
+
+export type CreateAuthSessionInput = Omit<AuthSession, "revokedAt">;

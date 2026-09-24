@@ -39,11 +39,11 @@ describe("events api", () => {
     await expect(fetchPublicEvents()).rejects.toThrow("Impossible de charger les événements");
   });
 
-  it("fetches the backoffice events with the authenticated identity", async () => {
+  it("fetches backoffice events without exposing a bearer token", async () => {
     window.localStorage.setItem("rene-auth-token", "token-1");
     const fetchMock = vi.fn((url: string, init?: { headers?: Record<string, string> }) => {
       expect(url).toBe("/api/events");
-      expect(init?.headers?.Authorization).toBe("Bearer token-1");
+      expect(init?.headers?.Authorization).toBeUndefined();
       return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
     });
     vi.stubGlobal("fetch", fetchMock);

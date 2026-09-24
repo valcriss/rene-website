@@ -15,7 +15,7 @@ describe("auth persistence without a window (SSR)", () => {
     const store = useAuthStore();
 
     expect(store.role).toBe("VISITOR");
-    expect(store.token).toBeNull();
+    expect("token" in store).toBe(false);
     expect(store.userId).toBeNull();
     expect(store.userName).toBe("");
     expect(store.userEmail).toBe("");
@@ -30,10 +30,10 @@ describe("auth persistence without a window (SSR)", () => {
 
     expect(() => store.logout()).not.toThrow();
     expect(store.role).toBe("VISITOR");
-    expect(store.token).toBeNull();
+    expect("token" in store).toBe(false);
   });
 
-  it("buildAuthHeaders omits Authorization when there is no persisted token", () => {
+  it("buildAuthHeaders never exposes a browser-managed bearer token", () => {
     const headers = buildAuthHeaders("EDITOR");
 
     expect(headers["Content-Type"]).toBe("application/json");

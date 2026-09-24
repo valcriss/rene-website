@@ -14,10 +14,15 @@ const getSecret = () => {
 
 const getExpiresIn = (): SignOptions["expiresIn"] => {
   const value = process.env.JWT_EXPIRES_IN?.trim();
-  return (value && value.length > 0 ? value : "12h") as SignOptions["expiresIn"];
+  return (value && value.length > 0 ? value : "15m") as SignOptions["expiresIn"];
 };
 
-export const signUserToken = (user: AuthUser): JwtResult<string> => {
+const issuer = "rene-website";
+const audience = "rene-website-web";
+
+export type VerifiedUserToken = AuthUser & { sessionId?: string; sessionVersion?: number };
+
+export const signUserToken = (user: AuthUser, sessionId?: string): JwtResult<string> => {
   const secret = getSecret();
   if (!secret) {
     return { ok: false, errors: ["JWT_SECRET is required"] };
@@ -28,23 +33,28 @@ export const signUserToken = (user: AuthUser): JwtResult<string> => {
       sub: user.id,
       email: user.email,
       name: user.name,
-      role: user.role
+      role: user.role,
+      ...(sessionId ? { sid: sessionId, sv: user.sessionVersion ?? 0 } : {})
     },
     secret,
-    { expiresIn: getExpiresIn() }
+    { algorithm: "HS256", audience, issuer, expiresIn: getExpiresIn() }
   );
 
   return { ok: true, value: token };
 };
 
-export const verifyUserToken = (token: string): JwtResult<AuthUser> => {
+export const verifyUserToken = (token: string): JwtResult<VerifiedUserToken> => {
   const secret = getSecret();
   if (!secret) {
     return { ok: false, errors: ["JWT_SECRET is required"] };
   }
 
   try {
-    const payload = jwt.verify(token, secret) as jwt.JwtPayload;
+    const payload = jwt.verify(token, secret, {
+      algorithms: ["HS256"],
+      audience,
+      issuer
+    }) as jwt.JwtPayload;
     if (!payload || typeof payload !== "object") {
       return { ok: false, errors: ["Token invalide"] };
     }
@@ -53,6 +63,8 @@ export const verifyUserToken = (token: string): JwtResult<AuthUser> => {
     const email = typeof payload.email === "string" ? payload.email : null;
     const name = typeof payload.name === "string" ? payload.name : null;
     const role = payload.role;
+    const sessionId = typeof payload.sid === "string" ? payload.sid : undefined;
+    const sessionVersion = typeof payload.sv === "number" ? payload.sv : undefined;
 
     if (!id || !email || !name || !isUserRole(role)) {
       return { ok: false, errors: ["Token invalide"] };
@@ -64,7 +76,8 @@ export const verifyUserToken = (token: string): JwtResult<AuthUser> => {
         id,
         email,
         name,
-        role
+        role,
+        ...(sessionId ? { sessionId, sessionVersion } : {})
       }
     };
   } catch {
