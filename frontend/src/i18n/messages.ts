@@ -71,7 +71,9 @@ export const messages = {
       multisite: "Multisite",
       mapEyebrow: "Explorer la zone",
       mapTitle: "Carte des \u00e9v\u00e9nements",
-      mapLead: "Rep\u00e8re g\u00e9ographique compl\u00e9mentaire"
+      mapLead: "Rep\u00e8re g\u00e9ographique compl\u00e9mentaire",
+      exploreAgendaEyebrow: "Explorer l'agenda",
+      exploreAgendaTitle: "Par ville et par cat\u00e9gorie"
     },
     search: {
       label: "Rechercher un \u00e9v\u00e9nement",
@@ -95,6 +97,23 @@ export const messages = {
       noTypes: "Aucun type disponible.",
       showFilters: "Afficher les filtres",
       hideFilters: "Masquer les filtres"
+    },
+    agenda: {
+      eyebrow: "Agenda local",
+      empty: "Aucun événement ne correspond pour le moment. Revenez bientôt ou consultez l'agenda complet.",
+      backToFullAgenda: "Voir l'agenda complet",
+      weekend: {
+        title: "L'agenda du week-end",
+        intro: "Concerts, expositions et sorties culturelles à ne pas manquer ce week-end à Descartes et alentours."
+      },
+      city: {
+        title: "Agenda de {city}",
+        intro: "Tous les événements culturels à venir à {city} et ses environs."
+      },
+      category: {
+        title: "Agenda — {category}",
+        intro: "Tous les événements à venir de type {category} à Descartes et alentours."
+      }
     },
     detail: {
       backToAgenda: "Retour \u00e0 l'agenda",
@@ -627,7 +646,9 @@ export const messages = {
       multisite: "Multisite",
       mapEyebrow: "Explore the area",
       mapTitle: "Event map",
-      mapLead: "Complementary geographic reference"
+      mapLead: "Complementary geographic reference",
+      exploreAgendaEyebrow: "Explore the agenda",
+      exploreAgendaTitle: "By city and category"
     },
     search: {
       label: "Search for an event",
@@ -651,6 +672,23 @@ export const messages = {
       noTypes: "No type available.",
       showFilters: "Show filters",
       hideFilters: "Hide filters"
+    },
+    agenda: {
+      eyebrow: "Local agenda",
+      empty: "Nothing matches right now. Check back soon or browse the full agenda.",
+      backToFullAgenda: "View the full agenda",
+      weekend: {
+        title: "This weekend's agenda",
+        intro: "Concerts, exhibitions and cultural outings not to miss this weekend in and around Descartes."
+      },
+      city: {
+        title: "Agenda for {city}",
+        intro: "All upcoming cultural events in {city} and its surroundings."
+      },
+      category: {
+        title: "Agenda — {category}",
+        intro: "All upcoming {category} events in and around Descartes."
+      }
     },
     detail: {
       backToAgenda: "Back to agenda",

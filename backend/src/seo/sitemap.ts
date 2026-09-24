@@ -1,8 +1,11 @@
 import { EventRepository } from "../events/repository";
+import { getActiveCategoryIds, getActiveCityFacets } from "./agenda";
 
 // Public, static top-level routes with no dynamic data — kept in sync with the public route list
-// in backend/src/static.ts (KNOWN_STATIC_ROUTES).
-const STATIC_PUBLIC_PATHS = ["/", "/contact", "/mentions-legales"];
+// in backend/src/static.ts (KNOWN_STATIC_ROUTES). /agenda/ce-week-end is evergreen (see
+// docs/seo-local-pages.md) so it's always listed, unlike the city/category pages below which are
+// only included while they have at least one currently active (published, non-archived) event.
+const STATIC_PUBLIC_PATHS = ["/", "/contact", "/mentions-legales", "/agenda/ce-week-end"];
 
 // Paths with no SEO value and/or that must never be indexed — kept in sync with static.ts's
 // NOINDEX_ROUTES and isBackofficeRoute.
@@ -34,7 +37,13 @@ export const buildSitemapXml = async (repo: EventRepository, siteUrl: string): P
   const eventEntries = events
     .filter(isSitemapEligible)
     .map((event) => buildUrlEntry(`${siteUrl}/evenements/${event.slug}`, event.updatedAt));
+  const cityEntries = getActiveCityFacets(events).map((facet) =>
+    buildUrlEntry(`${siteUrl}/agenda/ville/${facet.slug}`)
+  );
+  const categoryEntries = getActiveCategoryIds(events).map((categoryId) =>
+    buildUrlEntry(`${siteUrl}/agenda/categorie/${categoryId}`)
+  );
 
-  const entries = [...staticEntries, ...eventEntries].join("\n");
+  const entries = [...staticEntries, ...eventEntries, ...cityEntries, ...categoryEntries].join("\n");
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries}\n</urlset>\n`;
 };

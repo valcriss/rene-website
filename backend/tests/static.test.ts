@@ -15,6 +15,21 @@ jest.mock("../src/ssr", () => ({
 
 const frontendDist = path.resolve(__dirname, "../../frontend/dist/client");
 
+const cityOccurrence = {
+  id: "occ-1",
+  venueName: null,
+  address: null,
+  postalCode: null,
+  city: "Descartes",
+  latitude: null,
+  longitude: null,
+  eventStartAt: "2026-01-15T20:00:00.000Z",
+  eventEndAt: "2026-01-15T22:00:00.000Z",
+  allDay: false,
+  createdAt: "2026-01-01T00:00:00.000Z",
+  updatedAt: "2026-01-01T00:00:00.000Z"
+};
+
 const baseEvent: Event = {
   id: "published",
   title: "Concert",
@@ -217,6 +232,87 @@ describe("registerStatic", () => {
     expect(response.status).toBe(200);
     expect(response.text).toBe("<html><body>SSR:/contact</body></html>");
     expect(response.headers["x-robots-tag"]).toBeUndefined();
+  });
+
+  it("serves SSR-rendered HTML for the evergreen weekend agenda page", async () => {
+    const app = express();
+    registerStatic(app, createRepo(null));
+
+    const response = await request(app).get("/agenda/ce-week-end");
+
+    expect(response.status).toBe(200);
+    expect(response.text).toBe("<html><body>SSR:/agenda/ce-week-end</body></html>");
+    expect(response.headers["x-robots-tag"]).toBeUndefined();
+  });
+
+  it("serves an indexable SSR page for a city with a currently active event", async () => {
+    const app = express();
+    registerStatic(
+      app,
+      createRepo({ ...baseEvent, occurrences: [{ ...cityOccurrence }] })
+    );
+
+    const response = await request(app).get("/agenda/ville/descartes");
+
+    expect(response.status).toBe(200);
+    expect(response.text).toBe("<html><body>SSR:/agenda/ville/descartes</body></html>");
+    expect(response.headers["x-robots-tag"]).toBeUndefined();
+  });
+
+  it("serves a noindex SSR page for a known city that currently has no active event", async () => {
+    const app = express();
+    registerStatic(
+      app,
+      createRepo({ ...baseEvent, status: "DRAFT", occurrences: [{ ...cityOccurrence }] })
+    );
+
+    const response = await request(app).get("/agenda/ville/descartes");
+
+    expect(response.status).toBe(200);
+    expect(response.headers["x-robots-tag"]).toBe("noindex");
+  });
+
+  it("returns a real 404 for a city that has never been used", async () => {
+    const app = express();
+    registerStatic(app, createRepo({ ...baseEvent, occurrences: [{ ...cityOccurrence }] }));
+
+    const response = await request(app).get("/agenda/ville/paris");
+
+    expect(response.status).toBe(404);
+    expect(response.text).toBe("<h1>Index</h1>");
+    expect(renderMock).not.toHaveBeenCalled();
+  });
+
+  it("serves an indexable SSR page for a category with a currently active event", async () => {
+    const app = express();
+    registerStatic(app, createRepo({ ...baseEvent, categoryId: "music" }));
+
+    const response = await request(app).get("/agenda/categorie/music");
+
+    expect(response.status).toBe(200);
+    expect(response.text).toBe("<html><body>SSR:/agenda/categorie/music</body></html>");
+    expect(response.headers["x-robots-tag"]).toBeUndefined();
+  });
+
+  it("serves a noindex SSR page for a known category that currently has no active event", async () => {
+    const app = express();
+    registerStatic(app, createRepo({ ...baseEvent, status: "REJECTED", categoryId: "music" }));
+
+    const response = await request(app).get("/agenda/categorie/music");
+
+    expect(response.status).toBe(200);
+    expect(response.headers["x-robots-tag"]).toBe("noindex");
+  });
+
+  it("returns a real 404 for a category that has never been used", async () => {
+    const app = express();
+    registerStatic(app, createRepo({ ...baseEvent, categoryId: "music" }));
+
+    const response = await request(app).get("/agenda/categorie/science");
+
+    expect(response.status).toBe(404);
+    expect(response.text).toBe("<h1>Index</h1>");
+    expect(renderMock).not.toHaveBeenCalled();
   });
 
   // express.static serves index.html for "/" by default *before* any later handler runs;
