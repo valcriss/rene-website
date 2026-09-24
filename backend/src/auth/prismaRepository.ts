@@ -1,7 +1,7 @@
 import { prisma } from "../prisma/client";
 import { UserRole } from "./roles";
 import { AuthRepository } from "./repository";
-import { AuthUser, AuthUserWithPassword } from "./types";
+import { AuthSession, AuthUser, AuthUserWithPassword } from "./types";
 
 type PrismaUser = {
   id: string;
@@ -9,6 +9,7 @@ type PrismaUser = {
   email: string;
   role: UserRole;
   passwordHash: string;
+  sessionVersion: number;
 };
 
 type PrismaPasswordResetToken = {
@@ -22,14 +23,16 @@ const toAuthUserWithPassword = (user: PrismaUser): AuthUserWithPassword => ({
   name: user.name,
   email: user.email,
   role: user.role,
-  passwordHash: user.passwordHash
+  passwordHash: user.passwordHash,
+  sessionVersion: user.sessionVersion
 });
 
 const toAuthUser = (user: PrismaUser): AuthUser => ({
   id: user.id,
   name: user.name,
   email: user.email,
-  role: user.role
+  role: user.role,
+  sessionVersion: user.sessionVersion
 });
 
 const isUniqueConstraintError = (error: unknown) =>
@@ -94,5 +97,33 @@ export const createPrismaAuthRepository = (): AuthRepository => ({
       ),
   deletePasswordResetTokensByUserId: async (userId) => {
     await prisma.passwordResetToken.deleteMany({ where: { userId } });
+  },
+  createSession: async (input) => {
+    await prisma.authSession.create({ data: input });
+  },
+  getSessionById: async (id) =>
+    prisma.authSession.findUnique({ where: { id } }) as Promise<AuthSession | null>,
+  getSessionByRefreshTokenHash: async (refreshTokenHash) =>
+    prisma.authSession.findUnique({ where: { refreshTokenHash } }) as Promise<AuthSession | null>,
+  rotateSession: async (currentSessionId, nextSession) => {
+    await prisma.$transaction([
+      prisma.authSession.update({ where: { id: currentSessionId }, data: { revokedAt: new Date() } }),
+      prisma.authSession.create({ data: nextSession })
+    ]);
+  },
+  revokeSessionFamily: async (familyId) => {
+    await prisma.authSession.updateMany({
+      where: { familyId, revokedAt: null },
+      data: { revokedAt: new Date() }
+    });
+  },
+  invalidateUserSessions: async (userId) => {
+    await prisma.$transaction([
+      prisma.user.update({ where: { id: userId }, data: { sessionVersion: { increment: 1 } } }),
+      prisma.authSession.updateMany({
+        where: { userId, revokedAt: null },
+        data: { revokedAt: new Date() }
+      })
+    ]);
   }
 });

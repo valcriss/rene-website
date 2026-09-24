@@ -6,7 +6,6 @@ export type AuthUser = {
 };
 
 export type AuthResponse = {
-  token: string;
   user: AuthUser;
 };
 
@@ -44,7 +43,8 @@ const postAuthRequest = async (path: string, body: Record<string, string>, fallb
     headers: {
       "Content-Type": "application/json"
     },
-    body: JSON.stringify(body)
+    body: JSON.stringify(body),
+    credentials: "same-origin"
   });
 
   if (!response.ok) {
@@ -60,7 +60,8 @@ const postVoidRequest = async (path: string, body: Record<string, string>, fallb
     headers: {
       "Content-Type": "application/json"
     },
-    body: JSON.stringify(body)
+    body: JSON.stringify(body),
+    credentials: "same-origin"
   });
 
   if (!response.ok) {
@@ -79,3 +80,30 @@ export const requestPasswordReset = async (email: string): Promise<void> =>
 
 export const resetPassword = async (payload: ResetPasswordPayload): Promise<void> =>
   postVoidRequest("/api/auth/reset-password", payload, "Réinitialisation impossible");
+
+const csrfHeader = () => {
+  const item = document.cookie.split(";").map((part) => part.trim()).find((part) => part.startsWith("rene_csrf="));
+  return item ? { "X-CSRF-Token": decodeURIComponent(item.slice("rene_csrf=".length)) } : {};
+};
+
+export const getSession = async (): Promise<AuthResponse | null> => {
+  let response = await fetch("/api/auth/session", { credentials: "same-origin" });
+  if (response.status === 401) {
+    const refresh = await fetch("/api/auth/refresh", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: csrfHeader()
+    });
+    if (!refresh.ok) return null;
+    response = await fetch("/api/auth/session", { credentials: "same-origin" });
+  }
+  return response.ok ? response.json() as Promise<AuthResponse> : null;
+};
+
+export const logout = async (): Promise<void> => {
+  await fetch("/api/auth/logout", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: csrfHeader()
+  });
+};

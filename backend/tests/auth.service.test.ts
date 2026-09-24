@@ -12,6 +12,7 @@ const buildRepo = (
     createPasswordResetToken?: AuthRepository["createPasswordResetToken"];
     getPasswordResetTokenByHash?: AuthRepository["getPasswordResetTokenByHash"];
     deletePasswordResetTokensByUserId?: AuthRepository["deletePasswordResetTokensByUserId"];
+    invalidateUserSessions?: AuthRepository["invalidateUserSessions"];
   }
 ): AuthRepository => ({
   getUserByEmail: async (email) =>
@@ -37,7 +38,8 @@ const buildRepo = (
   updatePasswordHash: updatePasswordHash ?? (async () => undefined),
   createPasswordResetToken: options?.createPasswordResetToken ?? (async () => undefined),
   getPasswordResetTokenByHash: options?.getPasswordResetTokenByHash ?? (async () => null),
-  deletePasswordResetTokensByUserId: options?.deletePasswordResetTokensByUserId ?? (async () => undefined)
+  deletePasswordResetTokensByUserId: options?.deletePasswordResetTokensByUserId ?? (async () => undefined),
+  invalidateUserSessions: options?.invalidateUserSessions
 });
 
 describe("auth service", () => {
@@ -77,7 +79,6 @@ describe("auth service", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
 
-    expect(result.value.token).toBeDefined();
     expect(result.value.user.email).toBe("test@example.com");
   });
 
@@ -115,11 +116,11 @@ describe("auth service", () => {
     expect(result.ok).toBe(true);
   });
 
-  it("returns error when JWT secret is missing", async () => {
+  it("validates credentials independently from session configuration", async () => {
     delete process.env.JWT_SECRET;
     const repo = buildRepo(await hashPassword("secret"));
     const result = await login(repo, { email: "test@example.com", password: "secret" });
-    expect(result.ok).toBe(false);
+    expect(result.ok).toBe(true);
   });
 
   it("returns signup validation errors", async () => {
@@ -223,10 +224,9 @@ describe("auth service", () => {
     });
     await expect(verifyPassword("secret123", expectedHash)).resolves.toBe(true);
     expect(result.value.user.role).toBe("EDITOR");
-    expect(result.value.token).toBeDefined();
   });
 
-  it("returns signup error when JWT secret is missing", async () => {
+  it("creates the account independently from session configuration", async () => {
     delete process.env.JWT_SECRET;
     const repo = buildRepo(null);
     const result = await signup(repo, {
@@ -236,10 +236,7 @@ describe("auth service", () => {
       passwordConfirmation: "secret123"
     });
 
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.code).toBe("validation");
-    }
+    expect(result.ok).toBe(true);
   });
 
   it("requests a password reset with validation errors", async () => {
@@ -344,6 +341,7 @@ describe("auth service", () => {
   it("resets a password with a valid token", async () => {
     const updatePasswordHash = jest.fn<Promise<void>, [string, string]>(async () => undefined);
     const deletePasswordResetTokensByUserId = jest.fn<Promise<void>, [string]>(async () => undefined);
+    const invalidateUserSessions = jest.fn<Promise<void>, [string]>(async () => undefined);
     const repo = buildRepo(await hashPassword("secret"), undefined, updatePasswordHash, {
       getPasswordResetTokenByHash: async (tokenHash) =>
         tokenHash === hashPasswordResetToken("valid-token")
@@ -353,7 +351,8 @@ describe("auth service", () => {
               expiresAt: new Date(Date.now() + 60_000)
             }
           : null,
-      deletePasswordResetTokensByUserId
+      deletePasswordResetTokensByUserId,
+      invalidateUserSessions
     });
 
     const result = await resetPassword(repo, {
@@ -366,6 +365,7 @@ describe("auth service", () => {
     expect(updatePasswordHash).toHaveBeenCalledWith("user-1", expect.any(String));
     await expect(verifyPassword("new-secret-123", updatePasswordHash.mock.calls[0][1])).resolves.toBe(true);
     expect(deletePasswordResetTokensByUserId).toHaveBeenCalledWith("user-1");
+    expect(invalidateUserSessions).toHaveBeenCalledWith("user-1");
   });
 
   it("rejects an invalid reset token", async () => {

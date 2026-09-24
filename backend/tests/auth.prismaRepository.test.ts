@@ -6,6 +6,11 @@ jest.mock("@prisma/client", () => {
   const passwordResetTokenCreate = jest.fn();
   const passwordResetTokenFindUnique = jest.fn();
   const passwordResetTokenDeleteMany = jest.fn();
+  const authSessionCreate = jest.fn();
+  const authSessionFindUnique = jest.fn();
+  const authSessionUpdate = jest.fn();
+  const authSessionUpdateMany = jest.fn();
+  const transaction = jest.fn((operations: unknown[]) => Promise.all(operations));
 
   return {
     PrismaClient: jest.fn(() => ({
@@ -19,7 +24,14 @@ jest.mock("@prisma/client", () => {
         create: passwordResetTokenCreate,
         findUnique: passwordResetTokenFindUnique,
         deleteMany: passwordResetTokenDeleteMany
-      }
+      },
+      authSession: {
+        create: authSessionCreate,
+        findUnique: authSessionFindUnique,
+        update: authSessionUpdate,
+        updateMany: authSessionUpdateMany
+      },
+      $transaction: transaction
     })),
     __mocks: {
       userFindUnique,
@@ -28,7 +40,12 @@ jest.mock("@prisma/client", () => {
       userUpdate,
       passwordResetTokenCreate,
       passwordResetTokenFindUnique,
-      passwordResetTokenDeleteMany
+      passwordResetTokenDeleteMany,
+      authSessionCreate,
+      authSessionFindUnique,
+      authSessionUpdate,
+      authSessionUpdateMany,
+      transaction
     }
   };
 });
@@ -43,6 +60,11 @@ const prismaMocks = jest.requireMock("@prisma/client").__mocks as {
   passwordResetTokenCreate: jest.Mock;
   passwordResetTokenFindUnique: jest.Mock;
   passwordResetTokenDeleteMany: jest.Mock;
+  authSessionCreate: jest.Mock;
+  authSessionFindUnique: jest.Mock;
+  authSessionUpdate: jest.Mock;
+  authSessionUpdateMany: jest.Mock;
+  transaction: jest.Mock;
 };
 
 describe("createPrismaAuthRepository", () => {
@@ -54,6 +76,11 @@ describe("createPrismaAuthRepository", () => {
     prismaMocks.passwordResetTokenCreate.mockReset();
     prismaMocks.passwordResetTokenFindUnique.mockReset();
     prismaMocks.passwordResetTokenDeleteMany.mockReset();
+    prismaMocks.authSessionCreate.mockReset();
+    prismaMocks.authSessionFindUnique.mockReset();
+    prismaMocks.authSessionUpdate.mockReset();
+    prismaMocks.authSessionUpdateMany.mockReset();
+    prismaMocks.transaction.mockClear();
   });
 
   it("gets user by email", async () => {
@@ -235,5 +262,57 @@ describe("createPrismaAuthRepository", () => {
     await repo.deletePasswordResetTokensByUserId("user-1");
 
     expect(prismaMocks.passwordResetTokenDeleteMany).toHaveBeenCalledWith({ where: { userId: "user-1" } });
+  });
+
+  it("persists, reads, rotates and revokes sessions", async () => {
+    const repo = createPrismaAuthRepository();
+    const now = new Date("2026-09-24T10:00:00.000Z");
+    const input = {
+      id: "session-1",
+      userId: "user-1",
+      familyId: "family-1",
+      refreshTokenHash: "hash-1",
+      sessionVersion: 0,
+      createdAt: now,
+      lastUsedAt: now,
+      expiresAt: new Date("2026-09-24T18:00:00.000Z")
+    };
+    const stored = { ...input, revokedAt: null };
+    prismaMocks.authSessionFindUnique.mockResolvedValue(stored);
+
+    await repo.createSession!(input);
+    expect(prismaMocks.authSessionCreate).toHaveBeenCalledWith({ data: input });
+    await expect(repo.getSessionById!("session-1")).resolves.toEqual(stored);
+    expect(prismaMocks.authSessionFindUnique).toHaveBeenCalledWith({ where: { id: "session-1" } });
+    await expect(repo.getSessionByRefreshTokenHash!("hash-1")).resolves.toEqual(stored);
+    expect(prismaMocks.authSessionFindUnique).toHaveBeenCalledWith({ where: { refreshTokenHash: "hash-1" } });
+
+    const next = { ...input, id: "session-2", refreshTokenHash: "hash-2" };
+    await repo.rotateSession!("session-1", next);
+    expect(prismaMocks.authSessionUpdate).toHaveBeenCalledWith({
+      where: { id: "session-1" },
+      data: { revokedAt: expect.any(Date) }
+    });
+    expect(prismaMocks.authSessionCreate).toHaveBeenCalledWith({ data: next });
+
+    await repo.revokeSessionFamily!("family-1");
+    expect(prismaMocks.authSessionUpdateMany).toHaveBeenCalledWith({
+      where: { familyId: "family-1", revokedAt: null },
+      data: { revokedAt: expect.any(Date) }
+    });
+  });
+
+  it("increments session version and revokes all user sessions", async () => {
+    const repo = createPrismaAuthRepository();
+    await repo.invalidateUserSessions!("user-1");
+    expect(prismaMocks.userUpdate).toHaveBeenCalledWith({
+      where: { id: "user-1" },
+      data: { sessionVersion: { increment: 1 } }
+    });
+    expect(prismaMocks.authSessionUpdateMany).toHaveBeenCalledWith({
+      where: { userId: "user-1", revokedAt: null },
+      data: { revokedAt: expect.any(Date) }
+    });
+    expect(prismaMocks.transaction).toHaveBeenCalledTimes(1);
   });
 });

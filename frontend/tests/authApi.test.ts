@@ -1,5 +1,5 @@
 import { vi } from "vitest";
-import { login, requestPasswordReset, resetPassword, signup } from "../src/api/auth";
+import { getSession, login, logout, requestPasswordReset, resetPassword, signup } from "../src/api/auth";
 
 describe("auth api", () => {
   afterEach(() => {
@@ -10,15 +10,15 @@ describe("auth api", () => {
     const fetchMock = vi.fn(() =>
       Promise.resolve({
         ok: true,
-        json: () => Promise.resolve({ token: "t", user: { id: "1", name: "U", email: "u@test", role: "EDITOR" } })
+        json: () => Promise.resolve({ user: { id: "1", name: "U", email: "u@test", role: "EDITOR" } })
       })
     );
     vi.stubGlobal("fetch", fetchMock);
 
     const result = await login("u@test", "secret");
 
-    expect(result.token).toBe("t");
-    expect(fetchMock).toHaveBeenCalledWith("/api/auth/login", expect.any(Object));
+    expect(result.user.email).toBe("u@test");
+    expect(fetchMock).toHaveBeenCalledWith("/api/auth/login", expect.objectContaining({ credentials: "same-origin" }));
   });
 
   it("throws with API errors", async () => {
@@ -100,5 +100,54 @@ describe("auth api", () => {
     });
 
     expect(fetchMock).toHaveBeenCalledWith("/api/auth/reset-password", expect.any(Object));
+  });
+
+  it("restores an active session", async () => {
+    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ user: { id: "1", name: "U", email: "u@test", role: "EDITOR" } })
+    })));
+    await expect(getSession()).resolves.toMatchObject({ user: { email: "u@test" } });
+  });
+
+  it("rotates the refresh token before retrying an expired access session", async () => {
+    document.cookie = "rene_csrf=csrf%20token; Path=/";
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: false, status: 401 })
+      .mockResolvedValueOnce({ ok: true, status: 200 })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ user: { id: "1", name: "U", email: "u@test", role: "EDITOR" } })
+      });
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(getSession()).resolves.toMatchObject({ user: { id: "1" } });
+    expect(fetchMock).toHaveBeenNthCalledWith(2, "/api/auth/refresh", expect.objectContaining({
+      method: "POST",
+      headers: { "X-CSRF-Token": "csrf token" }
+    }));
+  });
+
+  it("returns no session when refresh or session validation fails", async () => {
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce({ ok: false, status: 401 })
+      .mockResolvedValueOnce({ ok: false, status: 401 }));
+    await expect(getSession()).resolves.toBeNull();
+
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce({ ok: false, status: 500 }));
+    await expect(getSession()).resolves.toBeNull();
+  });
+
+  it("logs out with same-origin credentials and CSRF", async () => {
+    document.cookie = "rene_csrf=logout-token; Path=/";
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal("fetch", fetchMock);
+    await logout();
+    expect(fetchMock).toHaveBeenCalledWith("/api/auth/logout", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "X-CSRF-Token": "logout-token" }
+    });
   });
 });
