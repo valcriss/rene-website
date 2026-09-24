@@ -24,6 +24,7 @@ import NavigationHeader from "../components/navigation/Header.vue";
 import EventDetailView from "../components/events/EventDetailView.vue";
 import { useEventsStore } from "../stores/events";
 import { usePageSeo } from "../composables/usePageSeo";
+import { useEventStructuredData } from "../composables/useStructuredData";
 import { buildPlainTextDescription } from "../utils/seo";
 import { getEventDetailPath } from "../utils/eventLinks";
 
@@ -47,6 +48,8 @@ usePageSeo({
   image: () => seoEvent.value?.image,
   type: "article"
 });
+
+useEventStructuredData(() => seoEvent.value);
 
 const goToLogin = () => {
   router.push("/login");
