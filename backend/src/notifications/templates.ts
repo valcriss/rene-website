@@ -58,6 +58,12 @@ export const buildPasswordResetBody = (resetUrl: string, ttlMinutes: number) =>
   `Utilisez ce lien pour définir un nouveau mot de passe :\n${resetUrl}\n\n` +
   `Ce lien expire dans ${ttlMinutes} minutes. Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet email.`;
 
+export const buildEmailVerificationSubject = () => "Vérifiez votre adresse email R3ne";
+
+export const buildEmailVerificationBody = (verificationUrl: string, ttlMinutes: number) =>
+  `Bienvenue sur R3ne. Confirmez votre adresse email pour activer votre compte :\n${verificationUrl}\n\n` +
+  `Ce lien expire dans ${ttlMinutes} minutes.`;
+
 export const buildContactMessageSubject = (name: string) => `Nouveau message de contact de ${name}`;
 
 export const buildContactMessageBody = (name: string, email: string, message: string) =>

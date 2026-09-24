@@ -39,17 +39,18 @@ describe("SignupPage", () => {
     expect(await screen.findByText("Inscription impossible")).toBeInTheDocument();
   });
 
-  it("navigates to backoffice on signup success", async () => {
+  it("asks the visitor to verify their email on signup success", async () => {
     const { router, pinia } = await setup();
     const authStore = useAuthStore(pinia);
     const pushSpy = vi.spyOn(router, "push");
-    const resetSpy = vi.spyOn(authStore, "resetSignupForm");
-    vi.spyOn(authStore, "signupWithPassword").mockResolvedValue(undefined);
+    vi.spyOn(authStore, "signupWithPassword").mockImplementation(async () => {
+      authStore.signupVerificationSent = true;
+    });
 
     await fireEvent.click(screen.getByRole("button", { name: "Créer mon compte" }));
 
-    expect(resetSpy).toHaveBeenCalled();
-    expect(pushSpy).toHaveBeenCalledWith("/backoffice");
+    expect(await screen.findByText("Vérifiez votre boîte email pour activer votre compte avant de vous connecter.")).toBeInTheDocument();
+    expect(pushSpy).not.toHaveBeenCalledWith("/backoffice");
   });
 
   it("navigates to login", async () => {

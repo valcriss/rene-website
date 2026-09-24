@@ -1,6 +1,8 @@
-import { Router } from "express";
+import { Request, Response, Router } from "express";
 import { AuthRepository } from "./repository";
-import { login, requestPasswordReset, resetPassword, signup } from "./service";
+import { normalizeEmail } from "./email";
+import { checkAuthThrottle, clearLoginThrottle } from "./rateLimiter";
+import { login, requestPasswordReset, resetPassword, signup, verifyEmail } from "./service";
 import { clearSessionCookies, setSessionCookies } from "./cookies";
 import { createSession, parseCookies, REFRESH_COOKIE, refreshSession, revokeSession } from "./session";
 
@@ -14,13 +16,28 @@ const publicUser = (user: { id: string; name: string; email: string; role: strin
 export const createAuthRouter = (repo: AuthRepository) => {
   const router = Router();
 
+  const rejectThrottledRequest = async (
+    req: Request,
+    res: Response,
+    action: "login" | "signup" | "forgot-password" | "reset-password",
+    identifier?: string
+  ) => {
+    const result = await checkAuthThrottle(repo, action, req.ip!, identifier);
+    if (result.allowed) return false;
+    res.set("Retry-After", String(result.retryAfterSeconds));
+    res.status(429).json({ errors: ["Trop de tentatives. Réessayez plus tard."] });
+    return true;
+  };
+
   router.post("/auth/login", async (req, res) => {
+    if (await rejectThrottledRequest(req, res, "login", normalizeEmail(req.body?.email) ?? undefined)) return;
     const result = await login(repo, req.body);
     if (!result.ok) {
       const status = result.errors.includes("Identifiants invalides.") ? 401 : 400;
       res.status(status).json({ errors: result.errors });
       return;
     }
+    await clearLoginThrottle(repo, result.value.user.email);
     const session = await createSession(repo, result.value.user);
     if (!session.ok) {
       res.status(500).json({ errors: ["Session configuration error"] });
@@ -31,20 +48,13 @@ export const createAuthRouter = (repo: AuthRepository) => {
   });
 
   router.post("/auth/signup", async (req, res) => {
+    if (await rejectThrottledRequest(req, res, "signup")) return;
     const result = await signup(repo, req.body);
     if (!result.ok) {
-      const status = result.code === "conflict" ? 409 : 400;
-      res.status(status).json({ errors: result.errors });
+      res.status(400).json({ errors: result.errors });
       return;
     }
-
-    const session = await createSession(repo, result.value.user);
-    if (!session.ok) {
-      res.status(500).json({ errors: ["Session configuration error"] });
-      return;
-    }
-    setSessionCookies(res, session.value.accessToken, session.value.refreshToken);
-    res.status(201).json({ user: publicUser(session.value.user) });
+    res.status(202).json({ message: result.value.message });
   });
 
   router.get("/auth/session", (req, res) => {
@@ -80,10 +90,10 @@ export const createAuthRouter = (repo: AuthRepository) => {
   });
 
   router.post("/auth/forgot-password", async (req, res) => {
+    if (await rejectThrottledRequest(req, res, "forgot-password", normalizeEmail(req.body?.email) ?? undefined)) return;
     const result = await requestPasswordReset(repo, req.body);
     if (!result.ok) {
-      const status = result.code === "validation" ? 400 : 500;
-      res.status(status).json({ errors: result.errors });
+      res.status(400).json({ errors: result.errors });
       return;
     }
 
@@ -91,12 +101,25 @@ export const createAuthRouter = (repo: AuthRepository) => {
   });
 
   router.post("/auth/reset-password", async (req, res) => {
+    const token = typeof req.body?.token === "string" ? req.body.token.trim() : undefined;
+    if (await rejectThrottledRequest(req, res, "reset-password", token)) return;
     const result = await resetPassword(repo, req.body);
     if (!result.ok) {
       res.status(400).json({ errors: result.errors });
       return;
     }
 
+    res.json(result.value);
+  });
+
+  router.post("/auth/verify-email", async (req, res) => {
+    const token = typeof req.body?.token === "string" ? req.body.token.trim() : "";
+    if (await rejectThrottledRequest(req, res, "reset-password", token || undefined)) return;
+    const result = await verifyEmail(repo, token);
+    if (!result.ok) {
+      res.status(400).json({ errors: result.errors });
+      return;
+    }
     res.json(result.value);
   });
 

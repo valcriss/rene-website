@@ -6,11 +6,30 @@ jest.mock("@prisma/client", () => {
   const passwordResetTokenCreate = jest.fn();
   const passwordResetTokenFindUnique = jest.fn();
   const passwordResetTokenDeleteMany = jest.fn();
+  const emailVerificationTokenCreate = jest.fn();
+  const emailVerificationTokenFindUnique = jest.fn();
+  const emailVerificationTokenDeleteMany = jest.fn();
+  const authRateLimitFindUnique = jest.fn();
+  const authRateLimitCreate = jest.fn();
+  const authRateLimitUpdate = jest.fn();
+  const authRateLimitDelete = jest.fn();
+  const executeRawUnsafe = jest.fn();
   const authSessionCreate = jest.fn();
   const authSessionFindUnique = jest.fn();
   const authSessionUpdate = jest.fn();
   const authSessionUpdateMany = jest.fn();
-  const transaction = jest.fn((operations: unknown[]) => Promise.all(operations));
+  const prismaMock = {
+    authRateLimit: {
+      findUnique: authRateLimitFindUnique,
+      create: authRateLimitCreate,
+      update: authRateLimitUpdate,
+      delete: authRateLimitDelete
+    },
+    $executeRawUnsafe: executeRawUnsafe
+  };
+  const transaction = jest.fn((operations: unknown[] | ((tx: typeof prismaMock) => unknown)) =>
+    typeof operations === "function" ? operations(prismaMock) : Promise.all(operations)
+  );
 
   return {
     PrismaClient: jest.fn(() => ({
@@ -25,6 +44,13 @@ jest.mock("@prisma/client", () => {
         findUnique: passwordResetTokenFindUnique,
         deleteMany: passwordResetTokenDeleteMany
       },
+      emailVerificationToken: {
+        create: emailVerificationTokenCreate,
+        findUnique: emailVerificationTokenFindUnique,
+        deleteMany: emailVerificationTokenDeleteMany
+      },
+      authRateLimit: prismaMock.authRateLimit,
+      $executeRawUnsafe: executeRawUnsafe,
       authSession: {
         create: authSessionCreate,
         findUnique: authSessionFindUnique,
@@ -41,6 +67,14 @@ jest.mock("@prisma/client", () => {
       passwordResetTokenCreate,
       passwordResetTokenFindUnique,
       passwordResetTokenDeleteMany,
+      emailVerificationTokenCreate,
+      emailVerificationTokenFindUnique,
+      emailVerificationTokenDeleteMany,
+      authRateLimitFindUnique,
+      authRateLimitCreate,
+      authRateLimitUpdate,
+      authRateLimitDelete,
+      executeRawUnsafe,
       authSessionCreate,
       authSessionFindUnique,
       authSessionUpdate,
@@ -60,6 +94,14 @@ const prismaMocks = jest.requireMock("@prisma/client").__mocks as {
   passwordResetTokenCreate: jest.Mock;
   passwordResetTokenFindUnique: jest.Mock;
   passwordResetTokenDeleteMany: jest.Mock;
+  emailVerificationTokenCreate: jest.Mock;
+  emailVerificationTokenFindUnique: jest.Mock;
+  emailVerificationTokenDeleteMany: jest.Mock;
+  authRateLimitFindUnique: jest.Mock;
+  authRateLimitCreate: jest.Mock;
+  authRateLimitUpdate: jest.Mock;
+  authRateLimitDelete: jest.Mock;
+  executeRawUnsafe: jest.Mock;
   authSessionCreate: jest.Mock;
   authSessionFindUnique: jest.Mock;
   authSessionUpdate: jest.Mock;
@@ -76,6 +118,14 @@ describe("createPrismaAuthRepository", () => {
     prismaMocks.passwordResetTokenCreate.mockReset();
     prismaMocks.passwordResetTokenFindUnique.mockReset();
     prismaMocks.passwordResetTokenDeleteMany.mockReset();
+    prismaMocks.emailVerificationTokenCreate.mockReset();
+    prismaMocks.emailVerificationTokenFindUnique.mockReset();
+    prismaMocks.emailVerificationTokenDeleteMany.mockReset();
+    prismaMocks.authRateLimitFindUnique.mockReset();
+    prismaMocks.authRateLimitCreate.mockReset();
+    prismaMocks.authRateLimitUpdate.mockReset();
+    prismaMocks.authRateLimitDelete.mockReset();
+    prismaMocks.executeRawUnsafe.mockReset();
     prismaMocks.authSessionCreate.mockReset();
     prismaMocks.authSessionFindUnique.mockReset();
     prismaMocks.authSessionUpdate.mockReset();
@@ -96,6 +146,15 @@ describe("createPrismaAuthRepository", () => {
     const result = await repo.getUserByEmail("test@example.com");
 
     expect(result?.email).toBe("test@example.com");
+  });
+
+  it("maps session and email-verification status when present", async () => {
+    const verifiedAt = new Date("2026-09-24T10:00:00.000Z");
+    prismaMocks.userFindUnique.mockResolvedValue({
+      id: "verified", name: "Verified", email: "verified@test", role: "EDITOR", passwordHash: "hash", sessionVersion: 4, emailVerifiedAt: verifiedAt
+    });
+    await expect(createPrismaAuthRepository().getUserByEmail("verified@test"))
+      .resolves.toMatchObject({ sessionVersion: 4, emailVerifiedAt: verifiedAt });
   });
 
   it("gets user by id", async () => {
@@ -187,6 +246,23 @@ describe("createPrismaAuthRepository", () => {
     });
 
     expect(result).toBeNull();
+  });
+
+  it("creates an unverified editor and handles its unique and unexpected failures", async () => {
+    const repo = createPrismaAuthRepository();
+    prismaMocks.userCreate.mockResolvedValueOnce({
+      id: "pending-user", name: "Pending", email: "pending@test", role: "EDITOR", passwordHash: "hash", sessionVersion: 0, emailVerifiedAt: null
+    });
+    await expect(repo.createUnverifiedEditorUser!({ name: "Pending", email: "pending@test", passwordHash: "hash" }))
+      .resolves.toMatchObject({ id: "pending-user", emailVerifiedAt: null });
+    expect(prismaMocks.userCreate).toHaveBeenLastCalledWith({
+      data: { name: "Pending", email: "pending@test", role: "EDITOR", passwordHash: "hash", emailVerifiedAt: null }
+    });
+
+    prismaMocks.userCreate.mockRejectedValueOnce({ code: "P2002" });
+    await expect(repo.createUnverifiedEditorUser!({ name: "Pending", email: "pending@test", passwordHash: "hash" })).resolves.toBeNull();
+    prismaMocks.userCreate.mockRejectedValueOnce(new Error("boom"));
+    await expect(repo.createUnverifiedEditorUser!({ name: "Pending", email: "pending@test", passwordHash: "hash" })).rejects.toThrow("boom");
   });
 
   it("rethrows non-unique create errors", async () => {
@@ -314,5 +390,46 @@ describe("createPrismaAuthRepository", () => {
       data: { revokedAt: expect.any(Date) }
     });
     expect(prismaMocks.transaction).toHaveBeenCalledTimes(1);
+  });
+
+  it("persists and consumes email verification tokens", async () => {
+    const repo = createPrismaAuthRepository();
+    const expiresAt = new Date("2026-09-25T10:00:00.000Z");
+    prismaMocks.emailVerificationTokenFindUnique.mockResolvedValue({ id: "verify-1", userId: "user-1", expiresAt });
+
+    await repo.createEmailVerificationToken!("user-1", "verification-hash", expiresAt);
+    expect(prismaMocks.emailVerificationTokenDeleteMany).toHaveBeenCalledWith({ where: { userId: "user-1" } });
+    expect(prismaMocks.emailVerificationTokenCreate).toHaveBeenCalledWith({
+      data: { userId: "user-1", tokenHash: "verification-hash", expiresAt }
+    });
+    await expect(repo.getEmailVerificationTokenByHash!("verification-hash")).resolves.toEqual({ id: "verify-1", userId: "user-1", expiresAt });
+    await repo.deleteEmailVerificationTokensByUserId!("user-1");
+    prismaMocks.emailVerificationTokenFindUnique.mockResolvedValueOnce(null);
+    await expect(repo.getEmailVerificationTokenByHash!("missing")).resolves.toBeNull();
+    await repo.markEmailVerified!("user-1");
+    expect(prismaMocks.userUpdate).toHaveBeenCalledWith({ where: { id: "user-1" }, data: { emailVerifiedAt: expect.any(Date) } });
+  });
+
+  it("serializes persistent rate-limit decisions and tolerates a missing key on clear", async () => {
+    const repo = createPrismaAuthRepository();
+    const now = new Date("2026-09-24T10:00:00.000Z");
+    prismaMocks.authRateLimitFindUnique.mockResolvedValueOnce(null);
+    await expect(repo.consumeRateLimit!({ key: "k", limit: { max: 2, windowMs: 60_000 }, now }))
+      .resolves.toEqual({ allowed: true, retryAfterSeconds: 0 });
+    expect(prismaMocks.executeRawUnsafe).toHaveBeenCalledWith("SELECT pg_advisory_xact_lock(hashtext($1))", "k");
+    expect(prismaMocks.authRateLimitCreate).toHaveBeenCalled();
+
+    prismaMocks.authRateLimitFindUnique.mockResolvedValueOnce({ key: "k", attempts: 2, windowStartedAt: now, blockedUntil: null });
+    await expect(repo.consumeRateLimit!({ key: "k", limit: { max: 2, windowMs: 60_000 }, now }))
+      .resolves.toMatchObject({ allowed: false, retryAfterSeconds: 5 });
+    expect(prismaMocks.authRateLimitUpdate).toHaveBeenCalled();
+
+    prismaMocks.authRateLimitFindUnique.mockResolvedValueOnce({
+      key: "k", attempts: 3, windowStartedAt: now, blockedUntil: new Date(now.getTime() + 60_000)
+    });
+    await expect(repo.consumeRateLimit!({ key: "k", limit: { max: 2, windowMs: 60_000 }, now }))
+      .resolves.toMatchObject({ allowed: false, retryAfterSeconds: 60 });
+    prismaMocks.authRateLimitDelete.mockRejectedValueOnce(new Error("missing"));
+    await expect(repo.clearRateLimit!("k")).resolves.toBeUndefined();
   });
 });

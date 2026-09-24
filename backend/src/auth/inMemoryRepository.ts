@@ -1,7 +1,39 @@
 import { randomUUID } from "node:crypto";
 import { AuthRepository } from "./repository";
 import { UserRole } from "./roles";
-import { AuthPasswordResetToken, AuthSession } from "./types";
+import {
+  AuthEmailVerificationToken,
+  AuthPasswordResetToken,
+  AuthSession,
+  ConsumeRateLimitInput,
+  ConsumeRateLimitResult
+} from "./types";
+
+type RateLimitEntry = { attempts: number; windowStartedAt: Date; blockedUntil: Date | null };
+
+const consumeRateLimit = (
+  entries: Map<string, RateLimitEntry>,
+  { key, limit, now }: ConsumeRateLimitInput
+): ConsumeRateLimitResult => {
+  const current = entries.get(key);
+  if (current?.blockedUntil && current.blockedUntil > now) {
+    return {
+      allowed: false,
+      retryAfterSeconds: Math.max(1, Math.ceil((current.blockedUntil.getTime() - now.getTime()) / 1000))
+    };
+  }
+
+  const isNewWindow = !current || now.getTime() - current.windowStartedAt.getTime() >= limit.windowMs;
+  const attempts = isNewWindow ? 1 : current.attempts + 1;
+  const blockedUntil = attempts > limit.max
+    ? new Date(now.getTime() + Math.min(15 * 60, 5 * 2 ** (attempts - limit.max - 1)) * 1000)
+    : null;
+  entries.set(key, { attempts, windowStartedAt: isNewWindow ? now : current.windowStartedAt, blockedUntil });
+
+  return blockedUntil
+    ? { allowed: false, retryAfterSeconds: Math.ceil((blockedUntil.getTime() - now.getTime()) / 1000) }
+    : { allowed: true, retryAfterSeconds: 0 };
+};
 
 export const createInMemoryAuthRepository = (): AuthRepository => {
   const users = new Map<string, {
@@ -11,9 +43,12 @@ export const createInMemoryAuthRepository = (): AuthRepository => {
     role: UserRole;
     passwordHash: string;
     sessionVersion: number;
+    emailVerifiedAt: Date | null;
   }>();
   const passwordResetTokens = new Map<string, AuthPasswordResetToken & { tokenHash: string }>();
+  const emailVerificationTokens = new Map<string, AuthEmailVerificationToken & { tokenHash: string }>();
   const sessions = new Map<string, AuthSession>();
+  const rateLimits = new Map<string, RateLimitEntry>();
 
   return {
     getUserByEmail: async (email) => users.get(email) ?? null,
@@ -39,7 +74,8 @@ export const createInMemoryAuthRepository = (): AuthRepository => {
         email,
         role: "EDITOR" as const,
         passwordHash,
-        sessionVersion: 0
+        sessionVersion: 0,
+        emailVerifiedAt: new Date()
       };
 
       users.set(email, user);
@@ -50,6 +86,20 @@ export const createInMemoryAuthRepository = (): AuthRepository => {
         email: user.email,
         role: user.role
       };
+    },
+    createUnverifiedEditorUser: async ({ name, email, passwordHash }) => {
+      if (users.has(email)) return null;
+      const user = {
+        id: randomUUID(),
+        name,
+        email,
+        role: "EDITOR" as const,
+        passwordHash,
+        sessionVersion: 0,
+        emailVerifiedAt: null
+      };
+      users.set(email, user);
+      return { id: user.id, name: user.name, email: user.email, role: user.role, emailVerifiedAt: null };
     },
     updatePasswordHash: async (userId, passwordHash) => {
       for (const [email, user] of users.entries()) {
@@ -87,6 +137,26 @@ export const createInMemoryAuthRepository = (): AuthRepository => {
     deletePasswordResetTokensByUserId: async (userId) => {
       passwordResetTokens.delete(userId);
     },
+    createEmailVerificationToken: async (userId, tokenHash, expiresAt) => {
+      emailVerificationTokens.delete(userId);
+      emailVerificationTokens.set(userId, { id: randomUUID(), userId, tokenHash, expiresAt });
+    },
+    getEmailVerificationTokenByHash: async (tokenHash) => {
+      for (const token of emailVerificationTokens.values()) {
+        if (token.tokenHash === tokenHash) {
+          return { id: token.id, userId: token.userId, expiresAt: token.expiresAt };
+        }
+      }
+      return null;
+    },
+    deleteEmailVerificationTokensByUserId: async (userId) => {
+      emailVerificationTokens.delete(userId);
+    },
+    markEmailVerified: async (userId) => {
+      for (const [email, user] of users) {
+        if (user.id === userId) users.set(email, { ...user, emailVerifiedAt: new Date() });
+      }
+    },
     createSession: async (input) => {
       sessions.set(input.id, { ...input, revokedAt: null });
     },
@@ -112,6 +182,10 @@ export const createInMemoryAuthRepository = (): AuthRepository => {
       for (const [id, session] of sessions) {
         if (session.userId === userId && !session.revokedAt) sessions.set(id, { ...session, revokedAt });
       }
+    },
+    consumeRateLimit: async (input) => consumeRateLimit(rateLimits, input),
+    clearRateLimit: async (key) => {
+      rateLimits.delete(key);
     }
   };
 };

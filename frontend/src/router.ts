@@ -5,6 +5,7 @@ const LoginPage = () => import("./pages/LoginPage.vue");
 const SignupPage = () => import("./pages/SignupPage.vue");
 const ForgotPasswordPage = () => import("./pages/ForgotPasswordPage.vue");
 const ResetPasswordPage = () => import("./pages/ResetPasswordPage.vue");
+const VerifyEmailPage = () => import("./pages/VerifyEmailPage.vue");
 const ContactPage = () => import("./pages/ContactPage.vue");
 const LegalNoticePage = () => import("./pages/LegalNoticePage.vue");
 const EventDetailPage = () => import("./pages/EventDetailPage.vue");
@@ -27,6 +28,7 @@ const routes = [
   { path: "/signup", name: "signup", component: SignupPage },
   { path: "/forgot-password", name: "forgot-password", component: ForgotPasswordPage },
   { path: "/reset-password", name: "reset-password", component: ResetPasswordPage },
+  { path: "/verify-email", name: "verify-email", component: VerifyEmailPage },
   { path: "/contact", name: "contact", component: ContactPage },
   { path: "/mentions-legales", name: "legal-notice", component: LegalNoticePage },
   {

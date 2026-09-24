@@ -69,7 +69,7 @@ describe("auth session routes", () => {
     expect(cookieLines(response).every((cookie) => cookie.includes("Secure"))).toBe(true);
   });
 
-  it("returns a configuration error without creating a login or signup session", async () => {
+  it("returns a configuration error for login while public signup only requests verification", async () => {
     delete process.env.JWT_SECRET;
     const loginSetup = buildApp();
     await seedUser(loginSetup.repo);
@@ -82,9 +82,9 @@ describe("auth session routes", () => {
     expect((await request(signupSetup.app).post("/api/auth/signup").send({
       name: "New",
       email: "new@test.fr",
-      password: "secret123",
-      passwordConfirmation: "secret123"
-    })).status).toBe(500);
+      password: "correct horse battery",
+      passwordConfirmation: "correct horse battery"
+    })).status).toBe(202);
   });
 
   it("restores, rotates and logs out a session server-side", async () => {

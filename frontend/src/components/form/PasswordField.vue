@@ -6,6 +6,7 @@
         :value="modelValue"
         :type="visible ? 'text' : 'password'"
         :placeholder="placeholder"
+        :maxlength="maxLength"
         class="w-full rounded-lg border border-slate-200 px-3 py-2 pr-10 text-sm"
         @input="emitUpdate"
       />
@@ -37,9 +38,11 @@ withDefaults(
     modelValue: string;
     label: string;
     placeholder?: string;
+    maxLength?: number;
   }>(),
   {
-    placeholder: "********"
+    placeholder: "********",
+    maxLength: 128
   }
 );
 

@@ -10,6 +10,7 @@ import {
   UpdateAdminSettingsInput
 } from "./types";
 import { UserRole } from "../auth/roles";
+import { normalizeEmail } from "../auth/email";
 
 type ServiceResult<T> =
   | { ok: true; value: T }
@@ -30,7 +31,8 @@ const validateUserInput = (input: unknown): ServiceResult<CreateAdminUserInput> 
   const errors: string[] = [];
 
   if (!isNonEmptyString(data.name)) errors.push("name is required");
-  if (!isNonEmptyString(data.email)) errors.push("email is required");
+  const email = normalizeEmail(data.email);
+  if (!email) errors.push("email is invalid");
   const role = parseRole(data.role);
   if (!role) errors.push("role is invalid");
 
@@ -43,7 +45,7 @@ const validateUserInput = (input: unknown): ServiceResult<CreateAdminUserInput> 
     ok: true,
     value: {
       name: data.name!.trim(),
-      email: data.email!.trim(),
+      email: email!,
       role: safeRole
     }
   };

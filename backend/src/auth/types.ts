@@ -6,6 +6,7 @@ export type AuthUser = {
   email: string;
   role: UserRole;
   sessionVersion?: number;
+  emailVerifiedAt?: Date | null;
 };
 
 export type AuthenticatedActor = Pick<AuthUser, "id" | "role">;
@@ -39,3 +40,20 @@ export type AuthSession = {
 };
 
 export type CreateAuthSessionInput = Omit<AuthSession, "revokedAt">;
+
+export type AuthEmailVerificationToken = {
+  id: string;
+  userId: string;
+  expiresAt: Date;
+};
+
+export type ConsumeRateLimitInput = {
+  key: string;
+  limit: { max: number; windowMs: number };
+  now: Date;
+};
+
+export type ConsumeRateLimitResult = {
+  allowed: boolean;
+  retryAfterSeconds: number;
+};

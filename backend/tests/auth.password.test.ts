@@ -27,7 +27,7 @@ describe("auth password", () => {
     await expect(verifyPassword("secret123", "invalid-hash")).resolves.toBe(false);
     await expect(verifyPassword("secret123", "$argon2id$v=19$m=1,t=1,p=1$bad$bad"))
       .resolves.toBe(false);
-    expect(needsPasswordRehash("invalid-hash")).toBe(false);
+    expect(needsPasswordRehash("invalid-hash")).toBe(true);
   });
 
   it("does not rehash argon2 hashes", async () => {

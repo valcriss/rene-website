@@ -5,6 +5,8 @@ import { sendEmail, MailResult } from "./mailer";
 import {
   buildPasswordResetBody,
   buildPasswordResetSubject,
+  buildEmailVerificationBody,
+  buildEmailVerificationSubject,
   buildSubmittedBody,
   buildSubmittedSubject,
   buildResubmittedBody,
@@ -124,6 +126,17 @@ export const notifyPasswordResetRequested = async (
     to: email,
     subject: buildPasswordResetSubject(),
     text: buildPasswordResetBody(resetUrl, ttlMinutes)
+  });
+
+export const notifyEmailVerificationRequested = async (
+  email: string,
+  verificationUrl: string,
+  ttlMinutes: number
+): Promise<MailResult> =>
+  sendEmail({
+    to: email,
+    subject: buildEmailVerificationSubject(),
+    text: buildEmailVerificationBody(verificationUrl, ttlMinutes)
   });
 
 export const notifyContactMessage = async (

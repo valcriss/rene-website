@@ -1,5 +1,5 @@
 import { vi } from "vitest";
-import { getSession, login, logout, requestPasswordReset, resetPassword, signup } from "../src/api/auth";
+import { getSession, login, logout, requestPasswordReset, resetPassword, signup, verifyEmail } from "../src/api/auth";
 
 describe("auth api", () => {
   afterEach(() => {
@@ -55,14 +55,13 @@ describe("auth api", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await signup({
+    await signup({
       name: "U",
       email: "u@test",
       password: "secret123",
       passwordConfirmation: "secret123"
     });
 
-    expect(result.user.email).toBe("u@test");
     expect(fetchMock).toHaveBeenCalledWith("/api/auth/signup", expect.any(Object));
   });
 
@@ -100,6 +99,13 @@ describe("auth api", () => {
     });
 
     expect(fetchMock).toHaveBeenCalledWith("/api/auth/reset-password", expect.any(Object));
+  });
+
+  it("verifies an email activation token", async () => {
+    const fetchMock = vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({}) }));
+    vi.stubGlobal("fetch", fetchMock);
+    await verifyEmail({ token: "token" });
+    expect(fetchMock).toHaveBeenCalledWith("/api/auth/verify-email", expect.any(Object));
   });
 
   it("restores an active session", async () => {

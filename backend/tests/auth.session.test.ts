@@ -125,6 +125,13 @@ describe("auth sessions", () => {
     expect(await refreshSession(repo, created.value.refreshToken)).toEqual({ ok: false, code: "configuration" });
   });
 
+  it("does not create a session before public email verification", async () => {
+    const repo = createInMemoryAuthRepository();
+    const user = await repo.createUnverifiedEditorUser!({ name: "Pending", email: "pending@test", passwordHash: "hash" });
+    if (!user) throw new Error("user creation failed");
+    expect(await createSession(repo, user)).toEqual({ ok: false, code: "invalid" });
+  });
+
   it("handles rotation without a previous record and invalidates only matching active sessions", async () => {
     const repo = createInMemoryAuthRepository();
     const user = await createUser(repo);

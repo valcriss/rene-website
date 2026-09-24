@@ -5,6 +5,7 @@ jest.mock("../src/notifications/mailer", () => ({
 import { sendEmail } from "../src/notifications/mailer";
 import {
   notifyContactMessage,
+  notifyEmailVerificationRequested,
   notifyEventDeleted,
   notifyEventPublished,
   notifyModerationReminder,
@@ -202,6 +203,14 @@ describe("notifications service", () => {
         subject: "Réinitialisation de votre mot de passe"
       })
     );
+  });
+
+  it("sends an email verification message", async () => {
+    await notifyEmailVerificationRequested("user@test", "https://rene.test/verify-email?token=abc", 1440);
+    expect(sendEmail).toHaveBeenCalledWith(expect.objectContaining({
+      to: "user@test",
+      subject: "Vérifiez votre adresse email R3ne"
+    }));
   });
 
   it("sends a contact message with reply-to set to the visitor's email", async () => {
