@@ -126,7 +126,14 @@ export const messages = {
       addToCalendar: "Ajouter au calendrier",
       relatedEyebrow: "\u00c0 d\u00e9couvrir aussi",
       relatedTitle: "D'autres rendez-vous du calendrier",
-      relatedLead: "\u00c0 proximit\u00e9 et autour des m\u00eames dates"
+      relatedLead: "\u00c0 proximit\u00e9 et autour des m\u00eames dates",
+      eventEnded: "Cet \u00e9v\u00e9nement est termin\u00e9. D\u00e9couvrez les prochains rendez-vous ci-dessous."
+    },
+    notFound: {
+      eyebrow: "Erreur 404",
+      title: "Page introuvable",
+      description: "Cette page n'existe pas ou a \u00e9t\u00e9 d\u00e9plac\u00e9e.",
+      backToAgenda: "Retour \u00e0 l'agenda"
     },
     login: {
       eyebrow: "Espace professionnel",
@@ -642,7 +649,14 @@ export const messages = {
       addToCalendar: "Add to calendar",
       relatedEyebrow: "Also worth discovering",
       relatedTitle: "Other events in the calendar",
-      relatedLead: "Nearby and around the same dates"
+      relatedLead: "Nearby and around the same dates",
+      eventEnded: "This event has ended. Discover upcoming events below."
+    },
+    notFound: {
+      eyebrow: "404 error",
+      title: "Page not found",
+      description: "This page does not exist or has moved.",
+      backToAgenda: "Back to agenda"
     },
     login: {
       eyebrow: "Professional area",

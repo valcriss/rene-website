@@ -65,7 +65,7 @@ export const createApp = () => {
   });
 
   if (process.env.NODE_ENV === "production") {
-    registerStatic(app);
+    registerStatic(app, eventRepository);
   }
 
   return app;

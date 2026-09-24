@@ -19,6 +19,7 @@ const BackofficeAdminCategoriesPage = () => import("./pages/backoffice/Backoffic
 const BackofficeAdminAudiencesPage = () => import("./pages/backoffice/BackofficeAdminAudiencesPage.vue");
 const BackofficeAdminSettingsPage = () => import("./pages/backoffice/BackofficeAdminSettingsPage.vue");
 const BackofficeProfilePage = () => import("./pages/backoffice/BackofficeProfilePage.vue");
+const NotFoundPage = () => import("./pages/NotFoundPage.vue");
 
 const routes = [
   { path: "/", name: "home", component: HomePage },
@@ -50,7 +51,8 @@ const routes = [
       { path: "profile", name: "backoffice-profile", component: BackofficeProfilePage }
     ]
   },
-  { path: "/event/:id", name: "event-detail", component: EventDetailPage }
+  { path: "/event/:id", name: "event-detail", component: EventDetailPage },
+  { path: "/:pathMatch(.*)*", name: "not-found", component: NotFoundPage }
 ];
 
 export const createAppRouter = (history: RouterHistory = createWebHistory()) =>

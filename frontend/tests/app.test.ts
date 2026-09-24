@@ -296,7 +296,7 @@ describe("App", () => {
     expect(screen.queryByText("Afficher les événements archivés")).not.toBeInTheDocument();
   });
 
-  it("treats a direct link to an archived event as not found on the public detail page", async () => {
+  it("treats a direct link to a manually archived event as not found on the public detail page", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(() =>
@@ -317,7 +317,8 @@ describe("App", () => {
                   latitude: 46.97,
                   longitude: 0.7,
                   status: "PUBLISHED",
-                  publicationEndAt: "2020-01-01T00:00:00.000Z"
+                  publicationEndAt: "2020-01-01T00:00:00.000Z",
+                  archivedAt: "2020-01-02T00:00:00.000Z"
                 }
               ])
             )
@@ -327,6 +328,40 @@ describe("App", () => {
     await renderWithRouter("/event/1");
 
     expect(await screen.findByText("Événement introuvable.")).toBeInTheDocument();
+  });
+
+  it("keeps a naturally ended event's direct link indexable with an 'event ended' banner", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve(
+              toEventsPayload([
+                {
+                  id: "1",
+                  title: "Concert terminé",
+                  eventStartAt: "2026-01-15T20:00:00.000Z",
+                  eventEndAt: "2026-01-15T22:00:00.000Z",
+                  venueName: "Salle",
+                  city: "Descartes",
+                  image: "https://example.com",
+                  categoryId: "music",
+                  latitude: 46.97,
+                  longitude: 0.7,
+                  status: "PUBLISHED",
+                  publicationEndAt: "2020-01-01T00:00:00.000Z"
+                }
+              ])
+            )
+        })
+      )
+    );
+    await renderWithRouter("/event/1");
+
+    expect(await screen.findByText("Concert terminé")).toBeInTheDocument();
+    expect(screen.getByTestId("event-ended-banner")).toBeInTheDocument();
   });
 
   it("uses placeholder when image is missing", async () => {

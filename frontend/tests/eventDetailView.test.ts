@@ -63,6 +63,60 @@ describe("EventDetailView", () => {
     expect(wrapper.text()).toContain("Événement introuvable.");
   });
 
+  it("keeps a naturally ended event indexable with an 'event ended' banner", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const eventsStore = useEventsStore();
+    const categoriesStore = useCategoriesStore();
+    categoriesStore.categories = [{ id: "music", name: "Musique", createdAt: "", updatedAt: "" }];
+    eventsStore.isLoading = false;
+    eventsStore.events = [
+      {
+        id: "1",
+        title: "Concert terminé",
+        content: "",
+        image: "img",
+        categoryId: "music",
+        audienceId: null,
+        occurrences: [
+          {
+            id: "occ-1",
+            eventStartAt: "2020-01-15T20:00:00.000Z",
+            eventEndAt: "2020-01-15T22:00:00.000Z",
+            allDay: false,
+            venueName: "Salle",
+            address: "",
+            postalCode: "",
+            city: "Descartes",
+            latitude: 46.97,
+            longitude: 0.7
+          }
+        ],
+        organizerName: "Org",
+        status: "PUBLISHED",
+        publishedAt: null,
+        publicationEndAt: "2020-01-15T22:00:00.000Z",
+        rejectionReason: null,
+        createdAt: "2020-01-01T00:00:00.000Z",
+        updatedAt: "2020-01-01T00:00:00.000Z"
+      }
+    ];
+
+    const wrapper = mount(EventDetailView, {
+      props: { eventId: "1" },
+      global: {
+        plugins: [pinia],
+        stubs: { EventMap: { template: "<div></div>" } }
+      }
+    });
+
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.text()).toContain("Concert terminé");
+    expect(wrapper.find("[data-testid='event-ended-banner']").exists()).toBe(true);
+    expect(wrapper.text()).toContain("Cet événement est terminé");
+  });
+
   it("renders fallback content and emits selection", async () => {
     const pinia = createPinia();
     setActivePinia(pinia);
