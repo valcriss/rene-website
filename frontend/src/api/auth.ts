@@ -105,4 +105,3 @@ export const logout = async (): Promise<void> => {
     headers: buildAuthHeaders(undefined, false)
   });
 };
-
