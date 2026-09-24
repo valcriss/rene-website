@@ -669,12 +669,15 @@ describe("editor handlers", () => {
         id: "1",
         content: "Desc",
         image: "img",
+        imageAlt: "Photo du concert",
         organizerName: "Asso",
         organizerUrl: "https://example.com",
         contactEmail: "contact@example.com",
         contactPhone: "0102030405",
         ticketUrl: "https://tickets.example.com",
         websiteUrl: "https://example.com",
+        seoTitleOverride: "Titre SEO perso",
+        seoDescriptionOverride: "Description SEO perso",
         occurrences: [
           {
             id: "occ-1",
@@ -696,6 +699,18 @@ describe("editor handlers", () => {
     expect(wrapper.find('input[placeholder="Titre de l\'événement"]').element).toHaveProperty(
       "value",
       "Concert"
+    );
+    expect(wrapper.find("[data-testid='editor-image-alt']").element).toHaveProperty(
+      "value",
+      "Photo du concert"
+    );
+    expect(wrapper.find("[data-testid='editor-seo-title-override']").element).toHaveProperty(
+      "value",
+      "Titre SEO perso"
+    );
+    expect(wrapper.find("[data-testid='editor-seo-description-override']").element).toHaveProperty(
+      "value",
+      "Description SEO perso"
     );
   });
 

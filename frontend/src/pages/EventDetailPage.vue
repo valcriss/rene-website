@@ -25,7 +25,7 @@ import EventDetailView from "../components/events/EventDetailView.vue";
 import { useEventsStore } from "../stores/events";
 import { usePageSeo } from "../composables/usePageSeo";
 import { useEventStructuredData } from "../composables/useStructuredData";
-import { buildPlainTextDescription } from "../utils/seo";
+import { computeSeoDescription, computeSeoTitle } from "../utils/seo";
 import { getEventDetailPath } from "../utils/eventLinks";
 
 const router = useRouter();
@@ -42,10 +42,10 @@ const seoEvent = computed(() => {
 });
 
 usePageSeo({
-  title: () => (seoEvent.value ? `${seoEvent.value.title} — ${t("navigation.title")}` : t("detail.notFound")),
-  description: () =>
-    seoEvent.value ? buildPlainTextDescription(seoEvent.value.content) : t("detail.notFound"),
+  title: () => (seoEvent.value ? computeSeoTitle(seoEvent.value, t("navigation.title")) : t("detail.notFound")),
+  description: () => (seoEvent.value ? computeSeoDescription(seoEvent.value) : t("detail.notFound")),
   image: () => seoEvent.value?.image,
+  imageAlt: () => seoEvent.value?.imageAlt,
   type: "article"
 });
 

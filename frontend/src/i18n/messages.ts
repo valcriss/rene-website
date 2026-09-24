@@ -335,6 +335,9 @@ export const messages = {
       noCategories: "Aucune cat\u00e9gorie disponible.",
       noAudiences: "Aucun public concern\u00e9 disponible.",
       currentImage: "Image actuelle : {image}",
+      imageAlt: "Texte alternatif de l'image",
+      imageAltHelp:
+        "Décrivez ce que montre l'image en une courte phrase (pour les lecteurs d'écran et les moteurs de recherche). Obligatoire pour soumettre la fiche si une image est fournie.",
       cropEyebrow: "Image",
       cropTitle: "Recadrer l'image",
       cropLead: "Ajustez le cadrage avant d'ajouter l'image à l'événement. Le format est fixé à 466 × 291 pixels.",
@@ -383,6 +386,23 @@ export const messages = {
         X: "X",
         TIKTOK: "TikTok"
       },
+      seoEyebrow: "Référencement",
+      seoTitle: "Titre et description pour les moteurs et réseaux",
+      seoLead:
+        "Par défaut, le titre et la description affichés dans les résultats de recherche et les partages sociaux sont calculés à partir du titre et du contenu de l'événement. Renseignez les champs ci-dessous seulement si ce résultat calculé n'est pas satisfaisant.",
+      seoTitleOverride: "Titre personnalisé (facultatif)",
+      seoDescriptionOverride: "Description personnalisée (facultatif)",
+      characterCount: "{count}/{max} caractères",
+      seoPreviewSearchEyebrow: "Aperçu dans les résultats de recherche",
+      seoPreviewSocialEyebrow: "Aperçu du partage sur les réseaux sociaux",
+      seoAlerts: {
+        genericTitle: "Le titre est très court : un titre plus descriptif aide au référencement.",
+        thinDescription:
+          "La description est trop courte ou vide : ajoutez du contenu pour obtenir une meilleure description automatique, ou renseignez une description personnalisée.",
+        missingImage: "Aucune image n'est renseignée : les partages sociaux afficheront une image générique.",
+        incoherentDates: "Une date de fin est antérieure à sa date de début : vérifiez les horaires saisis.",
+        missingLocation: "Aucune ville n'est renseignée pour ces dates : la fiche sera moins visible localement."
+      },
       pricingInfoTitle: "Horaires et tarifs",
       pricingInfoLead:
         "Précisez ici les tarifs, les réductions, les moyens de paiement et les modalités pratiques, avec une mise en forme légère sans image.",
@@ -420,7 +440,10 @@ export const messages = {
         city: "Descartes",
         postalCode: "37160",
         organizer: "Nom de l'organisateur",
-        phone: "06 00 00 00 00"
+        phone: "06 00 00 00 00",
+        imageAlt: "Ex. : Musiciens sur scène pendant le concert",
+        seoTitleOverride: "Laisser vide pour utiliser le titre calculé automatiquement",
+        seoDescriptionOverride: "Laisser vide pour utiliser la description calculée automatiquement"
       }
     },
     moderation: {
@@ -867,6 +890,9 @@ export const messages = {
       noCategories: "No category available.",
       noAudiences: "No audience available.",
       currentImage: "Current image: {image}",
+      imageAlt: "Image alt text",
+      imageAltHelp:
+        "Describe what the image shows in a short sentence (for screen readers and search engines). Required to submit the listing if an image is provided.",
       cropEyebrow: "Image",
       cropTitle: "Crop image",
       cropLead: "Adjust the framing before adding the image to the event. The output is fixed at 466 × 291 pixels.",
@@ -915,6 +941,23 @@ export const messages = {
         X: "X",
         TIKTOK: "TikTok"
       },
+      seoEyebrow: "Search engine optimization",
+      seoTitle: "Title and description for search engines and social media",
+      seoLead:
+        "By default, the title and description shown in search results and social shares are computed from the event's title and content. Only fill in the fields below if that computed result isn't satisfactory.",
+      seoTitleOverride: "Custom title (optional)",
+      seoDescriptionOverride: "Custom description (optional)",
+      characterCount: "{count}/{max} characters",
+      seoPreviewSearchEyebrow: "Search result preview",
+      seoPreviewSocialEyebrow: "Social share preview",
+      seoAlerts: {
+        genericTitle: "The title is very short: a more descriptive title helps with search ranking.",
+        thinDescription:
+          "The description is too short or empty: add more content for a better automatic description, or set a custom description.",
+        missingImage: "No image is set: social shares will show a generic image instead.",
+        incoherentDates: "An end date is earlier than its start date: check the times you entered.",
+        missingLocation: "No city is set for these dates: the listing will be less visible locally."
+      },
       pricingInfoTitle: "Schedule and pricing",
       pricingInfoLead:
         "Use this space for prices, discounts, accepted payment methods, and practical booking details, with light formatting and no images.",
@@ -950,7 +993,10 @@ export const messages = {
         city: "Descartes",
         postalCode: "37160",
         organizer: "Organizer name",
-        phone: "06 00 00 00 00"
+        phone: "06 00 00 00 00",
+        imageAlt: "E.g.: Musicians on stage during the concert",
+        seoTitleOverride: "Leave blank to use the automatically computed title",
+        seoDescriptionOverride: "Leave blank to use the automatically computed description"
       }
     },
     moderation: {

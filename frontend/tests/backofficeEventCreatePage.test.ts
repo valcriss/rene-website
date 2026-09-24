@@ -889,4 +889,69 @@ describe("BackofficeEventCreatePage", () => {
 
     expect(screen.getByText("Saisissez d'abord un code postal")).toBeInTheDocument();
   });
+
+  it("binds the image alt text and SEO override inputs to the editor form", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) }))
+    );
+
+    const setup = await setupPage();
+    setup.categoriesStore.hasLoaded = true;
+    renderPage(setup);
+
+    await fireEvent.update(screen.getByTestId("editor-image-alt"), "Musiciens sur scène");
+    await fireEvent.update(screen.getByTestId("editor-seo-title-override"), "Titre perso");
+    await fireEvent.update(screen.getByTestId("editor-seo-description-override"), "Description perso");
+
+    expect(setup.editorStore.editorForm.imageAlt).toBe("Musiciens sur scène");
+    expect(setup.editorStore.editorForm.seoTitleOverride).toBe("Titre perso");
+    expect(setup.editorStore.editorForm.seoDescriptionOverride).toBe("Description perso");
+  });
+
+  it("shows a live character counter for the SEO override fields", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) }))
+    );
+
+    const setup = await setupPage();
+    setup.categoriesStore.hasLoaded = true;
+    renderPage(setup);
+
+    expect(screen.getByTestId("seo-title-counter")).toHaveTextContent("0/70");
+    expect(screen.getByTestId("seo-description-counter")).toHaveTextContent("0/160");
+
+    await fireEvent.update(screen.getByTestId("editor-seo-title-override"), "Titre perso");
+
+    expect(screen.getByTestId("seo-title-counter")).toHaveTextContent("11/70");
+  });
+
+  it("renders a live SEO preview reflecting the current form content", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) }))
+    );
+
+    const setup = await setupPage();
+    setup.categoriesStore.hasLoaded = true;
+    renderPage(setup);
+
+    await fireEvent.update(screen.getByPlaceholderText("Titre de l'événement"), "Concert de jazz");
+
+    expect(screen.getByTestId("seo-preview-title")).toHaveTextContent("Concert de jazz — R3ne");
+  });
+
+  it("flags a missing image in the SEO preview alerts", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) }))
+    );
+
+    const setup = await setupPage();
+    setup.categoriesStore.hasLoaded = true;
+    renderPage(setup);
+
+    expect(screen.getByTestId("seo-alert-missingImage")).toBeInTheDocument();
+  });
 });

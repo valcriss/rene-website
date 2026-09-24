@@ -57,3 +57,26 @@ export const buildPlainTextDescription = (html: string | null | undefined, maxLe
   const safe = lastSpace > 0 ? truncated.slice(0, lastSpace) : truncated;
   return `${safe}…`;
 };
+
+// Shared by the editor's live SEO preview and the public event page's actual <title>/meta tags
+// (usePageSeo), so what an editor sees while writing is exactly what gets rendered (issue #55:
+// "aperçu final identique à la version publique"). A manual override always wins over the
+// computed default; an override that is empty/whitespace-only counts as "no override".
+export const computeSeoTitle = (
+  event: { title: string; seoTitleOverride?: string | null },
+  siteName: string
+): string => {
+  const override = event.seoTitleOverride?.trim();
+  if (override) {
+    return override;
+  }
+  return event.title.trim() ? `${event.title} — ${siteName}` : siteName;
+};
+
+export const computeSeoDescription = (event: {
+  content?: string | null;
+  seoDescriptionOverride?: string | null;
+}): string => {
+  const override = event.seoDescriptionOverride?.trim();
+  return override || buildPlainTextDescription(event.content);
+};

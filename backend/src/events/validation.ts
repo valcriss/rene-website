@@ -30,6 +30,9 @@ const maximumUrlLength = 2_048;
 const maximumTitleLength = 200;
 const maximumContentLength = 20_000;
 const maximumShortTextLength = 500;
+const maximumImageAltLength = 200;
+const maximumSeoTitleOverrideLength = 70;
+const maximumSeoDescriptionOverrideLength = 160;
 
 const validateMaximumLength = (value: unknown, maximum: number, label: string, errors: string[]) => {
   if (typeof value === "string" && value.length > maximum) {
@@ -225,6 +228,9 @@ export const validateCreateEvent = (input: unknown): ValidationResult => {
   if (!isNonEmptyString(data.title)) errors.push("Le titre est requis.");
   if (!isOptionalString(data.content)) errors.push("Le contenu doit être une chaîne.");
   if (!isOptionalString(data.image)) errors.push("L'image doit être une chaîne.");
+  if (!isOptionalString(data.imageAlt)) errors.push("Le texte alternatif de l'image doit être une chaîne.");
+  if (!isOptionalString(data.seoTitleOverride)) errors.push("Le titre SEO personnalisé doit être une chaîne.");
+  if (!isOptionalString(data.seoDescriptionOverride)) errors.push("La description SEO personnalisée doit être une chaîne.");
   if (!isOptionalString(data.categoryId)) errors.push("La catégorie doit être une chaîne.");
   if (!isOptionalString(data.audienceId)) errors.push("Le public concerné doit être une chaîne.");
   if (!isOptionalString(data.organizerName)) errors.push("L'organisateur doit être une chaîne.");
@@ -239,6 +245,14 @@ export const validateCreateEvent = (input: unknown): ValidationResult => {
   validateMaximumLength(data.title, maximumTitleLength, "Le titre", errors);
   validateMaximumLength(data.content, maximumContentLength, "Le contenu", errors);
   validateMaximumLength(data.pricingInfo, maximumContentLength, "Les informations tarifaires", errors);
+  validateMaximumLength(data.imageAlt, maximumImageAltLength, "Le texte alternatif de l'image", errors);
+  validateMaximumLength(data.seoTitleOverride, maximumSeoTitleOverrideLength, "Le titre SEO personnalisé", errors);
+  validateMaximumLength(
+    data.seoDescriptionOverride,
+    maximumSeoDescriptionOverrideLength,
+    "La description SEO personnalisée",
+    errors
+  );
   ([
     [data.image, "L'image"],
     [data.categoryId, "La catégorie"],
@@ -275,6 +289,7 @@ export const validateCreateEvent = (input: unknown): ValidationResult => {
       title: (data.title as string).trim(),
       content: sanitizedContent,
       image: normalizeOptionalString(data.image),
+      imageAlt: normalizeOptionalString(data.imageAlt),
       categoryId: normalizeOptionalString(data.categoryId),
       audienceId: normalizeOptionalString(data.audienceId),
       occurrences: occurrencesResult.occurrences,
@@ -285,7 +300,9 @@ export const validateCreateEvent = (input: unknown): ValidationResult => {
       ticketUrl: data.ticketUrl as string | undefined,
       pricingInfo: sanitizedPricingInfo,
       websiteUrl: data.websiteUrl as string | undefined,
-      socialLinks: socialLinksResult.links
+      socialLinks: socialLinksResult.links,
+      seoTitleOverride: normalizeOptionalString(data.seoTitleOverride),
+      seoDescriptionOverride: normalizeOptionalString(data.seoDescriptionOverride)
     }
   };
 };
@@ -301,6 +318,7 @@ export type SubmittableEventFields = {
   title: string;
   content: string | null;
   image: string | null;
+  imageAlt?: string | null;
   categoryId: string | null;
   audienceId: string | null;
   organizerName: string | null;
@@ -319,6 +337,9 @@ export const validateEventCompleteness = (event: SubmittableEventFields): string
   if (!isNonEmptyString(event.title)) errors.push("Le titre est requis.");
   if (!isNonEmptyString(event.content)) errors.push("Le contenu est requis.");
   if (!isNonEmptyString(event.image)) errors.push("L'image est requise.");
+  if (isNonEmptyString(event.image) && !isNonEmptyString(event.imageAlt)) {
+    errors.push("Le texte alternatif de l'image est requis.");
+  }
   if (!isNonEmptyString(event.categoryId)) errors.push("La catégorie est requise.");
   if (!isNonEmptyString(event.audienceId)) errors.push("Le public concerné est requis.");
   if (!isNonEmptyString(event.organizerName)) errors.push("L'organisateur est requis.");

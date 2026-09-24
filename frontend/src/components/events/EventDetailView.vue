@@ -30,7 +30,7 @@
                     : 'h-[240px] opacity-80 sm:h-[280px] xl:h-full xl:min-h-[420px]'
                 "
                 :src="getEventImage(detailEvent)"
-                :alt="detailEvent.title"
+                :alt="detailEvent.imageAlt || detailEvent.title"
                 loading="eager"
                 fetchpriority="high"
                 decoding="async"

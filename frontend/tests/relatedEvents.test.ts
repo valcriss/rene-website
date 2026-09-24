@@ -72,4 +72,36 @@ describe("RelatedEvents", () => {
     expect(setupState.getCategoryName("missing")).toBe("");
     expect(setupState.getCategoryTheme("missing").color).toBe("#1e3a8a");
   });
+
+  it("uses the image alt text when available, falling back to the title otherwise", async () => {
+    const eventsStore = useEventsStore();
+    eventsStore.events = [];
+    const router = createTestRouter("/");
+    await router.isReady();
+
+    const buildEvent = (overrides: Record<string, unknown> = {}) => ({
+      id: "1",
+      title: "Lecture",
+      content: "<p>Contenu</p>",
+      image: "img",
+      categoryId: "unknown",
+      audienceId: null,
+      occurrences: [],
+      organizerName: null,
+      status: "PUBLISHED",
+      ...overrides
+    });
+
+    const withAlt = mount(RelatedEvents, {
+      global: { plugins: [router] },
+      props: { events: [buildEvent({ imageAlt: "Public en pleine lecture" })] }
+    });
+    expect(withAlt.find("img").attributes("alt")).toBe("Public en pleine lecture");
+
+    const withoutAlt = mount(RelatedEvents, {
+      global: { plugins: [router] },
+      props: { events: [buildEvent()] }
+    });
+    expect(withoutAlt.find("img").attributes("alt")).toBe("Lecture");
+  });
 });

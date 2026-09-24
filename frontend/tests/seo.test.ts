@@ -1,4 +1,10 @@
-import { buildPlainTextDescription, DEFAULT_OG_IMAGE_PATH, toAbsoluteUrl } from "../src/utils/seo";
+import {
+  buildPlainTextDescription,
+  computeSeoDescription,
+  computeSeoTitle,
+  DEFAULT_OG_IMAGE_PATH,
+  toAbsoluteUrl
+} from "../src/utils/seo";
 
 describe("toAbsoluteUrl", () => {
   it("resolves a relative path against the site URL", () => {
@@ -71,5 +77,38 @@ describe("buildPlainTextDescription", () => {
     const result = buildPlainTextDescription(noSpaces, 50);
 
     expect(result).toBe(`${"a".repeat(50)}…`);
+  });
+});
+
+describe("computeSeoTitle", () => {
+  it("uses the override when set", () => {
+    expect(computeSeoTitle({ title: "Concert", seoTitleOverride: "Titre personnalisé" }, "R3ne")).toBe(
+      "Titre personnalisé"
+    );
+  });
+
+  it("ignores a blank/whitespace-only override and falls back to the computed title", () => {
+    expect(computeSeoTitle({ title: "Concert", seoTitleOverride: "   " }, "R3ne")).toBe("Concert — R3ne");
+    expect(computeSeoTitle({ title: "Concert" }, "R3ne")).toBe("Concert — R3ne");
+  });
+
+  it("falls back to the site name alone when the title is blank", () => {
+    expect(computeSeoTitle({ title: "   " }, "R3ne")).toBe("R3ne");
+  });
+});
+
+describe("computeSeoDescription", () => {
+  it("uses the override when set", () => {
+    expect(
+      computeSeoDescription({ content: "<p>Texte</p>", seoDescriptionOverride: "Description personnalisée" })
+    ).toBe("Description personnalisée");
+  });
+
+  it("ignores a blank override and falls back to the computed description", () => {
+    expect(computeSeoDescription({ content: "<p>Texte</p>", seoDescriptionOverride: "   " })).toBe("Texte");
+  });
+
+  it("falls back to the computed description when no override is provided", () => {
+    expect(computeSeoDescription({ content: "<p>Texte</p>" })).toBe("Texte");
   });
 });

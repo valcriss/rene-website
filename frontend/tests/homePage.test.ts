@@ -176,4 +176,37 @@ describe("HomePage", () => {
     const multiSiteCard = wrapper.get("[data-testid='event-card-multi-site']");
     expect(multiSiteCard.text()).toContain("Multisite");
   });
+
+  it("uses the image alt text when available, falling back to the title otherwise", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const eventsStore = useEventsStore();
+    const categoriesStore = useCategoriesStore();
+    eventsStore.isLoading = false;
+    eventsStore.error = null;
+    eventsStore.events = [
+      buildEvent({ id: "with-alt", imageAlt: "Public au concert" }),
+      buildEvent({ id: "without-alt", title: "Festival" })
+    ];
+    categoriesStore.hasLoaded = true;
+
+    const router = createTestRouter("/");
+    await router.isReady();
+
+    const wrapper = mount(HomePage, {
+      global: {
+        plugins: [pinia, router],
+        stubs: {
+          HomeFilters: { template: "<div></div>" },
+          HomeSearch: { template: "<div></div>" },
+          HomeTitle: { template: "<div></div>" },
+          EventMap: { template: "<div></div>" },
+          NavigationHeader: { template: "<div></div>" }
+        }
+      }
+    });
+
+    expect(wrapper.get("[data-testid='event-card-with-alt'] img").attributes("alt")).toBe("Public au concert");
+    expect(wrapper.get("[data-testid='event-card-without-alt'] img").attributes("alt")).toBe("Festival");
+  });
 });

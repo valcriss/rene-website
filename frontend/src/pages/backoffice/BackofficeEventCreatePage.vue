@@ -131,6 +131,18 @@
                   {{ t("editor.currentImage", { image: editorForm.image }) }}
                 </p>
               </label>
+              <label class="text-sm text-slate-600 md:col-span-2">
+                {{ t("editor.imageAlt") }}
+                <input
+                  v-model="editorForm.imageAlt"
+                  type="text"
+                  maxlength="200"
+                  class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm"
+                  :placeholder="t('editor.placeholders.imageAlt')"
+                  data-testid="editor-image-alt"
+                />
+                <p class="mt-2 text-xs text-slate-500">{{ t("editor.imageAltHelp") }}</p>
+              </label>
             </div>
           </section>
 
@@ -369,6 +381,56 @@
               </div>
             </div>
           </section>
+
+          <section class="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-[0_24px_60px_-40px_rgba(15,23,42,0.22)]" data-testid="editor-seo-section">
+            <p class="text-xs uppercase tracking-[0.3em] text-slate-500">{{ t("editor.seoEyebrow") }}</p>
+            <h3 class="mt-2 text-lg font-semibold text-slate-950">{{ t("editor.seoTitle") }}</h3>
+            <p class="mt-2 text-sm text-slate-500">{{ t("editor.seoLead") }}</p>
+
+            <div class="mt-5 grid gap-6 lg:grid-cols-2">
+              <div class="grid gap-4">
+                <label class="text-sm text-slate-600">
+                  {{ t("editor.seoTitleOverride") }}
+                  <input
+                    v-model="editorForm.seoTitleOverride"
+                    type="text"
+                    maxlength="70"
+                    class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm"
+                    :placeholder="t('editor.placeholders.seoTitleOverride')"
+                    data-testid="editor-seo-title-override"
+                  />
+                  <p class="mt-1 text-xs text-slate-400" data-testid="seo-title-counter">
+                    {{ t("editor.characterCount", { count: (editorForm.seoTitleOverride ?? "").length, max: 70 }) }}
+                  </p>
+                </label>
+                <label class="text-sm text-slate-600">
+                  {{ t("editor.seoDescriptionOverride") }}
+                  <textarea
+                    v-model="editorForm.seoDescriptionOverride"
+                    rows="3"
+                    maxlength="160"
+                    class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm"
+                    :placeholder="t('editor.placeholders.seoDescriptionOverride')"
+                    data-testid="editor-seo-description-override"
+                  ></textarea>
+                  <p class="mt-1 text-xs text-slate-400" data-testid="seo-description-counter">
+                    {{ t("editor.characterCount", { count: (editorForm.seoDescriptionOverride ?? "").length, max: 160 }) }}
+                  </p>
+                </label>
+              </div>
+
+              <SeoPreviewCard
+                :title="editorForm.title"
+                :content="editorForm.content ?? null"
+                :image="editorForm.image ?? null"
+                :image-alt="editorForm.imageAlt ?? null"
+                :seo-title-override="editorForm.seoTitleOverride ?? null"
+                :seo-description-override="editorForm.seoDescriptionOverride ?? null"
+                :occurrences="editorForm.occurrences"
+                :site-name="t('navigation.title')"
+              />
+            </div>
+          </section>
       </div>
 
       <div class="rounded-[1.75rem] border border-slate-200 bg-slate-950 p-5 text-white shadow-[0_24px_60px_-36px_rgba(15,23,42,0.5)]">
@@ -434,6 +496,7 @@ import { useRouter } from "vue-router";
 import type { SocialLinkType } from "../../api/events";
 import RichTextEditor from "../../components/form/RichTextEditor.vue";
 import ImageCropModal from "../../components/form/ImageCropModal.vue";
+import SeoPreviewCard from "../../components/form/SeoPreviewCard.vue";
 import LoadingSpinner from "../../components/LoadingSpinner.vue";
 import { useAuthStore } from "../../stores/auth";
 import { useAudiencesStore } from "../../stores/audiences";
