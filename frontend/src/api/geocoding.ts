@@ -1,13 +1,16 @@
+import type { GeolocationPrecision } from "./events";
+
 export type GeocodeResult = {
   latitude: number;
   longitude: number;
+  geolocationPrecision: GeolocationPrecision;
 };
 
 export type GeocodeInput = {
-  address: string;
-  postalCode: string;
+  address?: string;
+  postalCode?: string;
   city: string;
-  venueName: string;
+  venueName?: string;
 };
 
 const parseApiError = async (response: Response, fallback: string) => {
@@ -26,12 +29,10 @@ const parseApiError = async (response: Response, fallback: string) => {
 };
 
 export const geocodeEventLocation = async (input: GeocodeInput): Promise<GeocodeResult> => {
-  const params = new URLSearchParams({
-    address: input.address,
-    postalCode: input.postalCode,
-    city: input.city,
-    venueName: input.venueName
-  });
+  const params = new URLSearchParams({ city: input.city });
+  if (input.address) params.set("address", input.address);
+  if (input.postalCode) params.set("postalCode", input.postalCode);
+  if (input.venueName) params.set("venueName", input.venueName);
   const response = await fetch(`/api/geocoding?${params.toString()}`);
   if (!response.ok) {
     throw new Error(await parseApiError(response, "Adresse introuvable."));

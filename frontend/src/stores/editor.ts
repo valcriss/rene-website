@@ -12,6 +12,7 @@ import {
   submitEvent,
   updateEvent
 } from "../api/events";
+import { geocodeEventLocation } from "../api/geocoding";
 import { publishEvent, type ModeratorRole } from "../api/moderation";
 import { uploadImage } from "../api/uploads";
 import { computePublicationEndAt } from "../utils/occurrences";
@@ -224,6 +225,40 @@ export const useEditorStore = defineStore("editor", () => {
     );
   };
 
+  const resolvePreviewOccurrenceLocation = async (
+    occurrence: EventOccurrenceInput,
+    index: number
+  ): Promise<{ latitude: number | null; longitude: number | null; geolocationPrecision: GeolocationPrecision }> => {
+    if (hasManualCoordinates(index)) {
+      return {
+        latitude: occurrence.latitude as number,
+        longitude: occurrence.longitude as number,
+        geolocationPrecision: "EXACT"
+      };
+    }
+
+    const city = trimText(occurrence.city);
+    if (!city) {
+      return { latitude: null, longitude: null, geolocationPrecision: "UNRESOLVED" };
+    }
+
+    try {
+      const result = await geocodeEventLocation({
+        address: trimText(occurrence.address) || undefined,
+        postalCode: trimText(occurrence.postalCode) || undefined,
+        city,
+        venueName: trimText(occurrence.venueName) || undefined
+      });
+      return {
+        latitude: result.latitude,
+        longitude: result.longitude,
+        geolocationPrecision: result.geolocationPrecision
+      };
+    } catch {
+      return { latitude: null, longitude: null, geolocationPrecision: "UNRESOLVED" };
+    }
+  };
+
   const getRetainedOccurrenceIndices = () =>
     editorForm.occurrences
       .map((occurrence, index) => ({ occurrence, index }))
@@ -258,18 +293,22 @@ export const useEditorStore = defineStore("editor", () => {
         .filter((link) => link.url.length > 0) ?? []
   });
 
-  const buildPreviewEvent = (): EventItem => {
+  const buildPreviewEvent = async (): Promise<EventItem> => {
     const now = new Date().toISOString();
-    const previewOccurrences: EventOccurrence[] = (
-      editorForm.occurrences.length > 0 ? editorForm.occurrences : [defaultOccurrence()]
-    ).map((occurrence, index) => ({
+    const sourceOccurrences = editorForm.occurrences.length > 0 ? editorForm.occurrences : [defaultOccurrence()];
+    const resolvedLocations = await Promise.all(
+      sourceOccurrences.map((occurrence, index) => resolvePreviewOccurrenceLocation(occurrence, index))
+    );
+
+    const previewOccurrences: EventOccurrence[] = sourceOccurrences.map((occurrence, index) => ({
       id: `preview-occurrence-${index}`,
       venueName: trimText(occurrence.venueName),
       address: trimText(occurrence.address),
       postalCode: trimText(occurrence.postalCode),
       city: trimText(occurrence.city) || "Descartes",
-      latitude: 46.97,
-      longitude: 0.7,
+      latitude: resolvedLocations[index].latitude,
+      longitude: resolvedLocations[index].longitude,
+      geolocationPrecision: resolvedLocations[index].geolocationPrecision,
       eventStartAt: normalizeDateBoundary(occurrence.eventStartAt, false) || now,
       eventEndAt: normalizeDateBoundary(occurrence.eventEndAt || occurrence.eventStartAt, true) || now,
       allDay: true,
@@ -302,15 +341,13 @@ export const useEditorStore = defineStore("editor", () => {
     };
   };
 
-  const savePreviewSnapshot = () => {
+  const savePreviewSnapshot = async () => {
     const token = `${Date.now()}`;
+    const event = await buildPreviewEvent();
     if (typeof window !== "undefined") {
       window.localStorage.setItem(
         buildPreviewStorageKey(token),
-        JSON.stringify({
-          token,
-          event: buildPreviewEvent()
-        } satisfies EditorPreviewSnapshot)
+        JSON.stringify({ token, event } satisfies EditorPreviewSnapshot)
       );
     }
     return token;
