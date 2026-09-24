@@ -51,7 +51,8 @@ export const useAdminStore = defineStore("admin", () => {
     contactEmail: "",
     contactPhone: "",
     homepageIntro: "",
-    homepageSubtitle: ""
+    homepageSubtitle: "",
+    legalNotice: ""
   });
 
   const resetAdminUserForm = () => {
@@ -234,6 +235,7 @@ export const useAdminStore = defineStore("admin", () => {
       adminSettingsForm.contactPhone = settings.contactPhone;
       adminSettingsForm.homepageIntro = settings.homepageIntro;
       adminSettingsForm.homepageSubtitle = settings.homepageSubtitle;
+      adminSettingsForm.legalNotice = settings.legalNotice;
     } catch (err) {
       adminError.value = err instanceof Error ? err.message : "Erreur inconnue";
     } finally {

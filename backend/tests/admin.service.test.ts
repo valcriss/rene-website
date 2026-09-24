@@ -32,7 +32,13 @@ const baseRepo: AdminRepository = {
   createAudience: async () => ({ id: "aud", name: "Tous publics", createdAt: "", updatedAt: "" }),
   updateAudience: async () => null,
   deleteAudience: async () => false,
-  getSettings: async () => ({ contactEmail: "", contactPhone: "", homepageIntro: "", homepageSubtitle: "" }),
+  getSettings: async () => ({
+    contactEmail: "",
+    contactPhone: "",
+    homepageIntro: "",
+    homepageSubtitle: "",
+    legalNotice: ""
+  }),
   updateSettings: async (input) => ({ ...input })
 };
 
@@ -45,7 +51,8 @@ describe("admin service", () => {
       contactEmail: "",
       contactPhone: "",
       homepageIntro: "",
-      homepageSubtitle: ""
+      homepageSubtitle: "",
+      legalNotice: ""
     });
   });
 
@@ -193,7 +200,8 @@ describe("admin service", () => {
       contactEmail: " contact@test ",
       contactPhone: " 0102030405 ",
       homepageIntro: " Bienvenue ",
-      homepageSubtitle: " Sous-titre "
+      homepageSubtitle: " Sous-titre ",
+      legalNotice: " Mentions légales "
     });
 
     expect(result).toEqual({
@@ -202,12 +210,13 @@ describe("admin service", () => {
         contactEmail: "contact@test",
         contactPhone: "0102030405",
         homepageIntro: "Bienvenue",
-        homepageSubtitle: "Sous-titre"
+        homepageSubtitle: "Sous-titre",
+        legalNotice: "Mentions légales"
       }
     });
   });
 
-  it("keeps homepage subtitle optional in settings", async () => {
+  it("keeps homepage subtitle and legal notice optional in settings", async () => {
     const result = await updateAdminSettings(baseRepo, {
       contactEmail: " contact@test ",
       contactPhone: " 0102030405 ",
@@ -220,7 +229,8 @@ describe("admin service", () => {
         contactEmail: "contact@test",
         contactPhone: "0102030405",
         homepageIntro: "Bienvenue",
-        homepageSubtitle: ""
+        homepageSubtitle: "",
+        legalNotice: ""
       }
     });
   });

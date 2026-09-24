@@ -46,6 +46,10 @@
               {{ t("admin.homepageIntro") }}
               <textarea v-model="adminSettingsForm.homepageIntro" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" rows="5"></textarea>
             </label>
+            <label class="text-sm text-slate-600 md:col-span-2">
+              {{ t("admin.legalNotice") }}
+              <textarea v-model="adminSettingsForm.legalNotice" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" rows="8"></textarea>
+            </label>
           </div>
           <div class="mt-5 flex gap-3">
             <button type="button" class="rounded-full bg-slate-950 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800" @click="handleSaveAdminSettings">

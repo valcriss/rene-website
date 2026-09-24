@@ -24,6 +24,7 @@ export type AdminSettings = {
   contactPhone: string;
   homepageIntro: string;
   homepageSubtitle: string;
+  legalNotice: string;
 };
 
 const jsonHeaders = (role: string) => buildAuthHeaders(role);

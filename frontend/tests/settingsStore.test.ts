@@ -17,7 +17,8 @@ describe("settings store", () => {
       vi.fn(() =>
         Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({ homepageIntro: "Bienvenue", homepageSubtitle: "Sous-titre" })
+          json: () =>
+            Promise.resolve({ homepageIntro: "Bienvenue", homepageSubtitle: "Sous-titre", legalNotice: "Mentions légales" })
         })
       )
     );
@@ -27,6 +28,7 @@ describe("settings store", () => {
 
     expect(store.homepageIntro).toBe("Bienvenue");
     expect(store.homepageSubtitle).toBe("Sous-titre");
+    expect(store.legalNotice).toBe("Mentions légales");
     expect(store.hasLoaded).toBe(true);
   });
 
@@ -38,6 +40,7 @@ describe("settings store", () => {
 
     expect(store.homepageIntro).toBeNull();
     expect(store.homepageSubtitle).toBeNull();
+    expect(store.legalNotice).toBeNull();
     expect(store.hasLoaded).toBe(false);
   });
 

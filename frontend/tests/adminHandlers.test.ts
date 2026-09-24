@@ -100,7 +100,8 @@ describe("admin handlers", () => {
       contactEmail: "c",
       contactPhone: "p",
       homepageIntro: "i",
-      homepageSubtitle: "s"
+      homepageSubtitle: "s",
+      legalNotice: "l"
     });
     createAdminUserMock.mockReset();
     updateAdminUserMock.mockReset();

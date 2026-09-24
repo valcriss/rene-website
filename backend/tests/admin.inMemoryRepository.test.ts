@@ -94,9 +94,11 @@ describe("admin in-memory repository", () => {
       contactEmail: "contact@test",
       contactPhone: "0102030405",
       homepageIntro: "Intro",
-      homepageSubtitle: "Sous-titre"
+      homepageSubtitle: "Sous-titre",
+      legalNotice: "Mentions légales"
     });
     expect(updated.homepageIntro).toBe("Intro");
     expect(updated.homepageSubtitle).toBe("Sous-titre");
+    expect(updated.legalNotice).toBe("Mentions légales");
   });
 });

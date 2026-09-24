@@ -9,7 +9,8 @@ export const createPublicSettingsRouter = (repo: AdminRepository) => {
     const settings = await getAdminSettings(repo);
     res.json({
       homepageIntro: settings.homepageIntro,
-      homepageSubtitle: settings.homepageSubtitle
+      homepageSubtitle: settings.homepageSubtitle,
+      legalNotice: settings.legalNotice
     });
   });
 

@@ -18,8 +18,20 @@ const inMemoryMock = jest.fn(() => ({
   createCategory: jest.fn(async () => ({ id: "cat", name: "Cat", createdAt: "", updatedAt: "" })),
   updateCategory: jest.fn(async () => null),
   deleteCategory: jest.fn(async () => false),
-  getSettings: jest.fn(async () => ({ contactEmail: "", contactPhone: "", homepageIntro: "", homepageSubtitle: "" })),
-  updateSettings: jest.fn(async () => ({ contactEmail: "", contactPhone: "", homepageIntro: "", homepageSubtitle: "" }))
+  getSettings: jest.fn(async () => ({
+    contactEmail: "",
+    contactPhone: "",
+    homepageIntro: "",
+    homepageSubtitle: "",
+    legalNotice: ""
+  })),
+  updateSettings: jest.fn(async () => ({
+    contactEmail: "",
+    contactPhone: "",
+    homepageIntro: "",
+    homepageSubtitle: "",
+    legalNotice: ""
+  }))
 }));
 const prismaMock = jest.fn(() => inMemoryMock());
 
