@@ -5,7 +5,7 @@
 </template>
 
 <script setup lang="ts">
-import { watch } from "vue";
+import { onServerPrefetch, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useAuthStore } from "./stores/auth";
 import { useEventsStore } from "./stores/events";
@@ -59,6 +59,10 @@ watch(
   },
   { immediate: true }
 );
+
+// The watch above fires the initial fetch but doesn't expose its promise; SSR needs to await
+// it (via onServerPrefetch, a no-op on the client) so the response body includes real events.
+onServerPrefetch(() => eventsStore.fetchEvents());
 
 defineExpose({
   handlePublish: eventsStore.handlePublish,

@@ -63,7 +63,7 @@ export const createApp = () => {
     res.json({ status: "ok" });
   });
 
-  if (process.env.NODE_ENV === "production") {
+  if (process.env.NODE_ENV !== "test") {
     registerStatic(app, eventRepository);
   }
 

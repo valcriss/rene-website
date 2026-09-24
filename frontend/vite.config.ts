@@ -1,8 +1,11 @@
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 
-export default defineConfig({
+export default defineConfig(({ isSsrBuild }) => ({
   plugins: [vue()],
+  build: {
+    outDir: isSsrBuild ? "dist/server" : "dist/client"
+  },
   server: {
     proxy: {
       "/api": {
@@ -32,4 +35,4 @@ export default defineConfig({
       }
     }
   }
-});
+}));

@@ -5,8 +5,15 @@ import request from "supertest";
 import { registerStatic } from "../src/static";
 import { EventRepository } from "../src/events/repository";
 import { Event } from "../src/events/types";
+import { createSsrRenderer } from "../src/ssr";
 
-const frontendDist = path.resolve(__dirname, "../../frontend/dist");
+const renderMock = jest.fn(async (url: string) => ({ html: `<html><body>SSR:${url}</body></html>` }));
+
+jest.mock("../src/ssr", () => ({
+  createSsrRenderer: jest.fn(async () => ({ render: renderMock }))
+}));
+
+const frontendDist = path.resolve(__dirname, "../../frontend/dist/client");
 
 const baseEvent: Event = {
   id: "published",
@@ -46,6 +53,8 @@ const createRepo = (event: Event | null): EventRepository => ({
 });
 
 describe("registerStatic", () => {
+  const originalEnv = process.env.NODE_ENV;
+
   beforeAll(async () => {
     await fs.mkdir(frontendDist, { recursive: true });
     await fs.writeFile(path.join(frontendDist, "index.html"), "<h1>Index</h1>");
@@ -54,6 +63,12 @@ describe("registerStatic", () => {
 
   afterAll(async () => {
     await fs.rm(frontendDist, { recursive: true, force: true });
+  });
+
+  beforeEach(() => {
+    renderMock.mockClear();
+    (createSsrRenderer as jest.Mock).mockClear();
+    process.env.NODE_ENV = originalEnv;
   });
 
   it("serves static assets", async () => {
@@ -76,48 +91,83 @@ describe("registerStatic", () => {
     expect(response.body).toEqual({ message: "Route API introuvable." });
   });
 
-  it("returns 200 for a published, non-archived event page", async () => {
+  it("returns a JSON 404 for exactly /api with no sub-path", async () => {
+    const app = express();
+    registerStatic(app, createRepo(null));
+
+    const response = await request(app).get("/api");
+
+    expect(response.status).toBe(404);
+    expect(response.body).toEqual({ message: "Route API introuvable." });
+  });
+
+  it("returns 200 with SSR-rendered HTML for a published, non-archived event page", async () => {
     const app = express();
     registerStatic(app, createRepo(baseEvent));
 
     const response = await request(app).get("/event/published");
 
     expect(response.status).toBe(200);
-    expect(response.text).toBe("<h1>Index</h1>");
+    expect(response.text).toBe("<html><body>SSR:/event/published</body></html>");
+    expect(renderMock).toHaveBeenCalledWith("/event/published");
   });
 
-  it("returns 410 for an event that was intentionally archived", async () => {
+  it("returns 410 with SSR-rendered HTML for an event that was intentionally archived", async () => {
     const app = express();
     registerStatic(app, createRepo({ ...baseEvent, archivedAt: "2026-02-01T00:00:00.000Z" }));
 
     const response = await request(app).get("/event/published");
 
     expect(response.status).toBe(410);
-    expect(response.text).toBe("<h1>Index</h1>");
+    expect(response.text).toBe("<html><body>SSR:/event/published</body></html>");
   });
 
-  it("returns 404 for an unknown or never-published event id", async () => {
+  it("returns 404 with SSR-rendered HTML for an unknown or never-published event id", async () => {
     const app = express();
     registerStatic(app, createRepo(null));
 
     const response = await request(app).get("/event/missing");
 
     expect(response.status).toBe(404);
-    expect(response.text).toBe("<h1>Index</h1>");
+    expect(response.text).toBe("<html><body>SSR:/event/missing</body></html>");
   });
 
-  it("serves index.html for known static application routes", async () => {
+  it("serves SSR-rendered HTML for known static application routes", async () => {
     const app = express();
     registerStatic(app, createRepo(null));
 
     const response = await request(app).get("/contact");
 
     expect(response.status).toBe(200);
-    expect(response.text).toBe("<h1>Index</h1>");
+    expect(response.text).toBe("<html><body>SSR:/contact</body></html>");
     expect(response.headers["x-robots-tag"]).toBeUndefined();
   });
 
-  it("sets a noindex header for backoffice routes", async () => {
+  // express.static serves index.html for "/" by default *before* any later handler runs;
+  // without `index: false` this route would silently bypass SSR and serve the raw shell.
+  it("serves SSR-rendered HTML for the home route rather than the raw index.html shell", async () => {
+    const app = express();
+    registerStatic(app, createRepo(null));
+
+    const response = await request(app).get("/");
+
+    expect(response.status).toBe(200);
+    expect(response.text).toBe("<html><body>SSR:/</body></html>");
+  });
+
+  it("sets a noindex header for the backoffice root, serving the plain shell (not SSR)", async () => {
+    const app = express();
+    registerStatic(app, createRepo(null));
+
+    const response = await request(app).get("/backoffice");
+
+    expect(response.status).toBe(200);
+    expect(response.headers["x-robots-tag"]).toBe("noindex");
+    expect(response.text).toBe("<h1>Index</h1>");
+    expect(renderMock).not.toHaveBeenCalled();
+  });
+
+  it("sets a noindex header for nested backoffice routes", async () => {
     const app = express();
     registerStatic(app, createRepo(null));
 
@@ -137,7 +187,7 @@ describe("registerStatic", () => {
     expect(response.headers["x-robots-tag"]).toBe("noindex");
   });
 
-  it("returns a real 404 for an unknown application route", async () => {
+  it("returns a real 404 with the plain shell for an unknown application route", async () => {
     const app = express();
     registerStatic(app, createRepo(null));
 
@@ -145,5 +195,46 @@ describe("registerStatic", () => {
 
     expect(response.status).toBe(404);
     expect(response.text).toBe("<h1>Index</h1>");
+    expect(renderMock).not.toHaveBeenCalled();
+  });
+
+  it("skips the dev-middleware delegation entirely in production", async () => {
+    process.env.NODE_ENV = "production";
+    const devMiddlewares = jest.fn();
+    (createSsrRenderer as jest.Mock).mockResolvedValueOnce({ render: renderMock, devMiddlewares });
+
+    const app = express();
+    registerStatic(app, createRepo(null));
+
+    await request(app).get("/contact");
+
+    expect(devMiddlewares).not.toHaveBeenCalled();
+  });
+
+  it("delegates to the renderer's dev middlewares outside production", async () => {
+    const devMiddlewares = jest.fn((_req, res, next) => {
+      res.set("x-dev-middleware", "hit");
+      next();
+    });
+    (createSsrRenderer as jest.Mock).mockResolvedValueOnce({ render: renderMock, devMiddlewares });
+
+    const app = express();
+    registerStatic(app, createRepo(null));
+
+    const response = await request(app).get("/contact");
+
+    expect(devMiddlewares).toHaveBeenCalled();
+    expect(response.headers["x-dev-middleware"]).toBe("hit");
+  });
+
+  it("falls through to the route handler when the renderer has no dev middlewares", async () => {
+    (createSsrRenderer as jest.Mock).mockResolvedValueOnce({ render: renderMock });
+
+    const app = express();
+    registerStatic(app, createRepo(null));
+
+    const response = await request(app).get("/contact");
+
+    expect(response.status).toBe(200);
   });
 });

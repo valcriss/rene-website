@@ -25,7 +25,7 @@ export const buildAuthHeaders = (_role?: string, includeJson = true) => {
     headers["Content-Type"] = "application/json";
   }
 
-  const token = window.localStorage.getItem(TOKEN_STORAGE_KEY);
+  const token = typeof window !== "undefined" ? window.localStorage.getItem(TOKEN_STORAGE_KEY) : null;
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }

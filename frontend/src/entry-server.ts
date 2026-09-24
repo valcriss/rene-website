@@ -1,0 +1,22 @@
+import { renderToString } from "@vue/server-renderer";
+import { createApp } from "./appFactory";
+
+export type RenderResult = {
+  html: string;
+  stateScript: string;
+};
+
+// `</script>` inside serialized state (e.g. an event description) would otherwise close the
+// tag early; escaping `<` keeps the JSON valid while staying inert as HTML.
+const serializeState = (state: unknown): string => JSON.stringify(state).replace(/</g, "\\u003c");
+
+export const render = async (url: string): Promise<RenderResult> => {
+  const { app, router, pinia } = createApp(url);
+  await router.push(url);
+  await router.isReady();
+
+  const html = await renderToString(app);
+  const stateScript = `<script id="__PINIA_STATE__" type="application/json">${serializeState(pinia.state.value)}</script>`;
+
+  return { html, stateScript };
+};
