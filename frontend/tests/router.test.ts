@@ -26,9 +26,17 @@ describe("router", () => {
         "/backoffice/admin/categories",
         "/backoffice/admin/settings",
         "/backoffice/profile",
-        "/event/:id"
+        "/event/:id",
+        "/:pathMatch(.*)*"
       ])
     );
+  });
+
+  it("resolves unknown routes to the not-found page", async () => {
+    const router = createAppRouter(createMemoryHistory());
+    await router.push("/this/does/not/exist");
+
+    expect(router.currentRoute.value.name).toBe("not-found");
   });
 
   it("loads async route components", async () => {

@@ -69,6 +69,14 @@
             </div>
           </article>
 
+          <div
+            v-if="isEventEnded"
+            data-testid="event-ended-banner"
+            class="rounded-[1.5rem] border border-amber-200 bg-amber-50/80 p-5 text-sm text-amber-900"
+          >
+            {{ t("detail.eventEnded") }}
+          </div>
+
           <div class="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(340px,0.8fr)] xl:items-stretch">
             <div class="space-y-6">
               <section class="rounded-[2rem] border border-white/90 bg-white p-6 shadow-[0_20px_72px_-54px_rgba(30,41,59,0.24)] sm:p-8">
@@ -358,7 +366,14 @@ const detailEvent = computed(() => {
     return props.event;
   }
   const event = eventsStore.getEventById(props.eventId);
-  return event && !isEventArchived(event) ? event : null;
+  return event && !event.archivedAt ? event : null;
+});
+
+// The event is naturally past (publicationEndAt elapsed) but was never manually archived: it
+// stays indexable with an "event ended" indicator, distinct from a permanently withdrawn event.
+const isEventEnded = computed(() => {
+  const event = detailEvent.value;
+  return Boolean(event && !event.archivedAt && isEventArchived(event));
 });
 const categoryNames = computed(() =>
   new Map(categories.value.map((category) => [category.id, category.name]))

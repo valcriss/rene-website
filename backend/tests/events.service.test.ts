@@ -6,6 +6,7 @@ import {
   getEvent,
   getEventForActor,
   getPublicEvent,
+  getPublicEventPageStatus,
   listEvents,
   listPublicEvents,
   publishEvent as publishEventForActor,
@@ -261,6 +262,40 @@ describe("event services", () => {
       const repo = createRepo(null);
 
       await expect(getPublicEvent(repo, "missing")).resolves.toBeNull();
+    });
+  });
+
+  describe("getPublicEventPageStatus", () => {
+    const publishedEvent: Event = { ...baseEvent, id: "published", status: "PUBLISHED" };
+
+    it("returns 200 for a published, non-archived event", async () => {
+      const repo = createRepo(publishedEvent);
+
+      await expect(getPublicEventPageStatus(repo, "published")).resolves.toBe(200);
+    });
+
+    it("returns 200 for a published event whose occurrences ended (still indexable)", async () => {
+      const repo = createRepo({ ...publishedEvent, publicationEndAt: "2020-01-01T00:00:00.000Z" });
+
+      await expect(getPublicEventPageStatus(repo, "published")).resolves.toBe(200);
+    });
+
+    it("returns 410 for a published event that was intentionally archived", async () => {
+      const repo = createRepo({ ...publishedEvent, archivedAt: "2026-02-01T00:00:00.000Z" });
+
+      await expect(getPublicEventPageStatus(repo, "published")).resolves.toBe(410);
+    });
+
+    it("returns 404 for an event that was never published", async () => {
+      const repo = createRepo(baseEvent);
+
+      await expect(getPublicEventPageStatus(repo, "id")).resolves.toBe(404);
+    });
+
+    it("returns 404 for a missing event", async () => {
+      const repo = createRepo(null);
+
+      await expect(getPublicEventPageStatus(repo, "missing")).resolves.toBe(404);
     });
   });
 

@@ -184,6 +184,22 @@ export const getPublicEvent = async (repo: EventRepository, id: string): Promise
   return toPublicEvent(event);
 };
 
+export type PublicEventPageStatus = 200 | 404 | 410;
+
+// An event page is 410 only when it was intentionally and durably withdrawn (archivedAt set).
+// An event that merely reached the end of its occurrences (publicationEndAt elapsed) stays a
+// live, indexable 200 — it is still useful as a past record linking to upcoming events.
+export const getPublicEventPageStatus = async (
+  repo: EventRepository,
+  id: string
+): Promise<PublicEventPageStatus> => {
+  const event = await repo.getById(id);
+  if (!event || event.status !== "PUBLISHED") {
+    return 404;
+  }
+  return event.archivedAt ? 410 : 200;
+};
+
 export const getEventForActor = async (
   repo: EventRepository,
   id: string,
