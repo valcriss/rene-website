@@ -34,7 +34,22 @@ export const registerStatic = (app: express.Express, eventRepository: EventRepos
 
   // `index: false` is essential: without it, express.static serves the raw index.html for "/"
   // (and any other directory-like path) before our own handler below can server-render it.
-  app.use(express.static(frontendDist, { index: false }));
+  //
+  // Only files under /assets/ carry a content hash in their filename (Vite's build output) — a
+  // change to their content always means a new URL, so they can be cached for a year as
+  // immutable. Everything else served from this directory (index.html, logo.svg, mark.png) keeps
+  // its URL across deploys, so it must always be revalidated instead.
+  app.use(
+    express.static(frontendDist, {
+      index: false,
+      setHeaders: (res, filePath) => {
+        const cacheControl = filePath.includes(`${path.sep}assets${path.sep}`)
+          ? "public, max-age=31536000, immutable"
+          : "no-cache";
+        res.setHeader("Cache-Control", cacheControl);
+      }
+    })
+  );
 
   // Created lazily (not at registerStatic time) so tests that never issue an HTML request
   // never pay for it, and so the one dev-mode Vite server is shared across requests.

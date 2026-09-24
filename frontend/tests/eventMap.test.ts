@@ -48,6 +48,8 @@ vi.mock("leaflet", () => ({
   marker: vi.fn(() => markerInstance)
 }));
 
+type IntersectionCallback = (entries: IntersectionObserverEntry[], observer: IntersectionObserver) => void;
+
 const buildPin = (overrides: Partial<EventMapPin> = {}): EventMapPin => ({
   id: "1:occ-1",
   eventId: "1",
@@ -61,6 +63,75 @@ const buildPin = (overrides: Partial<EventMapPin> = {}): EventMapPin => ({
 describe("EventMap", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it("does not import leaflet or initialize the map until the container intersects the viewport", async () => {
+    const observeSpy = vi.fn();
+    const originalIntersectionObserver = window.IntersectionObserver;
+    class NeverIntersectingObserver {
+      constructor(_callback: IntersectionCallback) {
+        void _callback;
+      }
+      observe = observeSpy;
+      unobserve = vi.fn();
+      disconnect = vi.fn();
+      takeRecords = () => [];
+    }
+    window.IntersectionObserver = NeverIntersectingObserver as unknown as typeof IntersectionObserver;
+
+    render(EventMap, { props: { pins: [buildPin()] } });
+    await flushLeafletImport();
+
+    expect(observeSpy).toHaveBeenCalled();
+    expect(L.map).not.toHaveBeenCalled();
+
+    window.IntersectionObserver = originalIntersectionObserver;
+  });
+
+  it("keeps waiting when an intersection callback reports no intersecting entries yet", async () => {
+    let storedCallback: IntersectionCallback | null = null;
+    const originalIntersectionObserver = window.IntersectionObserver;
+    class ControllableObserver {
+      constructor(callback: IntersectionCallback) {
+        storedCallback = callback;
+      }
+      observe = vi.fn();
+      unobserve = vi.fn();
+      disconnect = vi.fn();
+      takeRecords = () => [];
+    }
+    window.IntersectionObserver = ControllableObserver as unknown as typeof IntersectionObserver;
+
+    render(EventMap, { props: { pins: [buildPin()] } });
+    await flushLeafletImport();
+
+    storedCallback?.([{ isIntersecting: false } as IntersectionObserverEntry], {} as IntersectionObserver);
+    await flushLeafletImport();
+
+    expect(L.map).not.toHaveBeenCalled();
+
+    window.IntersectionObserver = originalIntersectionObserver;
+  });
+
+  it("initializes the map once the container intersects the viewport", async () => {
+    render(EventMap, { props: { pins: [buildPin()] } });
+    await flushLeafletImport();
+
+    expect(L.map).toHaveBeenCalled();
+    expect(layerGroupInstance.addTo).toHaveBeenCalled();
+  });
+
+  it("falls back to initializing immediately when IntersectionObserver is unavailable", async () => {
+    const originalIntersectionObserver = window.IntersectionObserver;
+    // @ts-expect-error simulating an older browser with no IntersectionObserver support
+    delete window.IntersectionObserver;
+
+    render(EventMap, { props: { pins: [buildPin()] } });
+    await flushLeafletImport();
+
+    expect(L.map).toHaveBeenCalled();
+
+    window.IntersectionObserver = originalIntersectionObserver;
   });
 
   it("renders markers", async () => {
@@ -109,6 +180,20 @@ describe("EventMap", () => {
 
     expect(markerInstance.openPopup).toHaveBeenCalled();
     expect(mapInstance.setView).toHaveBeenCalledWith({ lat: 46.97, lng: 0.7 }, 13);
+  });
+
+  it("opens a marker when selectedId changes after mount", async () => {
+    const { rerender } = render(EventMap, {
+      props: {
+        pins: [buildPin()]
+      }
+    });
+    await flushLeafletImport();
+
+    markerInstance.openPopup.mockClear();
+    await rerender({ pins: [buildPin()], selectedId: "1" });
+
+    expect(markerInstance.openPopup).toHaveBeenCalled();
   });
 
   it("ignores selection without marker", async () => {

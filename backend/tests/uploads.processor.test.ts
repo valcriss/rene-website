@@ -5,6 +5,7 @@ import sharp from "sharp";
 import {
   getDeclaredUploadFormat,
   isDecodedMetadataAllowed,
+  MAX_UPLOAD_WIDTH,
   processAndPersistUpload,
   UploadRejectedError
 } from "../src/uploads/processor";
@@ -71,6 +72,38 @@ describe("upload processor", () => {
     expect(metadata.exif).toBeUndefined();
     expect(metadata.xmp).toBeUndefined();
     expect(metadata.icc).toBeUndefined();
+  });
+
+  it("downscales an image wider than the maximum width, preserving aspect ratio", async () => {
+    const dir = createTempDir();
+    process.env.UPLOAD_DIR = dir;
+    const oversized = sharp({
+      create: {
+        width: MAX_UPLOAD_WIDTH + 400,
+        height: (MAX_UPLOAD_WIDTH + 400) / 2,
+        channels: 4,
+        background: { r: 10, g: 20, b: 30, alpha: 1 }
+      }
+    });
+    const buffer = await oversized.png().toBuffer();
+
+    const filename = await processAndPersistUpload({ buffer, originalname: "wide.png", mimetype: "image/png" });
+    const metadata = await sharp(path.join(dir, "pending", filename)).metadata();
+
+    expect(metadata.width).toBe(MAX_UPLOAD_WIDTH);
+    expect(metadata.height).toBe(MAX_UPLOAD_WIDTH / 2);
+  });
+
+  it("leaves an image narrower than the maximum width unresized", async () => {
+    const dir = createTempDir();
+    process.env.UPLOAD_DIR = dir;
+    const buffer = await sourceImage().png().toBuffer();
+
+    const filename = await processAndPersistUpload({ buffer, originalname: "small.png", mimetype: "image/png" });
+    const metadata = await sharp(path.join(dir, "pending", filename)).metadata();
+
+    expect(metadata.width).toBe(3);
+    expect(metadata.height).toBe(2);
   });
 
   it.each([

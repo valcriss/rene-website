@@ -31,6 +31,9 @@
                 "
                 :src="getEventImage(detailEvent)"
                 :alt="detailEvent.title"
+                loading="eager"
+                fetchpriority="high"
+                decoding="async"
                 @error="markImageError(detailEvent.id)"
               />
               <div

@@ -60,9 +60,10 @@ describe("registerStatic", () => {
   const originalEnv = process.env.NODE_ENV;
 
   beforeAll(async () => {
-    await fs.mkdir(frontendDist, { recursive: true });
+    await fs.mkdir(path.join(frontendDist, "assets"), { recursive: true });
     await fs.writeFile(path.join(frontendDist, "index.html"), "<h1>Index</h1>");
     await fs.writeFile(path.join(frontendDist, "hello.txt"), "hello");
+    await fs.writeFile(path.join(frontendDist, "assets", "index-abc123.js"), "console.log('hi')");
   });
 
   afterAll(async () => {
@@ -83,6 +84,25 @@ describe("registerStatic", () => {
 
     expect(response.status).toBe(200);
     expect(response.text).toBe("hello");
+  });
+
+  it("caches non-hashed static files with no-cache, forcing revalidation", async () => {
+    const app = express();
+    registerStatic(app, createRepo(null));
+
+    const response = await request(app).get("/hello.txt");
+
+    expect(response.headers["cache-control"]).toBe("no-cache");
+  });
+
+  it("caches hashed build assets for a year as immutable", async () => {
+    const app = express();
+    registerStatic(app, createRepo(null));
+
+    const response = await request(app).get("/assets/index-abc123.js");
+
+    expect(response.status).toBe(200);
+    expect(response.headers["cache-control"]).toBe("public, max-age=31536000, immutable");
   });
 
   it("returns a JSON 404 for an unmatched API route", async () => {

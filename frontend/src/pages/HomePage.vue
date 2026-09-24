@@ -47,6 +47,9 @@
             class="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
             :src="getEventImage(currentCarouselEvent)"
             :alt="currentCarouselEvent.title"
+            loading="eager"
+            fetchpriority="high"
+            decoding="async"
             @error="markImageError(currentCarouselEvent.id)"
           />
           <div class="pointer-events-none absolute inset-x-0 bottom-0 h-[44%] bg-gradient-to-t from-slate-950/74 via-slate-950/34 to-transparent"></div>
@@ -195,6 +198,8 @@
                       class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
                       :src="getEventImage(eventItem)"
                       :alt="eventItem.title"
+                      loading="lazy"
+                      decoding="async"
                       @error="markImageError(eventItem.id)"
                     />
                     <div class="absolute left-5 top-5 flex flex-wrap gap-2">
