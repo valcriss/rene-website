@@ -4,6 +4,8 @@ import { createApp } from "../src/app";
 import { createAdminRouter } from "../src/admin/routes";
 import { AdminRepository } from "../src/admin/repository";
 import { AuthRepository } from "../src/auth/repository";
+import { authenticateOptional } from "../src/auth/middleware";
+import { authHeader } from "./authTestUtils";
 
 const stubAuthRepo = {} as AuthRepository;
 
@@ -16,9 +18,20 @@ describe("admin routes", () => {
     expect(response.body).toEqual({ message: "Authentication required" });
   });
 
+  it("rejects a spoofed admin role header", async () => {
+    const app = createApp();
+    const response = await request(app)
+      .get("/api/admin/users")
+      .set("x-user-role", "ADMIN")
+      .set("x-user-id", "attacker");
+
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({ message: "Authentication required" });
+  });
+
   it("denies access for non-admin", async () => {
     const app = createApp();
-    const response = await request(app).get("/api/admin/users").set("x-user-role", "EDITOR");
+    const response = await request(app).get("/api/admin/users").set("Authorization", authHeader("EDITOR"));
 
     expect(response.status).toBe(403);
     expect(response.body).toEqual({ message: "Forbidden" });
@@ -26,10 +39,10 @@ describe("admin routes", () => {
 
   it("lists users and categories", async () => {
     const app = createApp();
-    const usersResponse = await request(app).get("/api/admin/users").set("x-user-role", "ADMIN");
+    const usersResponse = await request(app).get("/api/admin/users").set("Authorization", authHeader("ADMIN"));
     const categoriesResponse = await request(app)
       .get("/api/admin/categories")
-      .set("x-user-role", "ADMIN");
+      .set("Authorization", authHeader("ADMIN"));
 
     expect(usersResponse.status).toBe(200);
     expect(usersResponse.body.length).toBeGreaterThan(0);
@@ -41,7 +54,7 @@ describe("admin routes", () => {
     const app = createApp();
     const adminResponse = await request(app)
       .get("/api/admin/audiences")
-      .set("x-user-role", "ADMIN");
+      .set("Authorization", authHeader("ADMIN"));
     const publicResponse = await request(app).get("/api/audiences");
 
     expect(adminResponse.status).toBe(200);
@@ -62,7 +75,7 @@ describe("admin routes", () => {
     const app = createApp();
     const createResponse = await request(app)
       .post("/api/admin/users")
-      .set("x-user-role", "ADMIN")
+      .set("Authorization", authHeader("ADMIN"))
       .send({ name: "Marie", email: "marie@example.com", role: "EDITOR" });
 
     expect(createResponse.status).toBe(201);
@@ -70,7 +83,7 @@ describe("admin routes", () => {
 
     const updateResponse = await request(app)
       .put(`/api/admin/users/${userId}`)
-      .set("x-user-role", "ADMIN")
+      .set("Authorization", authHeader("ADMIN"))
       .send({ name: "Marie Curie", email: "marie@example.com", role: "MODERATOR" });
 
     expect(updateResponse.status).toBe(200);
@@ -78,7 +91,7 @@ describe("admin routes", () => {
 
     const deleteResponse = await request(app)
       .delete(`/api/admin/users/${userId}`)
-      .set("x-user-role", "ADMIN");
+      .set("Authorization", authHeader("ADMIN"));
 
     expect(deleteResponse.status).toBe(204);
   });
@@ -87,11 +100,11 @@ describe("admin routes", () => {
     const app = createApp();
     const updateResponse = await request(app)
       .put("/api/admin/users/missing")
-      .set("x-user-role", "ADMIN")
+      .set("Authorization", authHeader("ADMIN"))
       .send({ name: "Marie", email: "marie@example.com", role: "EDITOR" });
     const deleteResponse = await request(app)
       .delete("/api/admin/users/missing")
-      .set("x-user-role", "ADMIN");
+      .set("Authorization", authHeader("ADMIN"));
 
     expect(updateResponse.status).toBe(404);
     expect(deleteResponse.status).toBe(404);
@@ -101,7 +114,7 @@ describe("admin routes", () => {
     const app = createApp();
     const response = await request(app)
       .post("/api/admin/users")
-      .set("x-user-role", "ADMIN")
+      .set("Authorization", authHeader("ADMIN"))
       .send({});
 
     expect(response.status).toBe(400);
@@ -111,12 +124,12 @@ describe("admin routes", () => {
     const app = createApp();
     const createResponse = await request(app)
       .post("/api/admin/users")
-      .set("x-user-role", "ADMIN")
+      .set("Authorization", authHeader("ADMIN"))
       .send({ name: "Marie", email: "marie@example.com", role: "EDITOR" });
 
     const response = await request(app)
       .put(`/api/admin/users/${createResponse.body.id}`)
-      .set("x-user-role", "ADMIN")
+      .set("Authorization", authHeader("ADMIN"))
       .send({});
 
     expect(response.status).toBe(400);
@@ -126,7 +139,7 @@ describe("admin routes", () => {
     const app = createApp();
     const createResponse = await request(app)
       .post("/api/admin/categories")
-      .set("x-user-role", "ADMIN")
+      .set("Authorization", authHeader("ADMIN"))
       .send({ name: "Lecture" });
 
     expect(createResponse.status).toBe(201);
@@ -134,7 +147,7 @@ describe("admin routes", () => {
 
     const updateResponse = await request(app)
       .put(`/api/admin/categories/${categoryId}`)
-      .set("x-user-role", "ADMIN")
+      .set("Authorization", authHeader("ADMIN"))
       .send({ name: "Lecture publique" });
 
     expect(updateResponse.status).toBe(200);
@@ -142,7 +155,7 @@ describe("admin routes", () => {
 
     const deleteResponse = await request(app)
       .delete(`/api/admin/categories/${categoryId}`)
-      .set("x-user-role", "ADMIN");
+      .set("Authorization", authHeader("ADMIN"));
 
     expect(deleteResponse.status).toBe(204);
   });
@@ -151,11 +164,11 @@ describe("admin routes", () => {
     const app = createApp();
     const updateResponse = await request(app)
       .put("/api/admin/categories/missing")
-      .set("x-user-role", "ADMIN")
+      .set("Authorization", authHeader("ADMIN"))
       .send({ name: "Lecture" });
     const deleteResponse = await request(app)
       .delete("/api/admin/categories/missing")
-      .set("x-user-role", "ADMIN");
+      .set("Authorization", authHeader("ADMIN"));
 
     expect(updateResponse.status).toBe(404);
     expect(deleteResponse.status).toBe(404);
@@ -165,7 +178,7 @@ describe("admin routes", () => {
     const app = createApp();
     const response = await request(app)
       .post("/api/admin/categories")
-      .set("x-user-role", "ADMIN")
+      .set("Authorization", authHeader("ADMIN"))
       .send({});
 
     expect(response.status).toBe(400);
@@ -175,12 +188,12 @@ describe("admin routes", () => {
     const app = createApp();
     const createResponse = await request(app)
       .post("/api/admin/categories")
-      .set("x-user-role", "ADMIN")
+      .set("Authorization", authHeader("ADMIN"))
       .send({ name: "Lecture" });
 
     const response = await request(app)
       .put(`/api/admin/categories/${createResponse.body.id}`)
-      .set("x-user-role", "ADMIN")
+      .set("Authorization", authHeader("ADMIN"))
       .send({});
 
     expect(response.status).toBe(400);
@@ -194,11 +207,12 @@ describe("admin routes", () => {
     } as unknown as AdminRepository;
     const app = express();
     app.use(express.json());
+    app.use(authenticateOptional);
     app.use("/api/admin", createAdminRouter(repo, stubAuthRepo));
 
     const response = await request(app)
       .delete("/api/admin/categories/active")
-      .set("x-user-role", "ADMIN");
+      .set("Authorization", authHeader("ADMIN"));
 
     expect(response.status).toBe(409);
     expect(response.body).toEqual({ errors: ["Category in use"] });
@@ -208,7 +222,7 @@ describe("admin routes", () => {
     const app = createApp();
     const createResponse = await request(app)
       .post("/api/admin/audiences")
-      .set("x-user-role", "ADMIN")
+      .set("Authorization", authHeader("ADMIN"))
       .send({ name: "Adolescents" });
 
     expect(createResponse.status).toBe(201);
@@ -216,7 +230,7 @@ describe("admin routes", () => {
 
     const updateResponse = await request(app)
       .put(`/api/admin/audiences/${audienceId}`)
-      .set("x-user-role", "ADMIN")
+      .set("Authorization", authHeader("ADMIN"))
       .send({ name: "Jeunes" });
 
     expect(updateResponse.status).toBe(200);
@@ -224,7 +238,7 @@ describe("admin routes", () => {
 
     const deleteResponse = await request(app)
       .delete(`/api/admin/audiences/${audienceId}`)
-      .set("x-user-role", "ADMIN");
+      .set("Authorization", authHeader("ADMIN"));
 
     expect(deleteResponse.status).toBe(204);
   });
@@ -233,11 +247,11 @@ describe("admin routes", () => {
     const app = createApp();
     const updateResponse = await request(app)
       .put("/api/admin/audiences/missing")
-      .set("x-user-role", "ADMIN")
+      .set("Authorization", authHeader("ADMIN"))
       .send({ name: "Jeunes" });
     const deleteResponse = await request(app)
       .delete("/api/admin/audiences/missing")
-      .set("x-user-role", "ADMIN");
+      .set("Authorization", authHeader("ADMIN"));
 
     expect(updateResponse.status).toBe(404);
     expect(deleteResponse.status).toBe(404);
@@ -247,19 +261,19 @@ describe("admin routes", () => {
     const app = createApp();
     const createResponse = await request(app)
       .post("/api/admin/audiences")
-      .set("x-user-role", "ADMIN")
+      .set("Authorization", authHeader("ADMIN"))
       .send({});
 
     expect(createResponse.status).toBe(400);
 
     const validCreateResponse = await request(app)
       .post("/api/admin/audiences")
-      .set("x-user-role", "ADMIN")
+      .set("Authorization", authHeader("ADMIN"))
       .send({ name: "Adolescents" });
 
     const updateResponse = await request(app)
       .put(`/api/admin/audiences/${validCreateResponse.body.id}`)
-      .set("x-user-role", "ADMIN")
+      .set("Authorization", authHeader("ADMIN"))
       .send({});
 
     expect(updateResponse.status).toBe(400);
@@ -273,11 +287,12 @@ describe("admin routes", () => {
     } as unknown as AdminRepository;
     const app = express();
     app.use(express.json());
+    app.use(authenticateOptional);
     app.use("/api/admin", createAdminRouter(repo, stubAuthRepo));
 
     const response = await request(app)
       .delete("/api/admin/audiences/active")
-      .set("x-user-role", "ADMIN");
+      .set("Authorization", authHeader("ADMIN"));
 
     expect(response.status).toBe(409);
     expect(response.body).toEqual({ errors: ["Audience in use"] });
@@ -287,14 +302,14 @@ describe("admin routes", () => {
     const app = createApp();
     const getResponse = await request(app)
       .get("/api/admin/settings")
-      .set("x-user-role", "ADMIN");
+      .set("Authorization", authHeader("ADMIN"));
 
     expect(getResponse.status).toBe(200);
     expect(getResponse.body.contactEmail).toBeDefined();
 
     const updateResponse = await request(app)
       .put("/api/admin/settings")
-      .set("x-user-role", "ADMIN")
+      .set("Authorization", authHeader("ADMIN"))
       .send({
         contactEmail: "contact@rene-website.test",
         contactPhone: "0102030405",
@@ -313,7 +328,7 @@ describe("admin routes", () => {
     const app = createApp();
     const response = await request(app)
       .put("/api/admin/settings")
-      .set("x-user-role", "ADMIN")
+      .set("Authorization", authHeader("ADMIN"))
       .send({});
 
     expect(response.status).toBe(400);
@@ -323,7 +338,7 @@ describe("admin routes", () => {
     const app = createApp();
     await request(app)
       .put("/api/admin/settings")
-      .set("x-user-role", "ADMIN")
+      .set("Authorization", authHeader("ADMIN"))
       .send({
         contactEmail: "contact@rene-website.test",
         contactPhone: "0102030405",

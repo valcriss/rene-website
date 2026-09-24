@@ -2,18 +2,16 @@ import { Request, Response, NextFunction } from "express";
 
 export type UserRole = "EDITOR" | "MODERATOR" | "ADMIN";
 
-const parseRole = (value: string | undefined): UserRole | null => {
+export const isUserRole = (value: unknown): value is UserRole => {
   if (value === "EDITOR" || value === "MODERATOR" || value === "ADMIN") {
-    return value;
+    return true;
   }
-  return null;
+  return false;
 };
 
 export const requireRole = (allowed: UserRole[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
-    const headerValue = req.header("x-user-role") ?? undefined;
-    const headerRole = parseRole(headerValue);
-    const role = req.user?.role ?? headerRole;
+    const role = req.user?.role;
 
     if (!role) {
       res.status(401).json({ message: "Authentication required" });

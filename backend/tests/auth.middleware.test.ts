@@ -73,4 +73,26 @@ describe("auth middleware", () => {
     expect(response.status).toBe(401);
     expect(response.body).toEqual({ message: "Authentication required" });
   });
+
+  it("rejects an expired token", async () => {
+    process.env.JWT_EXPIRES_IN = "0s";
+    const tokenResult = signUserToken({
+      id: "user-1",
+      name: "Test",
+      email: "test@example.com",
+      role: "ADMIN"
+    });
+    delete process.env.JWT_EXPIRES_IN;
+    if (!tokenResult.ok) throw new Error("Token generation failed");
+
+    const app = express();
+    app.use(authenticateOptional);
+    app.get("/me", (_req, res) => res.json({ ok: true }));
+
+    const response = await request(app)
+      .get("/me")
+      .set("Authorization", `Bearer ${tokenResult.value}`);
+
+    expect(response.status).toBe(401);
+  });
 });

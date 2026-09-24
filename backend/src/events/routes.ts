@@ -13,17 +13,9 @@ import {
 } from "../notifications/service";
 import { Event } from "./types";
 import { computePublicationEndAt } from "./occurrences";
+import { getAuthenticatedUser } from "../auth/request";
 
 type AsyncHandler = (req: Request, res: Response) => Promise<void>;
-
-const getRequestUserId = (req: Request) => {
-  const headerUserId = req.header("x-user-id");
-  if (req.user?.id) {
-    return req.user.id;
-  }
-
-  return typeof headerUserId === "string" && headerUserId.trim().length > 0 ? headerUserId.trim() : null;
-};
 
 const withErrorHandling = (handler: AsyncHandler) => async (req: Request, res: Response) => {
   try {
@@ -75,9 +67,7 @@ export const createEventRouter = (
   }));
 
   router.post("/events", requireRole(["EDITOR", "MODERATOR", "ADMIN"]), withErrorHandling(async (req, res) => {
-    const rawUserId = req.header("x-user-id");
-    const headerUserId = typeof rawUserId === "string" && rawUserId.trim().length > 0 ? rawUserId.trim() : null;
-    const createdByUserId = req.user?.id ?? headerUserId;
+    const createdByUserId = getAuthenticatedUser(req).id;
     const result = await createEvent(repo, req.body, createdByUserId);
     if (!result.ok) {
       res.status(400).json({ errors: result.errors });
@@ -182,9 +172,10 @@ export const createEventRouter = (
 
   router.delete("/events/:id", requireRole(["EDITOR", "MODERATOR", "ADMIN"]), withErrorHandling(async (req, res) => {
     const current = await getEvent(repo, req.params.id);
+    const user = getAuthenticatedUser(req);
     const result = await deleteEvent(repo, req.params.id, {
-      role: (req.user?.role ?? req.header("x-user-role")) as "EDITOR" | "MODERATOR" | "ADMIN",
-      userId: getRequestUserId(req)
+      role: user.role,
+      userId: user.id
     });
     if (!result.ok) {
       const status = result.errors.includes("Événement introuvable.") ? 404 : result.errors.includes("Suppression non autorisée.") ? 403 : 400;
