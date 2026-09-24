@@ -116,4 +116,10 @@ describe("usePageSeo", () => {
     expect(html).toContain('<meta property="og:url" content="https://rene.example.org/event/6">');
     expect(html).toContain('<link rel="canonical" href="https://rene.example.org/event/6">');
   });
+
+  it("never emits an hreflang alternate: no translated-page equivalent exists (issue #57)", async () => {
+    const html = await renderWithSeo({ title: "Concert", description: "Description" }, "/event/7");
+
+    expect(html).not.toContain("hreflang");
+  });
 });
