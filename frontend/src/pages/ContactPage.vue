@@ -68,10 +68,16 @@ import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import NavigationHeader from "../components/navigation/Header.vue";
 import { useContactStore } from "../stores/contact";
+import { usePageSeo } from "../composables/usePageSeo";
 
 const router = useRouter();
 const { t } = useI18n();
 const contactStore = useContactStore();
+
+usePageSeo({
+  title: () => `${t("contact.title")} — ${t("navigation.title")}`,
+  description: () => t("contact.lead")
+});
 const { contactName, contactEmail, contactMessage, contactHoneypot, contactError, contactSent } =
   storeToRefs(contactStore);
 

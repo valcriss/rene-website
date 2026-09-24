@@ -7,8 +7,9 @@ import { i18n, setLocale } from "../src/i18n";
 if (typeof window !== "undefined") {
   await import("@testing-library/jest-dom");
   const { config } = await import("@vue/test-utils");
+  const { createHead } = await import("@unhead/vue/client");
 
-  config.global.plugins = [...(config.global.plugins ?? []), i18n];
+  config.global.plugins = [...(config.global.plugins ?? []), i18n, createHead()];
 
   window.scrollTo = () => {};
 

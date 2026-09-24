@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { transformHtmlTemplate } from "unhead/server";
 import { render } from "../src/entry-server";
+
+const BASE_TEMPLATE = "<!doctype html><html><head><title>R3ne</title></head><body></body></html>";
 
 const jsonResponse = (body: unknown) =>
   Promise.resolve({
@@ -32,7 +35,7 @@ describe("entry-server render", () => {
   });
 
   it("renders the home page with editorial content and a link to the agenda navigation", async () => {
-    const result = await render("/");
+    const result = await render("/", "https://rene.example.org");
 
     expect(result.html).toContain("R3ne");
     expect(result.html).toContain("<header");
@@ -81,17 +84,69 @@ describe("entry-server render", () => {
       })
     );
 
-    const result = await render("/event/1");
+    const result = await render("/event/1", "https://rene.example.org");
 
     expect(result.html).toContain("Concert au parc");
     expect(result.html).toContain("Une belle soirée en plein air.");
     expect(result.html).toContain("Descartes");
   });
 
+  it("threads siteUrl end-to-end into the rendered head's canonical/Open Graph tags", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: string | URL) => {
+        const url = typeof input === "string" ? input : input.toString();
+        if (url.includes("/api/public/events")) {
+          return jsonResponse([
+            {
+              id: "1",
+              title: "Concert au parc",
+              content: "<p>Une belle soirée en plein air.</p>",
+              image: "/uploads/concert.jpg",
+              categoryId: null,
+              audienceId: null,
+              occurrences: [],
+              organizerName: null,
+              status: "PUBLISHED",
+              publishedAt: "2026-01-01T00:00:00.000Z",
+              publicationEndAt: "2026-06-15T22:00:00.000Z",
+              archivedAt: null,
+              createdAt: "2026-01-01T00:00:00.000Z",
+              updatedAt: "2026-01-01T00:00:00.000Z"
+            }
+          ]);
+        }
+        return jsonResponse([]);
+      })
+    );
+
+    const result = await render("/event/1", "https://rene.example.org");
+    const fullHtml = transformHtmlTemplate(result.head, BASE_TEMPLATE);
+
+    expect(fullHtml).toContain("<title>Concert au parc — R3ne</title>");
+    expect(fullHtml).toContain('<link rel="canonical" href="https://rene.example.org/event/1">');
+    expect(fullHtml).toContain('<meta property="og:url" content="https://rene.example.org/event/1">');
+    expect(fullHtml).toContain('<meta property="og:image" content="https://rene.example.org/uploads/concert.jpg">');
+    expect(fullHtml).toContain('<meta property="og:type" content="article">');
+  });
+
   it("renders the not-found page for an unknown route", async () => {
-    const result = await render("/this/route/does/not/exist");
+    const result = await render("/this/route/does/not/exist", "https://rene.example.org");
 
     expect(result.html).toContain("Page introuvable");
+  });
+
+  it("never emits public Open Graph/description metadata for private routes", async () => {
+    const result = await render("/login", "https://rene.example.org");
+    const fullHtml = transformHtmlTemplate(result.head, BASE_TEMPLATE);
+
+    // Login/backoffice pages don't call usePageSeo, so only the generic static <title> from
+    // the template survives; no page-specific description/canonical/OG tags are added for a
+    // route that (per #48) is already served with X-Robots-Tag: noindex.
+    expect(fullHtml).toContain("<title>R3ne</title>");
+    expect(fullHtml).not.toContain('property="og:');
+    expect(fullHtml).not.toContain('name="description"');
+    expect(fullHtml).not.toContain('rel="canonical"');
   });
 
   it("escapes </script> sequences from event content when serializing the hydration state", async () => {
@@ -123,7 +178,7 @@ describe("entry-server render", () => {
       })
     );
 
-    const result = await render("/event/1");
+    const result = await render("/event/1", "https://rene.example.org");
 
     const scriptBody = result.stateScript.replace(/^<script[^>]*>/, "").replace(/<\/script>$/, "");
     expect(scriptBody).not.toContain("</script>");

@@ -279,6 +279,8 @@ import { useCategoriesStore } from "../stores/categories";
 import { useEventsStore } from "../stores/events";
 import { useSettingsStore } from "../stores/settings";
 import { formatEventDateBadge, getEarliestOccurrence, getEventLocationSummary, isMultisiteEvent } from "../utils/occurrences";
+import { usePageSeo } from "../composables/usePageSeo";
+import { buildPlainTextDescription } from "../utils/seo";
 
 type CategoryTheme = {
   backgroundColor: string;
@@ -310,6 +312,11 @@ const roleLabel = computed(() => t(`backoffice.roleLabels.${role.value}`));
 const homepageSubtitleText = computed(() => homepageSubtitle.value?.trim() || t("home.titleLead"));
 const introText = computed(() => homepageIntro.value?.trim() || t("home.intro"));
 const accountLabel = computed(() => userName.value || t("common.mySpace"));
+
+usePageSeo({
+  title: () => `${t("navigation.title")} — ${t("navigation.tagline")}`,
+  description: () => buildPlainTextDescription(introText.value)
+});
 
 const categoryNames = computed(() =>
   new Map(categories.value.map((category) => [category.id, category.name]))

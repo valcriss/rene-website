@@ -30,6 +30,7 @@
     "@tiptap/extension-text": "^3.31.3",
     "@tiptap/extension-underline": "^3.31.3",
     "@tiptap/vue-3": "^3.31.3",
+    "@unhead/vue": "^3.4.1",
     "cropperjs": "^1.6.3",
     "isomorphic-dompurify": "^4.3.0",
     "leaflet": "^1.9.4",

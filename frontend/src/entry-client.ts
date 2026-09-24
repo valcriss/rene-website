@@ -1,9 +1,10 @@
+import { createHead } from "@unhead/vue/client";
 import { createApp } from "./appFactory";
 import { useAuthStore } from "./stores/auth";
 import "./styles.css";
 import "leaflet/dist/leaflet.css";
 
-const { app, router, pinia } = createApp();
+const { app, router, pinia } = createApp(createHead);
 
 const stateElement = document.getElementById("__PINIA_STATE__");
 if (stateElement?.textContent) {

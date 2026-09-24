@@ -11,14 +11,17 @@ Le déploiement fournit les valeurs non sensibles suivantes à Docker Compose :
 - `POSTGRES_MIGRATION_USER` : rôle propriétaire utilisé uniquement par les migrations ;
 - `POSTGRES_APP_USER` : rôle applicatif sans privilèges DDL ni administration ;
 - `POSTGRES_DB` ;
-- `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER` et `SENDER_EMAIL`.
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER` et `SENDER_EMAIL` ;
+- `SITE_URL` : URL absolue publique du site (`https://...`), utilisée pour les
+  canonical, Open Graph et X Card générés côté serveur (issue #47).
 
 Le backend valide en production :
 
 - une `DATABASE_URL` PostgreSQL avec un rôle applicatif dédié et un mot de passe ;
 - des secrets JWT et cron d'au moins 32 caractères avec une diversité suffisante,
   différents des valeurs faibles connues ;
-- une URL Photon HTTP(S), un port valide et une configuration SMTP cohérente ;
+- une URL Photon HTTP(S), une `SITE_URL` HTTP(S), un port valide et une
+  configuration SMTP cohérente ;
 - la présence et la lisibilité des fichiers référencés par les variables `*_FILE`.
 
 Les erreurs de démarrage citent seulement le nom de la variable concernée. Elles ne
