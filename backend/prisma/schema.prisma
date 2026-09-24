@@ -60,8 +60,11 @@ model Event {
   status                 EventStatus @default(DRAFT)
   featured               Boolean     @default(false)
   publishedAt            DateTime?
+  publishedByUserId      String?     @db.Uuid
   publicationEndAt       DateTime
   rejectionReason        String?
+  rejectedByUserId       String?     @db.Uuid
+  rejectedAt             DateTime?
   archivedAt             DateTime?
   createdAt              DateTime    @default(now())
   updatedAt              DateTime    @updatedAt
@@ -69,6 +72,8 @@ model Event {
   category            Category?            @relation(fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   audience            Audience?            @relation(fields: [audienceId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   createdByUser       User?                @relation("UserCreatedEvents", fields: [createdByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  publishedByUser     User?                @relation("UserPublishedEvents", fields: [publishedByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  rejectedByUser      User?                @relation("UserRejectedEvents", fields: [rejectedByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   pendingRevision     EventRevision?
   occurrences         EventOccurrence[]
   moderationReminders ModerationReminder[]
@@ -79,6 +84,8 @@ model Event {
   @@index([categoryId])
   @@index([audienceId])
   @@index([createdByUserId])
+  @@index([publishedByUserId])
+  @@index([rejectedByUserId])
   @@index([archivedAt])
 }
 
@@ -233,6 +240,8 @@ model User {
   updatedAt       DateTime  @updatedAt
 
   createdEvents           Event[]                  @relation("UserCreatedEvents")
+  publishedEvents         Event[]                  @relation("UserPublishedEvents")
+  rejectedEvents          Event[]                  @relation("UserRejectedEvents")
   createdRevisions        EventRevision[]          @relation("UserCreatedRevisions")
   passwordResetTokens     PasswordResetToken[]
   categoryUnsubscriptions CategoryUnsubscription[]
@@ -311,4 +320,19 @@ model SiteSetting {
   legalNotice      String   @default("")
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now())
+  requestId String?
+  actorId   String?  @db.Uuid
+  action    String
+  target    String?
+  outcome   String
+  metadata  Json?
+
+  @@index([createdAt])
+  @@index([actorId, createdAt])
+  @@index([action, createdAt])
 }

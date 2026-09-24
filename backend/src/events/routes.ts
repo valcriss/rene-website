@@ -14,15 +14,20 @@ import {
 import { Event } from "./types";
 import { computePublicationEndAt } from "./occurrences";
 import { getAuthenticatedUser } from "../auth/request";
+import { auditLogger } from "../security/audit";
+import { safeErrorMessage } from "../security/logging";
 
 type AsyncHandler = (req: Request, res: Response) => Promise<void>;
+
+const auditEvent = (req: Request, res: Response, action: string, target: string) =>
+  auditLogger.record({ requestId: res.locals.requestId, actorId: req.user?.id, action, target, outcome: "success" });
 
 const withErrorHandling = (handler: AsyncHandler) => async (req: Request, res: Response) => {
   try {
     await handler(req, res);
   } catch (error) {
     // eslint-disable-next-line no-console
-    console.error("Events API error", error);
+    console.error(JSON.stringify({ event: "events_api_error", error: safeErrorMessage(error) }));
     res.status(500).json({ message: "Erreur interne du serveur." });
   }
 };
@@ -100,8 +105,9 @@ export const createEventRouter = (
       : await notifyEventSubmitted(notificationEvent, authRepo, subscriptionRepo);
     if (!notification.ok) {
       // eslint-disable-next-line no-console
-      console.warn("Notifications submit failed", notification.errors);
+      console.warn(JSON.stringify({ event: "event_notification_failed", action: "submit" }));
     }
+    await auditEvent(req, res, "event.submit", `event:${result.value.id}`);
     res.json(result.value);
   }));
 
@@ -114,8 +120,9 @@ export const createEventRouter = (
     const notification = await notifyEventPublished(result.value, authRepo);
     if (!notification.ok) {
       // eslint-disable-next-line no-console
-      console.warn("Notifications publish failed", notification.errors);
+      console.warn(JSON.stringify({ event: "event_notification_failed", action: "publish" }));
     }
+    await auditEvent(req, res, "event.publish", `event:${result.value.id}`);
     res.json(result.value);
   }));
 
@@ -125,6 +132,7 @@ export const createEventRouter = (
       res.status(result.status).json({ errors: result.errors });
       return;
     }
+    await auditEvent(req, res, "event.archive", `event:${result.value.id}`);
     res.json(result.value);
   }));
 
@@ -134,6 +142,7 @@ export const createEventRouter = (
       res.status(result.status).json({ errors: result.errors });
       return;
     }
+    await auditEvent(req, res, "event.unarchive", `event:${result.value.id}`);
     res.json(result.value);
   }));
 
@@ -144,6 +153,7 @@ export const createEventRouter = (
       return;
     }
 
+    await auditEvent(req, res, "event.feature", `event:${result.value.id}`);
     res.json(result.value);
   }));
 
@@ -154,6 +164,7 @@ export const createEventRouter = (
       return;
     }
 
+    await auditEvent(req, res, "event.slug", `event:${result.value.id}`);
     res.json(result.value);
   }));
 
@@ -168,8 +179,9 @@ export const createEventRouter = (
     const notification = await notifyEventRejected(notificationEvent, authRepo);
     if (!notification.ok) {
       // eslint-disable-next-line no-console
-      console.warn("Notifications reject failed", notification.errors);
+      console.warn(JSON.stringify({ event: "event_notification_failed", action: "reject" }));
     }
+    await auditEvent(req, res, "event.reject", `event:${result.value.id}`);
     res.json(result.value);
   }));
 
@@ -188,9 +200,10 @@ export const createEventRouter = (
       const notification = await notifyEventDeleted(current, authRepo);
       if (!notification.ok) {
         // eslint-disable-next-line no-console
-        console.warn("Notifications delete failed", notification.errors);
+        console.warn(JSON.stringify({ event: "event_notification_failed", action: "delete" }));
       }
     }
+    await auditEvent(req, res, "event.delete", `event:${req.params.id}`);
     res.json(result.value);
   }));
 
