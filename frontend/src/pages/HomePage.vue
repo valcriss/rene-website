@@ -262,7 +262,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onMounted, onServerPrefetch, ref, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
@@ -376,6 +376,16 @@ onMounted(() => {
   categoriesStore.loadCategories();
   audiencesStore.loadAudiences();
   settingsStore.loadPublicSettings();
+});
+
+// onMounted never runs during SSR, so the home page's category/audience names and site
+// settings would otherwise render blank; onServerPrefetch awaits the same loads server-side.
+onServerPrefetch(async () => {
+  await Promise.all([
+    categoriesStore.loadCategories(),
+    audiencesStore.loadAudiences(),
+    settingsStore.loadPublicSettings()
+  ]);
 });
 
 const getCategoryName = (categoryId: string) => categoryNames.value.get(categoryId) ?? "";

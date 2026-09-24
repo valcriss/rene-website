@@ -14,18 +14,22 @@ const STORAGE_KEY = "rene-auth-role";
 const USER_NAME_KEY = "rene-auth-user-name";
 const USER_EMAIL_KEY = "rene-auth-user-email";
 
+// No `window` (and therefore no persisted session) exists during SSR: an anonymous visitor
+// is exactly what an anonymous crawler request should render as.
+const hasWindow = () => typeof window !== "undefined";
+
 const loadRole = (): Role => {
-  const stored = window.localStorage.getItem(STORAGE_KEY);
+  const stored = hasWindow() ? window.localStorage.getItem(STORAGE_KEY) : null;
   if (stored === "EDITOR" || stored === "MODERATOR" || stored === "ADMIN") {
     return stored;
   }
   return "VISITOR";
 };
 
-const loadToken = () => window.localStorage.getItem(TOKEN_STORAGE_KEY);
-const loadUserId = () => window.localStorage.getItem(USER_ID_STORAGE_KEY);
-const loadUserName = () => window.localStorage.getItem(USER_NAME_KEY) ?? "";
-const loadUserEmail = () => window.localStorage.getItem(USER_EMAIL_KEY) ?? "";
+const loadToken = () => (hasWindow() ? window.localStorage.getItem(TOKEN_STORAGE_KEY) : null);
+const loadUserId = () => (hasWindow() ? window.localStorage.getItem(USER_ID_STORAGE_KEY) : null);
+const loadUserName = () => (hasWindow() ? window.localStorage.getItem(USER_NAME_KEY) ?? "" : "");
+const loadUserEmail = () => (hasWindow() ? window.localStorage.getItem(USER_EMAIL_KEY) ?? "" : "");
 
 export const useAuthStore = defineStore("auth", () => {
   const role = ref<Role>(loadRole());
@@ -55,7 +59,9 @@ export const useAuthStore = defineStore("auth", () => {
 
   const login = (nextRole: Role) => {
     role.value = nextRole;
-    window.localStorage.setItem(STORAGE_KEY, nextRole);
+    if (hasWindow()) {
+      window.localStorage.setItem(STORAGE_KEY, nextRole);
+    }
   };
 
   const setSession = (payload: { token: string; user: { id: string; name: string; email: string; role: Role } }) => {
@@ -64,11 +70,13 @@ export const useAuthStore = defineStore("auth", () => {
     userId.value = payload.user.id;
     userName.value = payload.user.name;
     userEmail.value = payload.user.email;
-    window.localStorage.setItem(STORAGE_KEY, payload.user.role);
-    window.localStorage.setItem(TOKEN_STORAGE_KEY, payload.token);
-    window.localStorage.setItem(USER_ID_STORAGE_KEY, payload.user.id);
-    window.localStorage.setItem(USER_NAME_KEY, payload.user.name);
-    window.localStorage.setItem(USER_EMAIL_KEY, payload.user.email);
+    if (hasWindow()) {
+      window.localStorage.setItem(STORAGE_KEY, payload.user.role);
+      window.localStorage.setItem(TOKEN_STORAGE_KEY, payload.token);
+      window.localStorage.setItem(USER_ID_STORAGE_KEY, payload.user.id);
+      window.localStorage.setItem(USER_NAME_KEY, payload.user.name);
+      window.localStorage.setItem(USER_EMAIL_KEY, payload.user.email);
+    }
   };
 
   const loginWithPassword = async () => {
@@ -116,11 +124,13 @@ export const useAuthStore = defineStore("auth", () => {
     userId.value = null;
     userName.value = "";
     userEmail.value = "";
-    window.localStorage.removeItem(STORAGE_KEY);
-    window.localStorage.removeItem(TOKEN_STORAGE_KEY);
-    window.localStorage.removeItem(USER_ID_STORAGE_KEY);
-    window.localStorage.removeItem(USER_NAME_KEY);
-    window.localStorage.removeItem(USER_EMAIL_KEY);
+    if (hasWindow()) {
+      window.localStorage.removeItem(STORAGE_KEY);
+      window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+      window.localStorage.removeItem(USER_ID_STORAGE_KEY);
+      window.localStorage.removeItem(USER_NAME_KEY);
+      window.localStorage.removeItem(USER_EMAIL_KEY);
+    }
   };
 
   const resetCredentials = () => {

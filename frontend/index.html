@@ -6,7 +6,8 @@
     <title>R3ne</title>
   </head>
   <body class="bg-slate-50">
-    <div id="app"></div>
-    <script type="module" src="/src/main.ts"></script>
+    <div id="app"><!--ssr-outlet--></div>
+    <!--ssr-state-->
+    <script type="module" src="/src/entry-client.ts"></script>
   </body>
 </html>

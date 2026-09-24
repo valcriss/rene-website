@@ -2,6 +2,7 @@ import path from "node:path";
 import express from "express";
 import { EventRepository } from "./events/repository";
 import { getPublicEventPageStatus } from "./events/service";
+import { createSsrRenderer, SsrRenderer } from "./ssr";
 
 // Top-level SPA routes that exist regardless of any dynamic data — kept in sync with
 // frontend/src/router.ts. A path outside this list (and outside /event/:id) is a genuine
@@ -12,7 +13,8 @@ const KNOWN_STATIC_ROUTES = new Set([
   "/mentions-legales"
 ]);
 
-// Authentication and backoffice routes must never be indexed by search engines.
+// Authentication and backoffice routes must never be indexed by search engines, and have no
+// SEO value that would justify the cost/risk of server-rendering them.
 const NOINDEX_ROUTES = new Set(["/login", "/signup", "/forgot-password", "/reset-password"]);
 
 const isBackofficeRoute = (pathname: string) => pathname === "/backoffice" || pathname.startsWith("/backoffice/");
@@ -24,10 +26,35 @@ const sendNoindexIndex = (res: express.Response, indexPath: string, status = 200
 };
 
 export const registerStatic = (app: express.Express, eventRepository: EventRepository) => {
-  const frontendDist = path.resolve(__dirname, "../../frontend/dist");
+  const frontendDist = path.resolve(__dirname, "../../frontend/dist/client");
   const indexPath = path.join(frontendDist, "index.html");
 
-  app.use(express.static(frontendDist));
+  // `index: false` is essential: without it, express.static serves the raw index.html for "/"
+  // (and any other directory-like path) before our own handler below can server-render it.
+  app.use(express.static(frontendDist, { index: false }));
+
+  // Created lazily (not at registerStatic time) so tests that never issue an HTML request
+  // never pay for it, and so the one dev-mode Vite server is shared across requests.
+  let rendererPromise: Promise<SsrRenderer> | null = null;
+  const getRenderer = () => {
+    if (!rendererPromise) {
+      rendererPromise = createSsrRenderer();
+    }
+    return rendererPromise;
+  };
+
+  app.use(async (req, res, next) => {
+    if (process.env.NODE_ENV === "production") {
+      next();
+      return;
+    }
+    const renderer = await getRenderer();
+    if (renderer.devMiddlewares) {
+      renderer.devMiddlewares(req, res, next);
+      return;
+    }
+    next();
+  });
 
   app.get("*", (req, res) => {
     const pathname = req.path;
@@ -39,9 +66,14 @@ export const registerStatic = (app: express.Express, eventRepository: EventRepos
 
     const eventMatch = pathname.match(EVENT_DETAIL_PATTERN);
     if (eventMatch) {
-      void getPublicEventPageStatus(eventRepository, eventMatch[1]).then((status) => {
-        res.status(status).sendFile(indexPath);
-      });
+      void (async () => {
+        const [status, renderer] = await Promise.all([
+          getPublicEventPageStatus(eventRepository, eventMatch[1]),
+          getRenderer()
+        ]);
+        const { html } = await renderer.render(req.originalUrl);
+        res.status(status).type("html").send(html);
+      })();
       return;
     }
 
@@ -56,7 +88,11 @@ export const registerStatic = (app: express.Express, eventRepository: EventRepos
     }
 
     if (KNOWN_STATIC_ROUTES.has(pathname)) {
-      res.status(200).sendFile(indexPath);
+      void (async () => {
+        const renderer = await getRenderer();
+        const { html } = await renderer.render(req.originalUrl);
+        res.status(200).type("html").send(html);
+      })();
       return;
     }
 

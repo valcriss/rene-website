@@ -301,8 +301,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
-import DOMPurify from "dompurify";
+import { computed, onServerPrefetch } from "vue";
+import DOMPurify from "isomorphic-dompurify";
 import { storeToRefs } from "pinia";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { faFacebook, faInstagram, faLinkedin, faTiktok, faXTwitter, faYoutube } from "@fortawesome/free-brands-svg-icons";
@@ -492,6 +492,7 @@ const hasPoster = computed(() => {
 const relatedEvents = computed(() => (props.event ? [] : eventsStore.getRelatedPublishedEvents(props.eventId, 3)));
 
 audiencesStore.loadAudiences();
+onServerPrefetch(() => audiencesStore.loadAudiences());
 
 const {
   getEventImage,

@@ -4,6 +4,10 @@ import { vi } from "vitest";
 import EventMap from "../src/components/EventMap.vue";
 import type { EventMapPin } from "../src/utils/mapPins";
 
+// EventMap dynamically imports leaflet inside onMounted (to keep it out of SSR); flush the
+// microtask queue after render/rerender so that import (and everything after it) has settled.
+const flushLeafletImport = () => new Promise((resolve) => setTimeout(resolve, 0));
+
 type LeafletMap = {
   setView: ReturnType<typeof vi.fn>;
   fitBounds: ReturnType<typeof vi.fn>;
@@ -59,12 +63,13 @@ describe("EventMap", () => {
     vi.clearAllMocks();
   });
 
-  it("renders markers", () => {
+  it("renders markers", async () => {
     const { unmount } = render(EventMap, {
       props: {
         pins: [buildPin()]
       }
     });
+    await flushLeafletImport();
 
     expect(layerGroupInstance.addTo).toHaveBeenCalled();
     expect(layerGroupInstance.clearLayers).toHaveBeenCalled();
@@ -93,25 +98,27 @@ describe("EventMap", () => {
     expect(mapInstance.remove).toHaveBeenCalled();
   });
 
-  it("opens the selected marker", () => {
+  it("opens the selected marker", async () => {
     render(EventMap, {
       props: {
         selectedId: "1",
         pins: [buildPin()]
       }
     });
+    await flushLeafletImport();
 
     expect(markerInstance.openPopup).toHaveBeenCalled();
     expect(mapInstance.setView).toHaveBeenCalledWith({ lat: 46.97, lng: 0.7 }, 13);
   });
 
-  it("ignores selection without marker", () => {
+  it("ignores selection without marker", async () => {
     render(EventMap, {
       props: {
         selectedId: "missing",
         pins: []
       }
     });
+    await flushLeafletImport();
 
     expect(markerInstance.openPopup).not.toHaveBeenCalled();
   });
@@ -122,6 +129,7 @@ describe("EventMap", () => {
         pins: []
       }
     });
+    await flushLeafletImport();
 
     await rerender({
       pins: [buildPin({ id: "1:occ-1" }), buildPin({ id: "2:occ-1", eventId: "2", latitude: 47, longitude: 0.69 })]
@@ -137,6 +145,7 @@ describe("EventMap", () => {
         pins: []
       }
     });
+    await flushLeafletImport();
 
     mapInstance.setView.mockClear();
 
@@ -151,6 +160,7 @@ describe("EventMap", () => {
         pins: [buildPin()]
       }
     });
+    await flushLeafletImport();
 
     mapInstance.setView.mockClear();
 
@@ -159,12 +169,13 @@ describe("EventMap", () => {
     expect(mapInstance.setView).toHaveBeenCalledWith([46.972, 0.705], 12);
   });
 
-  it("emits select with the pin's event id when a marker is clicked", () => {
+  it("emits select with the pin's event id when a marker is clicked", async () => {
     const { emitted } = render(EventMap, {
       props: {
         pins: [buildPin({ eventId: "42" })]
       }
     });
+    await flushLeafletImport();
 
     const clickHandler = markerInstance.on.mock.calls.find(([eventName]) => eventName === "click")?.[1];
     clickHandler?.();
