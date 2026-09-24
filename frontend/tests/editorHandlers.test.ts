@@ -40,6 +40,16 @@ vi.mock("../src/api/moderation", async () => {
   };
 });
 
+const uploadImageMock = vi.fn();
+
+vi.mock("../src/api/uploads", async () => {
+  const actual = await vi.importActual<typeof import("../src/api/uploads")>("../src/api/uploads");
+  return {
+    ...actual,
+    uploadImage: (...args: unknown[]) => uploadImageMock(...args)
+  };
+});
+
 describe("editor handlers", () => {
   const mountedWrappers: Array<ReturnType<typeof mount>> = [];
   const mountWithRouter = async (path = "/login") => {
@@ -207,6 +217,22 @@ describe("editor handlers", () => {
     await vm.handleSaveDraft();
 
     expect(vm.getEditorError()).toBe("Erreur inconnue");
+  });
+
+  it("shows a clear French error when the image upload fails, instead of the raw error", async () => {
+    uploadImageMock.mockRejectedValue(new TypeError("Failed to fetch"));
+    const { wrapper } = await mountWithRouter();
+    await nextTick();
+
+    const vm = wrapper.vm as unknown as Exposed & { getEditorError: () => string | null };
+    const editorStore = useEditorStore();
+    editorStore.editorForm.title = "Concert";
+    editorStore.setImageFile(new File(["image"], "photo.png", { type: "image/png" }));
+    vm.setRole("EDITOR");
+    await vm.handleSaveDraft();
+
+    expect(vm.getEditorError()).toBe("Impossible d'enregistrer l'image. Merci de réessayer.");
+    expect(createMock).not.toHaveBeenCalled();
   });
 
   it("sets unknown editor error on submit", async () => {

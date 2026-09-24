@@ -15,6 +15,7 @@ import {
 import { publishEvent, type ModeratorRole } from "../api/moderation";
 import { uploadImage } from "../api/uploads";
 import { computePublicationEndAt } from "../utils/occurrences";
+import { i18n } from "../i18n";
 import { useAuthStore } from "./auth";
 import { useEventsStore } from "./events";
 
@@ -322,11 +323,20 @@ export const useEditorStore = defineStore("editor", () => {
     const retainedIndices = getRetainedOccurrenceIndices();
     const payload = buildEditorPayload(retainedIndices);
     const eventsStore = useEventsStore();
-    try {
-      if (imageFile.value) {
-        payload.image = await uploadImage(imageFile.value);
-      }
 
+    if (imageFile.value) {
+      try {
+        payload.image = await uploadImage(imageFile.value);
+      } catch {
+        // The underlying error (network failure, browser file-access error, etc.) is not
+        // reliably a translated, user-facing message, so a clear French fallback is shown
+        // instead of surfacing it verbatim.
+        editorError.value = i18n.global.t("editor.imageSaveError");
+        return null;
+      }
+    }
+
+    try {
       const updated =
         editorMode.value === "edit" && editingEventId.value
           ? await updateEvent(editingEventId.value, payload, authStore.role)

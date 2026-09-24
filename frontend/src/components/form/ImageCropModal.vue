@@ -10,6 +10,25 @@
           <img ref="imageRef" :src="imageUrl" :alt="t('editor.cropTitle')" class="block max-w-full" />
         </div>
 
+        <div class="mt-3 flex items-center justify-end gap-2">
+          <button
+            type="button"
+            class="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-lg font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+            :aria-label="t('editor.cropZoomOut')"
+            @click="handleZoomOut"
+          >
+            −
+          </button>
+          <button
+            type="button"
+            class="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-lg font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+            :aria-label="t('editor.cropZoomIn')"
+            @click="handleZoomIn"
+          >
+            +
+          </button>
+        </div>
+
         <div class="mt-5 flex flex-wrap items-center justify-end gap-3">
           <button
             type="button"
@@ -90,6 +109,14 @@ onBeforeUnmount(() => {
 
 const handleCancel = () => {
   emit("cancel");
+};
+
+const handleZoomIn = () => {
+  cropper?.zoom(0.1);
+};
+
+const handleZoomOut = () => {
+  cropper?.zoom(-0.1);
 };
 
 const handleConfirm = () => {
