@@ -339,6 +339,7 @@ describe("createPrismaAdminRepository", () => {
       contactPhone: "0102030405",
       homepageIntro: "Plateforme culturelle de Descartes.",
       homepageSubtitle: "",
+      legalNotice: "",
       createdAt: new Date("2026-05-22T09:00:00.000Z"),
       updatedAt: new Date("2026-05-22T09:30:00.000Z")
     });
@@ -348,6 +349,7 @@ describe("createPrismaAdminRepository", () => {
       contactPhone: "0101",
       homepageIntro: "Intro",
       homepageSubtitle: "Sous-titre",
+      legalNotice: "Mentions légales",
       createdAt: new Date("2026-05-22T09:00:00.000Z"),
       updatedAt: new Date("2026-05-22T09:30:00.000Z")
     });
@@ -357,11 +359,13 @@ describe("createPrismaAdminRepository", () => {
       contactEmail: "a@test",
       contactPhone: "0101",
       homepageIntro: "Intro",
-      homepageSubtitle: "Sous-titre"
+      homepageSubtitle: "Sous-titre",
+      legalNotice: "Mentions légales"
     });
     expect(settings.contactEmail).toBeDefined();
     expect(updated.homepageIntro).toBe("Intro");
     expect(updated.homepageSubtitle).toBe("Sous-titre");
+    expect(updated.legalNotice).toBe("Mentions légales");
     expect(prismaMocks.siteSettingUpsert).toHaveBeenCalledWith({
       where: { id: "default" },
       create: {
@@ -369,13 +373,15 @@ describe("createPrismaAdminRepository", () => {
         contactEmail: "a@test",
         contactPhone: "0101",
         homepageIntro: "Intro",
-        homepageSubtitle: "Sous-titre"
+        homepageSubtitle: "Sous-titre",
+        legalNotice: "Mentions légales"
       },
       update: {
         contactEmail: "a@test",
         contactPhone: "0101",
         homepageIntro: "Intro",
-        homepageSubtitle: "Sous-titre"
+        homepageSubtitle: "Sous-titre",
+        legalNotice: "Mentions légales"
       }
     });
   });
@@ -387,7 +393,8 @@ describe("createPrismaAdminRepository", () => {
       contactEmail: "contact@rene-website.test",
       contactPhone: "0102030405",
       homepageIntro: "Plateforme culturelle de Descartes.",
-      homepageSubtitle: ""
+      homepageSubtitle: "",
+      legalNotice: ""
     });
   });
 

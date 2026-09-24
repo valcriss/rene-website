@@ -72,7 +72,8 @@ const validateSettingsInput = (input: unknown): ServiceResult<AdminSettings> => 
       contactEmail: data.contactEmail!.trim(),
       contactPhone: data.contactPhone!.trim(),
       homepageIntro: data.homepageIntro!.trim(),
-      homepageSubtitle: typeof data.homepageSubtitle === "string" ? data.homepageSubtitle.trim() : ""
+      homepageSubtitle: typeof data.homepageSubtitle === "string" ? data.homepageSubtitle.trim() : "",
+      legalNotice: typeof data.legalNotice === "string" ? data.legalNotice.trim() : ""
     }
   };
 };

@@ -44,7 +44,8 @@ export const messages = {
     navigation: {
       title: "R3ne",
       tagline: "Agenda culturel",
-      contact: "Contact"
+      contact: "Contact",
+      legalNotice: "Mentions légales"
     },
     home: {
       titleLead:
@@ -187,6 +188,12 @@ export const messages = {
       backToHome: "Retour \u00e0 l'accueil",
       success: "Votre message a bien \u00e9t\u00e9 envoy\u00e9.",
       errorFallback: "Envoi du message impossible"
+    },
+    legalNotice: {
+      eyebrow: "Informations l\u00e9gales",
+      title: "Mentions l\u00e9gales",
+      empty: "Aucune mention l\u00e9gale n'a \u00e9t\u00e9 renseign\u00e9e pour le moment.",
+      backToHome: "Retour \u00e0 l'accueil"
     },
     backoffice: {
       title: "Backoffice",
@@ -455,6 +462,7 @@ export const messages = {
       contactEmail: "Email de contact",
       homepageIntro: "Intro page d'accueil",
       homepageSubtitle: "Sous-titre page d'accueil",
+      legalNotice: "Mentions l\u00e9gales",
       saveSettings: "Enregistrer les r\u00e9glages",
       guideposts: "Rep\u00e8res",
       contacts: "Contacts",
@@ -530,7 +538,8 @@ export const messages = {
     navigation: {
       title: "R3ne",
       tagline: "Cultural agenda",
-      contact: "Contact"
+      contact: "Contact",
+      legalNotice: "Legal notice"
     },
     home: {
       titleLead: "A platform dedicated to cultural events around Descartes and neighboring towns.",
@@ -672,6 +681,12 @@ export const messages = {
       backToHome: "Back to home",
       success: "Your message has been sent.",
       errorFallback: "Sending the message failed"
+    },
+    legalNotice: {
+      eyebrow: "Legal information",
+      title: "Legal notice",
+      empty: "No legal notice has been provided yet.",
+      backToHome: "Back to home"
     },
     backoffice: {
       title: "Back office",
@@ -935,6 +950,7 @@ export const messages = {
       contactEmail: "Contact email",
       homepageIntro: "Homepage intro",
       homepageSubtitle: "Homepage subtitle",
+      legalNotice: "Legal notice",
       saveSettings: "Save settings",
       guideposts: "Guideposts",
       contacts: "Contacts",

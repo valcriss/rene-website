@@ -15,6 +15,7 @@ describe("router", () => {
         "/forgot-password",
         "/reset-password",
         "/contact",
+        "/mentions-legales",
         "/backoffice",
         "/backoffice/events",
         "/backoffice/events/new",

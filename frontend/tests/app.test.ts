@@ -1590,7 +1590,8 @@ describe("App", () => {
               contactEmail: "contact@rene-website.fr",
               contactPhone: "0102030405",
               homepageIntro: "Intro",
-              homepageSubtitle: "Sous-titre"
+              homepageSubtitle: "Sous-titre",
+              legalNotice: "Mentions légales"
             })
         });
       }
@@ -1602,7 +1603,8 @@ describe("App", () => {
               contactEmail: "contact@rene-website.fr",
               contactPhone: "0102030405",
               homepageIntro: "Intro",
-              homepageSubtitle: "Sous-titre"
+              homepageSubtitle: "Sous-titre",
+              legalNotice: "Mentions légales"
             })
         });
       }
@@ -1618,6 +1620,7 @@ describe("App", () => {
     const settingsForm = within(await screen.findByTestId("admin-settings-form"));
     await fireEvent.update(settingsForm.getByLabelText("Sous-titre page d'accueil"), "Sous-titre");
     await fireEvent.update(settingsForm.getByLabelText("Intro page d'accueil"), "Intro");
+    await fireEvent.update(settingsForm.getByLabelText("Mentions légales"), "Mentions légales");
     await fireEvent.click(settingsForm.getByRole("button", { name: "Enregistrer les réglages" }));
 
     expect(fetchMock).toHaveBeenCalled();

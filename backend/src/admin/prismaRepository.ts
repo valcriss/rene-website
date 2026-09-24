@@ -64,6 +64,7 @@ type PrismaSiteSetting = {
   contactPhone: string;
   homepageIntro: string;
   homepageSubtitle: string;
+  legalNotice: string;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -72,7 +73,8 @@ const defaultSiteSettings: AdminSettings = {
   contactEmail: "contact@rene-website.test",
   contactPhone: "0102030405",
   homepageIntro: "Plateforme culturelle de Descartes.",
-  homepageSubtitle: ""
+  homepageSubtitle: "",
+  legalNotice: ""
 };
 
 const defaultSiteSettingsId = "default";
@@ -104,7 +106,8 @@ const toAdminSettings = (data: PrismaSiteSetting): AdminSettings => ({
   contactEmail: data.contactEmail,
   contactPhone: data.contactPhone,
   homepageIntro: data.homepageIntro,
-  homepageSubtitle: data.homepageSubtitle
+  homepageSubtitle: data.homepageSubtitle,
+  legalNotice: data.legalNotice
 });
 
 export const createPrismaAdminRepository = (): AdminRepository => {

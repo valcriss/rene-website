@@ -5,6 +5,7 @@ import { fetchPublicSettings } from "../api/settings";
 export const useSettingsStore = defineStore("settings", () => {
   const homepageIntro = ref<string | null>(null);
   const homepageSubtitle = ref<string | null>(null);
+  const legalNotice = ref<string | null>(null);
   const loading = ref(false);
   const hasLoaded = ref(false);
 
@@ -15,10 +16,12 @@ export const useSettingsStore = defineStore("settings", () => {
       const settings = await fetchPublicSettings();
       homepageIntro.value = settings.homepageIntro;
       homepageSubtitle.value = settings.homepageSubtitle;
+      legalNotice.value = settings.legalNotice;
       hasLoaded.value = true;
     } catch {
       homepageIntro.value = null;
       homepageSubtitle.value = null;
+      legalNotice.value = null;
     } finally {
       loading.value = false;
     }
@@ -27,6 +30,7 @@ export const useSettingsStore = defineStore("settings", () => {
   return {
     homepageIntro,
     homepageSubtitle,
+    legalNotice,
     loading,
     hasLoaded,
     loadPublicSettings

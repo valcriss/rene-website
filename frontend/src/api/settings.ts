@@ -1,6 +1,7 @@
 export type PublicSettings = {
   homepageIntro: string;
   homepageSubtitle: string;
+  legalNotice: string;
 };
 
 export const fetchPublicSettings = async (): Promise<PublicSettings> => {

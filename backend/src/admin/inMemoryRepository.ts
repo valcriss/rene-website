@@ -19,7 +19,8 @@ export const createInMemoryAdminRepository = (): AdminRepository => {
     contactEmail: "contact@rene-website.test",
     contactPhone: "0102030405",
     homepageIntro: "Plateforme culturelle de Descartes.",
-    homepageSubtitle: ""
+    homepageSubtitle: "",
+    legalNotice: ""
   };
 
   const now = () => new Date().toISOString();

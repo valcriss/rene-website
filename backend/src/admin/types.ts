@@ -28,6 +28,7 @@ export type AdminSettings = {
   contactPhone: string;
   homepageIntro: string;
   homepageSubtitle: string;
+  legalNotice: string;
 };
 
 export type CreateAdminUserInput = {
@@ -50,6 +51,7 @@ export type CreateAdminAudienceInput = {
 
 export type UpdateAdminAudienceInput = CreateAdminAudienceInput;
 
-export type UpdateAdminSettingsInput = Omit<AdminSettings, "homepageSubtitle"> & {
+export type UpdateAdminSettingsInput = Omit<AdminSettings, "homepageSubtitle" | "legalNotice"> & {
   homepageSubtitle?: string;
+  legalNotice?: string;
 };

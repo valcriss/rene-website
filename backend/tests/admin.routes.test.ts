@@ -299,12 +299,14 @@ describe("admin routes", () => {
         contactEmail: "contact@rene-website.test",
         contactPhone: "0102030405",
         homepageIntro: "Bienvenue",
-        homepageSubtitle: "Sous-titre"
+        homepageSubtitle: "Sous-titre",
+        legalNotice: "Mentions légales du site"
       });
 
     expect(updateResponse.status).toBe(200);
     expect(updateResponse.body.homepageIntro).toBe("Bienvenue");
     expect(updateResponse.body.homepageSubtitle).toBe("Sous-titre");
+    expect(updateResponse.body.legalNotice).toBe("Mentions légales du site");
   });
 
   it("returns 400 for invalid settings", async () => {
@@ -326,7 +328,8 @@ describe("admin routes", () => {
         contactEmail: "contact@rene-website.test",
         contactPhone: "0102030405",
         homepageIntro: "Bienvenue sur R3ne",
-        homepageSubtitle: "Sortir autour de Descartes"
+        homepageSubtitle: "Sortir autour de Descartes",
+        legalNotice: "Mentions légales du site"
       });
 
     const response = await request(app).get("/api/settings");
@@ -334,7 +337,8 @@ describe("admin routes", () => {
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
       homepageIntro: "Bienvenue sur R3ne",
-      homepageSubtitle: "Sortir autour de Descartes"
+      homepageSubtitle: "Sortir autour de Descartes",
+      legalNotice: "Mentions légales du site"
     });
   });
 });

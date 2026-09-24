@@ -31,7 +31,8 @@ describe("admin api", () => {
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve([]) })
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ contactEmail: "c", contactPhone: "p", homepageIntro: "i", homepageSubtitle: "s" })
+        json: () =>
+          Promise.resolve({ contactEmail: "c", contactPhone: "p", homepageIntro: "i", homepageSubtitle: "s", legalNotice: "l" })
       });
 
     vi.stubGlobal("fetch", fetchMock);
@@ -42,7 +43,8 @@ describe("admin api", () => {
       contactEmail: "c",
       contactPhone: "p",
       homepageIntro: "i",
-      homepageSubtitle: "s"
+      homepageSubtitle: "s",
+      legalNotice: "l"
     });
   });
 
@@ -121,7 +123,13 @@ describe("admin api", () => {
     );
 
     await expect(
-      updateAdminSettings("ADMIN", { contactEmail: "c", contactPhone: "p", homepageIntro: "i", homepageSubtitle: "s" })
+      updateAdminSettings("ADMIN", {
+        contactEmail: "c",
+        contactPhone: "p",
+        homepageIntro: "i",
+        homepageSubtitle: "s",
+        legalNotice: "l"
+      })
     ).resolves.toMatchObject({ contactEmail: "c" });
   });
 
@@ -132,7 +140,13 @@ describe("admin api", () => {
     );
 
     await expect(
-      updateAdminSettings("ADMIN", { contactEmail: "c", contactPhone: "p", homepageIntro: "i", homepageSubtitle: "s" })
+      updateAdminSettings("ADMIN", {
+        contactEmail: "c",
+        contactPhone: "p",
+        homepageIntro: "i",
+        homepageSubtitle: "s",
+        legalNotice: "l"
+      })
     ).rejects.toThrow("Impossible de mettre à jour les réglages");
   });
 
@@ -183,7 +197,13 @@ describe("admin api", () => {
       updateAdminCategory("ADMIN", "1", { name: "Musique" }),
       deleteAdminCategory("ADMIN", "1"),
       fetchAdminSettings("ADMIN"),
-      updateAdminSettings("ADMIN", { contactEmail: "c", contactPhone: "p", homepageIntro: "i", homepageSubtitle: "s" }),
+      updateAdminSettings("ADMIN", {
+        contactEmail: "c",
+        contactPhone: "p",
+        homepageIntro: "i",
+        homepageSubtitle: "s",
+        legalNotice: "l"
+      }),
       fetchAdminAudiences("ADMIN"),
       createAdminAudience("ADMIN", { name: "Adultes" }),
       updateAdminAudience("ADMIN", "1", { name: "Adultes" }),

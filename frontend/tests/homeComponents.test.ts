@@ -151,6 +151,21 @@ describe("home components", () => {
     expect(pushSpy).toHaveBeenCalledWith("/contact");
   });
 
+  it("Header navigates to the legal notice page", async () => {
+    const router = createTestRouter("/");
+    await router.isReady();
+    const pushSpy = vi.spyOn(router, "push");
+    const wrapper = mount(Header, { global: { plugins: [router] } });
+
+    const button = wrapper.findAll("button").find((item) => item.text() === "Mentions légales");
+    if (!button) {
+      throw new Error("Legal notice button not found");
+    }
+    await button.trigger("click");
+
+    expect(pushSpy).toHaveBeenCalledWith("/mentions-legales");
+  });
+
   it("Header keeps account dropdown above page content", async () => {
     const wrapper = mount(Header, {
       props: {

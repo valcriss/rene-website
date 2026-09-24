@@ -84,6 +84,13 @@
         >
           {{ t("navigation.contact") }}
         </button>
+        <button
+          type="button"
+          class="hidden text-sm font-medium text-slate-600 transition hover:text-slate-900 sm:inline"
+          @click="goToLegalNotice"
+        >
+          {{ t("navigation.legalNotice") }}
+        </button>
       </div>
     </div>
   </header>
@@ -192,6 +199,10 @@ const goToBackoffice = () => {
 
 const goToContact = () => {
   router?.push("/contact");
+};
+
+const goToLegalNotice = () => {
+  router?.push("/mentions-legales");
 };
 
 const handleLogout = () => {
