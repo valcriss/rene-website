@@ -17,15 +17,36 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
+import { useI18n } from "vue-i18n";
 import { useRoute, useRouter } from "vue-router";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { faArrowLeft } from "@fortawesome/free-solid-svg-icons";
 import NavigationHeader from "../components/navigation/Header.vue";
 import EventDetailView from "../components/events/EventDetailView.vue";
+import { useEventsStore } from "../stores/events";
+import { usePageSeo } from "../composables/usePageSeo";
+import { buildPlainTextDescription } from "../utils/seo";
 
 const router = useRouter();
 const route = useRoute();
+const { t } = useI18n();
+const eventsStore = useEventsStore();
 const detailEventId = computed(() => String(route.params.id));
+
+// Mirrors EventDetailView's own visibility rule (hide only manually archived events) so the
+// meta tags always match what the page actually shows, without duplicating its store wiring.
+const seoEvent = computed(() => {
+  const event = eventsStore.getEventById(detailEventId.value);
+  return event && !event.archivedAt ? event : null;
+});
+
+usePageSeo({
+  title: () => (seoEvent.value ? `${seoEvent.value.title} — ${t("navigation.title")}` : t("detail.notFound")),
+  description: () =>
+    seoEvent.value ? buildPlainTextDescription(seoEvent.value.content) : t("detail.notFound"),
+  image: () => seoEvent.value?.image,
+  type: "article"
+});
 
 const goToHome = () => {
   router.push("/");

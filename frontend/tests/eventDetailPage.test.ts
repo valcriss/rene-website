@@ -1,4 +1,5 @@
 import { mount } from "@vue/test-utils";
+import { createPinia } from "pinia";
 import { vi } from "vitest";
 import EventDetailPage from "../src/pages/EventDetailPage.vue";
 import { createTestRouter } from "./testRouter";
@@ -8,7 +9,7 @@ const makeWrapper = async () => {
   await router.isReady();
   const wrapper = mount(EventDetailPage, {
     global: {
-      plugins: [router],
+      plugins: [router, createPinia()],
       stubs: {
         NavigationHeader: {
           template: "<button data-testid='login' @click=\"$emit('login')\"></button>"

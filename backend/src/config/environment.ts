@@ -140,6 +140,7 @@ export const validateProductionEnvironment = (
   validateStrongSecret("JWT_SECRET", env, errors);
   validateStrongSecret("CRON_SECRET", env, errors);
   validateHttpUrl("PHOTON_URL", env.PHOTON_URL, errors);
+  validateHttpUrl("SITE_URL", env.SITE_URL, errors);
   validateSmtp(env, errors);
   validatePort(env, errors);
 

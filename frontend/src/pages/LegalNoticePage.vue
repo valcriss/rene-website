@@ -23,12 +23,14 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from "vue";
+import { onMounted, onServerPrefetch } from "vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import NavigationHeader from "../components/navigation/Header.vue";
 import { useSettingsStore } from "../stores/settings";
+import { usePageSeo } from "../composables/usePageSeo";
+import { buildPlainTextDescription } from "../utils/seo";
 
 const router = useRouter();
 const { t } = useI18n();
@@ -37,6 +39,15 @@ const { legalNotice } = storeToRefs(settingsStore);
 
 onMounted(() => {
   settingsStore.loadPublicSettings();
+});
+
+// onMounted never runs during SSR; without this, the legal notice text (and its meta
+// description below) would always render empty for crawlers.
+onServerPrefetch(() => settingsStore.loadPublicSettings());
+
+usePageSeo({
+  title: () => `${t("legalNotice.title")} — ${t("navigation.title")}`,
+  description: () => buildPlainTextDescription(legalNotice.value) || t("legalNotice.empty")
 });
 
 const goToHome = () => {

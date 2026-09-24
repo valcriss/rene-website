@@ -6,15 +6,23 @@
 
 <script setup lang="ts">
 import { onServerPrefetch, watch } from "vue";
+import { useHead } from "@unhead/vue";
 import { useRoute, useRouter } from "vue-router";
 import { useAuthStore } from "./stores/auth";
 import { useEventsStore } from "./stores/events";
 import { useEditorStore } from "./stores/editor";
 import { useAdminStore } from "./stores/admin";
 import { setSessionExpiredHandler } from "./api/authHeaders";
+import { getCurrentLocale } from "./i18n";
 
 const router = useRouter();
 const route = useRoute();
+
+// unhead doesn't reliably keep the template's own `lang="fr"` as the initial value (its default
+// takes precedence), so it's set explicitly here; live client-side switches are already handled
+// by installI18n's own `document.documentElement.lang` watcher, so this only needs to be correct
+// once, at setup time (matching whatever locale actually gets rendered, "fr" during SSR).
+useHead({ htmlAttrs: { lang: getCurrentLocale() } });
 
 const authStore = useAuthStore();
 const eventsStore = useEventsStore();

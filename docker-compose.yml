@@ -10,6 +10,7 @@ services:
       JWT_SECRET_FILE: /run/secrets/jwt_secret
       CRON_SECRET_FILE: /run/secrets/cron_secret
       PHOTON_URL: http://photon:2322
+      SITE_URL: ${SITE_URL:?Set SITE_URL in the deployment environment}
       UPLOAD_DIR: /app/uploads
       SMTP_HOST: ${SMTP_HOST:?Set SMTP_HOST in the deployment environment}
       SMTP_PORT: ${SMTP_PORT:-587}

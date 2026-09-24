@@ -18,6 +18,7 @@ const validEnvironment = (): Record<string, string | undefined> => ({
   JWT_SECRET: strongJwt,
   CRON_SECRET: strongCron,
   PHOTON_URL: "http://photon:2322",
+  SITE_URL: "https://rene.example.org",
   SMTP_HOST: "smtp.example.org",
   SMTP_PORT: "587",
   SMTP_SECURE: "false",
@@ -128,6 +129,11 @@ describe("production environment validation", () => {
     expect(errorsFor({ PHOTON_URL: "not-a-url" })).toContain("PHOTON_URL must be a valid URL");
     expect(errorsFor({ PHOTON_URL: "ftp://photon/data" })).toContain(
       "PHOTON_URL must use the http or https protocol"
+    );
+    expect(errorsFor({ SITE_URL: "" })).toContain("SITE_URL is required");
+    expect(errorsFor({ SITE_URL: "not-a-url" })).toContain("SITE_URL must be a valid URL");
+    expect(errorsFor({ SITE_URL: "ftp://rene.example.org" })).toContain(
+      "SITE_URL must use the http or https protocol"
     );
     expect(errorsFor({ SMTP_HOST: "" })).toContain("SMTP_HOST is required");
     expect(errorsFor({ SENDER_EMAIL: "invalid" })).toContain("SENDER_EMAIL must be a valid email address");
