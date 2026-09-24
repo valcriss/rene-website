@@ -44,3 +44,6 @@ rotation sont décrites dans [docs/security-secrets.md](docs/security-secrets.md
 
 Les quotas, tailles de requêtes, délais sortants et la configuration sûre derrière un
 reverse proxy sont décrits dans [docs/security-resource-limits.md](docs/security-resource-limits.md).
+
+La politique CSP, les headers HTTP et le déploiement HTTPS sont décrits dans
+[docs/security-http-headers.md](docs/security-http-headers.md).
