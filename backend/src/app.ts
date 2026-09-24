@@ -10,6 +10,7 @@ import { createAuthRepository } from "./auth/repositoryFactory";
 import { createCategoriesRouter } from "./categories/routes";
 import { createCommunesRouter } from "./communes/routes";
 import { createCommuneRepository } from "./communes/repositoryFactory";
+import { getTrustedProxyHops } from "./config/trustProxy";
 import { createContactRouter } from "./contact/routes";
 import { createEventRouter } from "./events/routes";
 import { createPublicEventsRouter } from "./events/publicRoutes";
@@ -22,18 +23,37 @@ import { createSubscriptionsRouter } from "./subscriptions/routes";
 import { createCategorySubscriptionRepository } from "./subscriptions/repositoryFactory";
 import { createUploadedAssetRouter, createUploadRouter } from "./uploads/routes";
 import { registerStatic } from "./static";
+import { createRequestRateLimiter, enforceRequestRateLimit } from "./security/rateLimiter";
+
+const apiMutationPolicy = {
+  action: "api-mutation",
+  ip: { max: 120, windowMs: 15 * 60 * 1000 },
+  actor: { max: 240, windowMs: 15 * 60 * 1000 }
+};
 
 export const createApp = () => {
   const app = express();
   const authRepository = createAuthRepository();
+  const requestRateLimiter = createRequestRateLimiter(authRepository);
 
   // Compresses every response (API JSON, SSR HTML, robots.txt/sitemap.xml, static assets) that
   // negotiates it via Accept-Encoding. Already-compressed content (uploaded WebP images) is left
   // alone by the middleware's own default filter, which skips non-compressible content types.
   app.use(compression());
-  app.use(express.json());
+  // The container is directly exposed by default. A deployment behind a known reverse proxy must
+  // opt in with TRUST_PROXY_HOPS; arbitrary X-Forwarded-For values are never trusted.
+  app.set("trust proxy", getTrustedProxyHops());
+  app.use(express.json({ limit: "128kb" }));
   app.use(createAuthenticationMiddleware(authRepository));
   app.use(csrfProtection);
+
+  app.use("/api", async (req, res, next) => {
+    if (["GET", "HEAD", "OPTIONS"].includes(req.method)) {
+      next();
+      return;
+    }
+    if (await enforceRequestRateLimit(requestRateLimiter, req, res, apiMutationPolicy)) next();
+  });
 
   app.use((req, res, next) => {
     const start = Date.now();
@@ -52,9 +72,9 @@ export const createApp = () => {
   app.use("/api", createAuthRouter(authRepository));
   app.use("/api", createEventRouter(eventRepository, authRepository, categorySubscriptionRepository));
   app.use("/api/public", createPublicEventsRouter(eventRepository));
-  app.use("/api", createGeocodingRouter());
+  app.use("/api", createGeocodingRouter(authRepository));
   app.use("/api", createCommunesRouter(communeRepository));
-  app.use("/api", createUploadRouter());
+  app.use("/api", createUploadRouter(authRepository));
   app.use("/api", createModerationReminderRouter(eventRepository, moderationReminderRepository, authRepository));
   app.use("/uploads", createUploadedAssetRouter());
 
@@ -63,7 +83,7 @@ export const createApp = () => {
   app.use("/api/categories", createCategoriesRouter(adminRepository));
   app.use("/api/audiences", createAudiencesRouter(adminRepository));
   app.use("/api/settings", createPublicSettingsRouter(adminRepository));
-  app.use("/api", createContactRouter(adminRepository));
+  app.use("/api", createContactRouter(adminRepository, authRepository));
   app.use("/api/subscriptions", createSubscriptionsRouter(categorySubscriptionRepository, adminRepository));
 
   app.get("/api/health", (_req, res) => {

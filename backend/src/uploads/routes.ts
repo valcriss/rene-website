@@ -1,7 +1,9 @@
 import { NextFunction, Request, Response, Router } from "express";
 import multer from "multer";
+import { AuthRepository } from "../auth/repository";
 import { requireRole } from "../auth/roles";
 import { getAuthenticatedUser } from "../auth/request";
+import { createRequestRateLimiter, enforceRequestRateLimit } from "../security/rateLimiter";
 import {
   getDeclaredUploadFormat,
   MAX_UPLOAD_BYTES,
@@ -13,9 +15,11 @@ import { buildUploadUrl, isStoredUploadFilename, readStoredUpload } from "./stor
 type AsyncHandler = (req: Request, res: Response) => Promise<void>;
 type FileFilterCallback = (error: Error | null, acceptFile?: boolean) => void;
 
-const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
-const RATE_LIMIT_MAX_UPLOADS = 20;
-const rateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
+const uploadRateLimitPolicy = {
+  action: "upload",
+  ip: { max: 30, windowMs: 15 * 60 * 1000 },
+  actor: { max: 20, windowMs: 15 * 60 * 1000 }
+};
 
 const logRejection = (req: Request, reason: string) => {
   // Never log a client-provided filename or a filesystem path.
@@ -32,29 +36,6 @@ const withErrorHandling = (handler: AsyncHandler) => async (req: Request, res: R
     res.status(500).json({ message: "Erreur interne du serveur." });
   }
 };
-
-const enforceUploadRateLimit = (req: Request, res: Response, next: NextFunction) => {
-  const actor = getAuthenticatedUser(req);
-  const now = Date.now();
-  const current = rateLimitBuckets.get(actor.id);
-  const bucket = !current || current.resetAt <= now
-    ? { count: 0, resetAt: now + RATE_LIMIT_WINDOW_MS }
-    : current;
-
-  if (bucket.count >= RATE_LIMIT_MAX_UPLOADS) {
-    const retryAfter = Math.max(1, Math.ceil((bucket.resetAt - now) / 1000));
-    res.setHeader("Retry-After", retryAfter.toString());
-    logRejection(req, "rate_limit");
-    res.status(429).json({ message: "Trop de requêtes." });
-    return;
-  }
-
-  bucket.count += 1;
-  rateLimitBuckets.set(actor.id, bucket);
-  next();
-};
-
-export const resetUploadRateLimitsForTests = () => rateLimitBuckets.clear();
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -84,13 +65,16 @@ const parseSingleImage = (req: Request, res: Response, next: NextFunction) => {
   });
 };
 
-export const createUploadRouter = () => {
+export const createUploadRouter = (rateLimitRepository?: Pick<AuthRepository, "consumeRateLimit">) => {
   const router = Router();
+  const rateLimiter = createRequestRateLimiter(rateLimitRepository);
 
   router.post(
     "/uploads",
     requireRole(["EDITOR", "MODERATOR", "ADMIN"]),
-    enforceUploadRateLimit,
+    async (req, res, next) => {
+      if (await enforceRequestRateLimit(rateLimiter, req, res, uploadRateLimitPolicy)) next();
+    },
     parseSingleImage,
     withErrorHandling(async (req, res) => {
       if (!req.file) {

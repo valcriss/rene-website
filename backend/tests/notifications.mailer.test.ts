@@ -5,7 +5,7 @@ jest.mock("nodemailer", () => ({
 }));
 
 import nodemailer from "nodemailer";
-import { sendEmail } from "../src/notifications/mailer";
+import { getSmtpTimeoutMs, sendEmail } from "../src/notifications/mailer";
 
 const transportMock = nodemailer as unknown as { createTransport: jest.Mock };
 
@@ -59,6 +59,31 @@ describe("mailer", () => {
     expect(transportMock.createTransport).toHaveBeenCalledWith(
       expect.objectContaining({ auth: { user: "user", pass: "pass" } })
     );
+  });
+
+  it("bounds SMTP timeouts and applies them to every mail socket phase", async () => {
+    delete process.env.SMTP_TIMEOUT_MS;
+    expect(getSmtpTimeoutMs()).toBe(10_000);
+    process.env.SMTP_TIMEOUT_MS = "invalid";
+    expect(getSmtpTimeoutMs()).toBe(10_000);
+    process.env.SMTP_TIMEOUT_MS = "1";
+    expect(getSmtpTimeoutMs()).toBe(1_000);
+    process.env.SMTP_TIMEOUT_MS = "1234.9";
+    expect(getSmtpTimeoutMs()).toBe(1_234);
+    process.env.SMTP_TIMEOUT_MS = "99999";
+    expect(getSmtpTimeoutMs()).toBe(60_000);
+
+    process.env.NODE_ENV = "production";
+    process.env.SMTP_HOST = "smtp.test";
+    process.env.SENDER_EMAIL = "noreply@test";
+    process.env.SMTP_TIMEOUT_MS = "4321";
+    await sendEmail({ to: "a@test", subject: "s", text: "t" });
+
+    expect(transportMock.createTransport).toHaveBeenCalledWith(expect.objectContaining({
+      connectionTimeout: 4321,
+      greetingTimeout: 4321,
+      socketTimeout: 4321
+    }));
   });
 
   it("returns error when sendMail fails", async () => {

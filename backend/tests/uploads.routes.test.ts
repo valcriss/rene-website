@@ -7,8 +7,7 @@ import sharp from "sharp";
 import { authenticateOptional } from "../src/auth/middleware";
 import {
   createUploadedAssetRouter,
-  createUploadRouter,
-  resetUploadRateLimitsForTests
+  createUploadRouter
 } from "../src/uploads/routes";
 import { MAX_UPLOAD_BYTES } from "../src/uploads/processor";
 import { authHeader } from "./authTestUtils";
@@ -33,10 +32,6 @@ const createPng = () => sharp({
 
 describe("uploads routes", () => {
   const originalDir = process.env.UPLOAD_DIR;
-
-  beforeEach(() => {
-    resetUploadRateLimitsForTests();
-  });
 
   afterEach(() => {
     process.env.UPLOAD_DIR = originalDir;
@@ -153,7 +148,7 @@ describe("uploads routes", () => {
 
     expect(limited.status).toBe(429);
     expect(limited.headers["retry-after"]).toBeDefined();
-    expect(limited.body).toEqual({ message: "Trop de requêtes." });
+    expect(limited.body).toEqual({ errors: ["Trop de requêtes. Réessayez plus tard."] });
   });
 
   it("returns 404 for invalid or missing stored image names", async () => {

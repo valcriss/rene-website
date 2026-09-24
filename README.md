@@ -41,3 +41,6 @@ curl -X POST https://<host>/api/moderation-reminders/check \
 
 La configuration de production, la création des secrets Docker et les procédures de
 rotation sont décrites dans [docs/security-secrets.md](docs/security-secrets.md).
+
+Les quotas, tailles de requêtes, délais sortants et la configuration sûre derrière un
+reverse proxy sont décrits dans [docs/security-resource-limits.md](docs/security-resource-limits.md).

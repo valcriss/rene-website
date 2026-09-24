@@ -33,4 +33,14 @@ describe("createRateLimiter", () => {
 
     expect(limiter.isAllowed("1.2.3.4")).toBe(true);
   });
+
+  it("evicts the oldest key when its bounded fallback store is full", () => {
+    const limiter = createRateLimiter({ max: 1, windowMs: 60_000 });
+
+    for (let index = 0; index <= 1_000; index += 1) {
+      expect(limiter.isAllowed(`client-${index}`)).toBe(true);
+    }
+
+    expect(limiter.isAllowed("client-0")).toBe(true);
+  });
 });

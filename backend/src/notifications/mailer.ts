@@ -1,6 +1,12 @@
 import nodemailer from "nodemailer";
 import { loadSmtpConfig } from "./smtpConfig";
 
+export const getSmtpTimeoutMs = () => {
+  const configured = Number(process.env.SMTP_TIMEOUT_MS);
+  if (!Number.isFinite(configured)) return 10_000;
+  return Math.min(60_000, Math.max(1_000, Math.floor(configured)));
+};
+
 export type EmailMessage = {
   to: string;
   subject: string;
@@ -23,10 +29,14 @@ export const sendEmail = async (message: EmailMessage): Promise<MailResult> => {
   }
 
   try {
+    const timeout = getSmtpTimeoutMs();
     const transporter = nodemailer.createTransport({
       host: config.value.host,
       port: config.value.port,
       secure: config.value.secure,
+      connectionTimeout: timeout,
+      greetingTimeout: timeout,
+      socketTimeout: timeout,
       auth: config.value.user && config.value.pass ? { user: config.value.user, pass: config.value.pass } : undefined
     });
 
