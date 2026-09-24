@@ -21,6 +21,8 @@ services:
       TRUST_PROXY_HOPS: ${TRUST_PROXY_HOPS:-0}
       PHOTON_TIMEOUT_MS: ${PHOTON_TIMEOUT_MS:-3000}
       SMTP_TIMEOUT_MS: ${SMTP_TIMEOUT_MS:-10000}
+      CSP_REPORT_ONLY: ${CSP_REPORT_ONLY:-false}
+      FORCE_HTTPS: ${FORCE_HTTPS:-false}
     ports:
       - "3000:3000"
     depends_on:

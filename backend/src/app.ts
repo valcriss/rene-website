@@ -24,6 +24,7 @@ import { createCategorySubscriptionRepository } from "./subscriptions/repository
 import { createUploadedAssetRouter, createUploadRouter } from "./uploads/routes";
 import { registerStatic } from "./static";
 import { createRequestRateLimiter, enforceRequestRateLimit } from "./security/rateLimiter";
+import { enforceHttps, preventPrivateCaching, securityHeaders } from "./security/headers";
 
 const apiMutationPolicy = {
   action: "api-mutation",
@@ -36,6 +37,8 @@ export const createApp = () => {
   const authRepository = createAuthRepository();
   const requestRateLimiter = createRequestRateLimiter(authRepository);
 
+  app.disable("x-powered-by");
+
   // Compresses every response (API JSON, SSR HTML, robots.txt/sitemap.xml, static assets) that
   // negotiates it via Accept-Encoding. Already-compressed content (uploaded WebP images) is left
   // alone by the middleware's own default filter, which skips non-compressible content types.
@@ -43,9 +46,12 @@ export const createApp = () => {
   // The container is directly exposed by default. A deployment behind a known reverse proxy must
   // opt in with TRUST_PROXY_HOPS; arbitrary X-Forwarded-For values are never trusted.
   app.set("trust proxy", getTrustedProxyHops());
+  app.use(enforceHttps);
+  app.use(securityHeaders);
   app.use(express.json({ limit: "128kb" }));
   app.use(createAuthenticationMiddleware(authRepository));
   app.use(csrfProtection);
+  app.use(preventPrivateCaching);
 
   app.use("/api", async (req, res, next) => {
     if (["GET", "HEAD", "OPTIONS"].includes(req.method)) {
