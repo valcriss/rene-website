@@ -3,21 +3,24 @@ import { validateCreateEvent, validateEventCompleteness } from "./validation";
 import { Event, EventOccurrenceInput, GeolocationPrecision } from "./types";
 import { geocodeEventLocation } from "../geocoding/photon";
 import { deleteUploadIfLocal } from "../uploads/storage";
-import { UserRole } from "../auth/roles";
+import { AuthenticatedActor } from "../auth/types";
 
 type ServiceResult<T> =
   | { ok: true; value: T }
-  | { ok: false; errors: string[] };
+  | { ok: false; errors: string[]; status: 400 | 403 | 404 };
 
 const missingCoordinatesError = "La localisation doit être corrigée avant la soumission à modération.";
 const pendingEditionError = "L'événement ne peut pas être modifié tant qu'il est en attente de modération.";
 const invalidFeaturedError = "La mise en avant doit être un booléen.";
 const deleteForbiddenError = "Suppression non autorisée.";
+const forbiddenError = "Action non autorisée.";
+const notFoundError = "Événement introuvable.";
 
-type DeleteActor = {
-  role: UserRole;
-  userId: string | null;
-};
+export type EventActor = AuthenticatedActor;
+
+const badRequest = <T>(errors: string[]): ServiceResult<T> => ({ ok: false, errors, status: 400 });
+const forbidden = <T>(message = forbiddenError): ServiceResult<T> => ({ ok: false, errors: [message], status: 403 });
+const notFound = <T>(message = notFoundError): ServiceResult<T> => ({ ok: false, errors: [message], status: 404 });
 
 const extractIsoDate = (value: string) => {
   const match = value.match(/^(\d{4}-\d{2}-\d{2})/);
@@ -118,29 +121,62 @@ const resolveOccurrenceCoordinates = async (occurrence: EventOccurrenceInput): P
 const prepareOccurrences = async (occurrences: EventOccurrenceInput[]): Promise<EventOccurrenceInput[]> =>
   Promise.all(occurrences.map(normalizeOccurrenceDates).map(resolveOccurrenceCoordinates));
 
-export const listEvents = (repo: EventRepository): Promise<Event[]> => repo.list();
+const isPendingModeration = (event: Event) =>
+  event.status === "PENDING" || event.pendingRevision?.status === "PENDING";
+
+export const canReadEvent = (event: Event, actor: EventActor) =>
+  actor.role === "ADMIN" ||
+  event.createdByUserId === actor.id ||
+  event.status === "PUBLISHED" ||
+  (actor.role === "MODERATOR" && isPendingModeration(event));
+
+export const listEvents = async (repo: EventRepository, actor?: EventActor): Promise<Event[]> => {
+  const events = await repo.list();
+  return actor ? events.filter((event) => canReadEvent(event, actor)) : events;
+};
 
 export const getEvent = (repo: EventRepository, id: string): Promise<Event | null> => repo.getById(id);
 
-const canDeleteEvent = (event: Event, actor: DeleteActor) => {
-  if (actor.role === "ADMIN" || actor.role === "MODERATOR") {
-    return true;
+export const getEventForActor = async (
+  repo: EventRepository,
+  id: string,
+  actor: EventActor
+): Promise<ServiceResult<Event>> => {
+  const event = await repo.getById(id);
+  if (!event) {
+    return notFound();
   }
 
-  return actor.userId !== null && event.status === "DRAFT" && event.createdByUserId === actor.userId;
+  return canReadEvent(event, actor) ? { ok: true, value: event } : forbidden();
+};
+
+const canEditEvent = (event: Event, actor: EventActor) =>
+  actor.role === "ADMIN" || event.createdByUserId === actor.id;
+
+const getEventForOwnedMutation = async (
+  repo: EventRepository,
+  id: string,
+  actor: EventActor
+): Promise<ServiceResult<Event>> => {
+  const event = await repo.getById(id);
+  if (!event) {
+    return actor.role === "ADMIN" ? notFound() : forbidden();
+  }
+
+  return canEditEvent(event, actor) ? { ok: true, value: event } : forbidden();
 };
 
 export const createEvent = async (
   repo: EventRepository,
   input: unknown,
-  createdByUserId?: string | null
+  actor: EventActor
 ): Promise<ServiceResult<Event>> => {
-  if (createdByUserId !== undefined && createdByUserId !== null && createdByUserId.trim().length === 0) {
-    return { ok: false, errors: ["Le créateur est requis."] };
+  if (actor.id.trim().length === 0) {
+    return badRequest(["Le créateur est requis."]);
   }
   const validation = validateCreateEvent(input);
   if (!validation.ok) {
-    return { ok: false, errors: validation.errors };
+    return badRequest(validation.errors);
   }
 
   const occurrences = await prepareOccurrences(validation.value.occurrences);
@@ -149,31 +185,33 @@ export const createEvent = async (
     const created = await repo.create({
       ...validation.value,
       occurrences,
-      createdByUserId: createdByUserId ?? null
+      createdByUserId: actor.id
     });
     return { ok: true, value: created };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erreur inconnue";
-    return { ok: false, errors: [message] };
+    return badRequest([message]);
   }
 };
 
 export const updateEvent = async (
   repo: EventRepository,
   id: string,
-  input: unknown
+  input: unknown,
+  actor: EventActor
 ): Promise<ServiceResult<Event>> => {
-  const current = await repo.getById(id);
-  if (!current) {
-    return { ok: false, errors: ["Événement introuvable."] };
+  const access = await getEventForOwnedMutation(repo, id, actor);
+  if (!access.ok) {
+    return access;
   }
+  const current = access.value;
   if (current.status === "PENDING" || current.pendingRevision?.status === "PENDING") {
-    return { ok: false, errors: [pendingEditionError] };
+    return badRequest([pendingEditionError]);
   }
 
   const validation = validateCreateEvent(input);
   if (!validation.ok) {
-    return { ok: false, errors: validation.errors };
+    return badRequest(validation.errors);
   }
 
   const occurrences = await prepareOccurrences(validation.value.occurrences);
@@ -187,7 +225,7 @@ export const updateEvent = async (
         createdByUserId: current.createdByUserId
       }, "DRAFT");
       if (!updated) {
-        return { ok: false, errors: ["Événement introuvable."] };
+        return notFound();
       }
       if (current.pendingRevision && current.pendingRevision.image !== updated.pendingRevision?.image) {
         await deleteUploadIfLocal(current.pendingRevision.image);
@@ -201,7 +239,7 @@ export const updateEvent = async (
       featured: current.featured
     });
     if (!updated) {
-      return { ok: false, errors: ["Événement introuvable."] };
+      return notFound();
     }
     if (current.image !== updated.image) {
       await deleteUploadIfLocal(current.image);
@@ -209,46 +247,48 @@ export const updateEvent = async (
     return { ok: true, value: updated };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erreur inconnue";
-    return { ok: false, errors: [message] };
+    return badRequest([message]);
   }
 };
 
 export const submitEvent = async (
   repo: EventRepository,
-  id: string
+  id: string,
+  actor: EventActor
 ): Promise<ServiceResult<Event>> => {
-  const current = await repo.getById(id);
-  if (!current) {
-    return { ok: false, errors: ["Événement introuvable."] };
+  const access = await getEventForOwnedMutation(repo, id, actor);
+  if (!access.ok) {
+    return access;
   }
+  const current = access.value;
   if (current.status === "PUBLISHED") {
     if (!current.pendingRevision) {
-      return { ok: false, errors: ["Révision introuvable."] };
+      return notFound("Révision introuvable.");
     }
     const completenessErrors = validateEventCompleteness(current.pendingRevision);
     if (completenessErrors.length > 0) {
-      return { ok: false, errors: completenessErrors };
+      return badRequest(completenessErrors);
     }
     if (!hasSubmittableGeolocation(current.pendingRevision.occurrences)) {
-      return { ok: false, errors: [missingCoordinatesError] };
+      return badRequest([missingCoordinatesError]);
     }
     if (current.pendingRevision.status === "PENDING") {
       return { ok: true, value: current };
     }
     const updatedRevision = await repo.submitPendingRevision(id);
     if (!updatedRevision) {
-      return { ok: false, errors: ["Révision introuvable."] };
+      return notFound("Révision introuvable.");
     }
     return { ok: true, value: updatedRevision };
   }
 
   const completenessErrors = validateEventCompleteness(current);
   if (completenessErrors.length > 0) {
-    return { ok: false, errors: completenessErrors };
+    return badRequest(completenessErrors);
   }
 
   if (!hasSubmittableGeolocation(current.occurrences)) {
-    return { ok: false, errors: [missingCoordinatesError] };
+    return badRequest([missingCoordinatesError]);
   }
 
   const updated = await repo.updateStatus(id, "PENDING", {
@@ -257,7 +297,7 @@ export const submitEvent = async (
     publicationEndAt: current.publicationEndAt
   });
   if (!updated) {
-    return { ok: false, errors: ["Événement introuvable."] };
+    return notFound();
   }
   return { ok: true, value: updated };
 };
@@ -265,26 +305,30 @@ export const submitEvent = async (
 export const publishEvent = async (
   repo: EventRepository,
   id: string,
+  actor: EventActor,
   featured: unknown = false
 ): Promise<ServiceResult<Event>> => {
+  if (actor.role !== "MODERATOR" && actor.role !== "ADMIN") {
+    return forbidden();
+  }
   if (typeof featured !== "boolean") {
-    return { ok: false, errors: [invalidFeaturedError] };
+    return badRequest([invalidFeaturedError]);
   }
   const current = await repo.getById(id);
   if (!current) {
-    return { ok: false, errors: ["Événement introuvable."] };
+    return notFound();
   }
   const now = new Date().toISOString();
   if (current.status === "PUBLISHED") {
     if (!current.pendingRevision) {
-      return { ok: false, errors: ["Révision introuvable."] };
+      return notFound("Révision introuvable.");
     }
     if (current.pendingRevision.status !== "PENDING") {
-      return { ok: false, errors: ["Révision non soumise."] };
+      return badRequest(["Révision non soumise."]);
     }
     const updatedRevision = await repo.publishPendingRevision(id, now);
     if (!updatedRevision) {
-      return { ok: false, errors: ["Révision introuvable."] };
+      return notFound("Révision introuvable.");
     }
     if (current.image !== updatedRevision.image) {
       await deleteUploadIfLocal(current.image);
@@ -299,7 +343,7 @@ export const publishEvent = async (
     publicationEndAt: current.publicationEndAt
   });
   if (!updated) {
-    return { ok: false, errors: ["Événement introuvable."] };
+    return notFound();
   }
   return { ok: true, value: updated };
 };
@@ -307,53 +351,71 @@ export const publishEvent = async (
 export const updateEventFeatured = async (
   repo: EventRepository,
   id: string,
-  featured: unknown
+  featured: unknown,
+  actor: EventActor
 ): Promise<ServiceResult<Event>> => {
+  if (actor.role !== "ADMIN") {
+    return forbidden();
+  }
   if (typeof featured !== "boolean") {
-    return { ok: false, errors: [invalidFeaturedError] };
+    return badRequest([invalidFeaturedError]);
   }
 
   const current = await repo.getById(id);
   if (!current) {
-    return { ok: false, errors: ["Événement introuvable."] };
+    return notFound();
   }
   if (current.status !== "PUBLISHED") {
-    return { ok: false, errors: ["Seuls les événements publiés peuvent être mis en avant."] };
+    return badRequest(["Seuls les événements publiés peuvent être mis en avant."]);
   }
 
   const updated = await repo.updateFeatured(id, featured);
   if (!updated) {
-    return { ok: false, errors: ["Événement introuvable."] };
+    return notFound();
   }
 
   return { ok: true, value: updated };
 };
 
-export const archiveEvent = async (repo: EventRepository, id: string): Promise<ServiceResult<Event>> => {
+export const archiveEvent = async (
+  repo: EventRepository,
+  id: string,
+  actor: EventActor
+): Promise<ServiceResult<Event>> => {
+  if (actor.role !== "ADMIN") {
+    return forbidden();
+  }
   const current = await repo.getById(id);
   if (!current) {
-    return { ok: false, errors: ["Événement introuvable."] };
+    return notFound();
   }
   if (current.status !== "PUBLISHED") {
-    return { ok: false, errors: ["Seuls les événements publiés peuvent être archivés."] };
+    return badRequest(["Seuls les événements publiés peuvent être archivés."]);
   }
 
   const updated = await repo.archiveEvent(id, new Date().toISOString());
   if (!updated) {
-    return { ok: false, errors: ["Événement introuvable."] };
+    return notFound();
   }
   return { ok: true, value: updated };
 };
 
-export const unarchiveEvent = async (repo: EventRepository, id: string): Promise<ServiceResult<Event>> => {
+export const unarchiveEvent = async (
+  repo: EventRepository,
+  id: string,
+  actor: EventActor
+): Promise<ServiceResult<Event>> => {
+  if (actor.role !== "ADMIN") {
+    return forbidden();
+  }
   const current = await repo.getById(id);
   if (!current) {
-    return { ok: false, errors: ["Événement introuvable."] };
+    return notFound();
   }
 
   const updated = await repo.unarchiveEvent(id);
   if (!updated) {
-    return { ok: false, errors: ["Événement introuvable."] };
+    return notFound();
   }
   return { ok: true, value: updated };
 };
@@ -361,25 +423,29 @@ export const unarchiveEvent = async (repo: EventRepository, id: string): Promise
 export const rejectEvent = async (
   repo: EventRepository,
   id: string,
-  reason: unknown
+  reason: unknown,
+  actor: EventActor
 ): Promise<ServiceResult<Event>> => {
+  if (actor.role !== "MODERATOR" && actor.role !== "ADMIN") {
+    return forbidden();
+  }
   if (typeof reason !== "string" || reason.trim().length === 0) {
-    return { ok: false, errors: ["Le motif de refus est requis."] };
+    return badRequest(["Le motif de refus est requis."]);
   }
   const current = await repo.getById(id);
   if (!current) {
-    return { ok: false, errors: ["Événement introuvable."] };
+    return notFound();
   }
   if (current.status === "PUBLISHED") {
     if (!current.pendingRevision) {
-      return { ok: false, errors: ["Révision introuvable."] };
+      return notFound("Révision introuvable.");
     }
     if (current.pendingRevision.status !== "PENDING") {
-      return { ok: false, errors: ["Révision non soumise."] };
+      return badRequest(["Révision non soumise."]);
     }
     const updatedRevision = await repo.rejectPendingRevision(id, reason);
     if (!updatedRevision) {
-      return { ok: false, errors: ["Révision introuvable."] };
+      return notFound("Révision introuvable.");
     }
     return { ok: true, value: updatedRevision };
   }
@@ -390,7 +456,7 @@ export const rejectEvent = async (
     publicationEndAt: current.publicationEndAt
   });
   if (!updated) {
-    return { ok: false, errors: ["Événement introuvable."] };
+    return notFound();
   }
   return { ok: true, value: updated };
 };
@@ -398,20 +464,21 @@ export const rejectEvent = async (
 export const deleteEvent = async (
   repo: EventRepository,
   id: string,
-  actor: DeleteActor
+  actor: EventActor
 ): Promise<ServiceResult<{ id: string }>> => {
-  const current = await repo.getById(id);
-  if (!current) {
-    return { ok: false, errors: ["Événement introuvable."] };
+  const access = await getEventForOwnedMutation(repo, id, actor);
+  if (!access.ok) {
+    return access;
   }
+  const current = access.value;
 
-  if (!canDeleteEvent(current, actor)) {
-    return { ok: false, errors: [deleteForbiddenError] };
+  if (actor.role !== "ADMIN" && current.status !== "DRAFT") {
+    return forbidden(deleteForbiddenError);
   }
 
   const deleted = await repo.delete(id);
   if (!deleted) {
-    return { ok: false, errors: ["Événement introuvable."] };
+    return notFound();
   }
 
   await deleteUploadIfLocal(current.image);

@@ -2,6 +2,7 @@ import type { EventItem } from "./events";
 import { buildAuthHeaders, handleSessionExpired } from "./authHeaders";
 
 export type ModeratorRole = "MODERATOR" | "ADMIN";
+export type AdminRole = "ADMIN";
 
 const callModerationEndpoint = async <T>(
   url: string,
@@ -33,10 +34,10 @@ export const publishEventWithFeatured = (
   featured: boolean
 ): Promise<EventItem> => callModerationEndpoint<EventItem>(`/api/events/${id}/publish`, role, { featured });
 
-export const archiveEvent = (id: string, role: ModeratorRole): Promise<EventItem> =>
+export const archiveEvent = (id: string, role: AdminRole): Promise<EventItem> =>
   callModerationEndpoint<EventItem>(`/api/events/${id}/archive`, role);
 
-export const unarchiveEvent = (id: string, role: ModeratorRole): Promise<EventItem> =>
+export const unarchiveEvent = (id: string, role: AdminRole): Promise<EventItem> =>
   callModerationEndpoint<EventItem>(`/api/events/${id}/unarchive`, role);
 
 export const rejectEvent = (
@@ -48,7 +49,7 @@ export const rejectEvent = (
 
 export const updateEventFeatured = async (
   id: string,
-  role: ModeratorRole,
+  role: AdminRole,
   featured: boolean
 ): Promise<EventItem> => {
   const response = await fetch(`/api/events/${id}/featured`, {

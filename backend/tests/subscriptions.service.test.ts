@@ -2,6 +2,8 @@ import { listCategorySubscriptions, setCategorySubscription } from "../src/subsc
 import { CategorySubscriptionRepository } from "../src/subscriptions/repository";
 import { AdminRepository } from "../src/admin/repository";
 
+const actor = { id: "user-1", role: "EDITOR" as const };
+
 const buildAdminRepo = (categories: { id: string; name: string }[]): AdminRepository =>
   ({
     listCategories: async () =>
@@ -21,7 +23,7 @@ describe("listCategorySubscriptions", () => {
     ]);
     const subscriptionRepo = buildSubscriptionRepo(["theatre"]);
 
-    const result = await listCategorySubscriptions(subscriptionRepo, adminRepo, "user-1");
+    const result = await listCategorySubscriptions(subscriptionRepo, adminRepo, actor);
 
     expect(result).toEqual([
       { id: "music", name: "Musique", subscribed: true },
@@ -34,7 +36,7 @@ describe("setCategorySubscription", () => {
   it("rejects a non-boolean subscribed value", async () => {
     const subscriptionRepo = buildSubscriptionRepo([]);
 
-    const result = await setCategorySubscription(subscriptionRepo, "user-1", "music", "yes");
+    const result = await setCategorySubscription(subscriptionRepo, actor, "music", "yes");
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -46,7 +48,7 @@ describe("setCategorySubscription", () => {
   it("updates the subscription when the value is valid", async () => {
     const subscriptionRepo = buildSubscriptionRepo([]);
 
-    const result = await setCategorySubscription(subscriptionRepo, "user-1", "music", false);
+    const result = await setCategorySubscription(subscriptionRepo, actor, "music", false);
 
     expect(result.ok).toBe(true);
     expect(subscriptionRepo.setSubscription).toHaveBeenCalledWith("user-1", "music", false);

@@ -3,7 +3,7 @@ import { defineStore } from "pinia";
 import { EventItem, EventOccurrence, deleteEvent, fetchEvents } from "../api/events";
 import { filterEvents, type EventFilters } from "../events/filterEvents";
 import placeholderEvent from "../assets/event-placeholder.svg";
-import { archiveEvent, publishEventWithFeatured, rejectEvent, unarchiveEvent, updateEventFeatured, type ModeratorRole } from "../api/moderation";
+import { archiveEvent, publishEventWithFeatured, rejectEvent, unarchiveEvent, updateEventFeatured, type AdminRole, type ModeratorRole } from "../api/moderation";
 import {
   formatDate,
   formatDateRange,
@@ -156,7 +156,7 @@ export const useEventsStore = defineStore("events", () => {
   const editableEvents = computed(() => [...myDraftEvents.value, ...myEditorialReviewEvents.value]);
   const publishedBackofficeEvents = computed(() => myPublishedEvents.value);
   const otherEditableEvents = computed(() => {
-    if (!authStore.canModerate) {
+    if (!authStore.isAdmin) {
       return [];
     }
 
@@ -434,9 +434,9 @@ export const useEventsStore = defineStore("events", () => {
   const handleUpdateFeatured = async (id: string, featured: boolean) => {
     moderationError.value = null;
     const authStore = useAuthStore();
-    if (!authStore.canModerate) return;
+    if (!authStore.isAdmin) return;
     try {
-      const updated = await updateEventFeatured(id, authStore.role as ModeratorRole, featured);
+      const updated = await updateEventFeatured(id, authStore.role as AdminRole, featured);
       updateEventState(updated);
       featuredEventIds[id] = updated.featured === true;
     } catch (err) {
@@ -447,9 +447,9 @@ export const useEventsStore = defineStore("events", () => {
   const handleArchive = async (id: string) => {
     moderationError.value = null;
     const authStore = useAuthStore();
-    if (!authStore.canModerate) return;
+    if (!authStore.isAdmin) return;
     try {
-      const updated = await archiveEvent(id, authStore.role as ModeratorRole);
+      const updated = await archiveEvent(id, authStore.role as AdminRole);
       updateEventState(updated);
     } catch (err) {
       moderationError.value = err instanceof Error ? err.message : "Erreur inconnue";
@@ -459,9 +459,9 @@ export const useEventsStore = defineStore("events", () => {
   const handleUnarchive = async (id: string) => {
     moderationError.value = null;
     const authStore = useAuthStore();
-    if (!authStore.canModerate) return;
+    if (!authStore.isAdmin) return;
     try {
-      const updated = await unarchiveEvent(id, authStore.role as ModeratorRole);
+      const updated = await unarchiveEvent(id, authStore.role as AdminRole);
       updateEventState(updated);
     } catch (err) {
       moderationError.value = err instanceof Error ? err.message : "Erreur inconnue";

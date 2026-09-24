@@ -36,7 +36,7 @@ const baseEvent: Event = {
   title: "Concert",
   content: "Texte",
   image: "https://example.com/img.png",
-  createdByUserId: null,
+  createdByUserId: "test-editor",
   categoryId: "music",
   audienceId: "all",
   occurrences: [baseOccurrence],
@@ -212,7 +212,7 @@ describe("events routes notification warnings", () => {
 
     const response = await request(app)
       .delete("/api/events/1")
-      .set("Authorization", authHeader("MODERATOR"));
+      .set("Authorization", authHeader("ADMIN"));
 
     expect(response.status).toBe(200);
     expect(warnSpy).toHaveBeenCalled();

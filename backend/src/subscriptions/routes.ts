@@ -27,9 +27,8 @@ export const createSubscriptionsRouter = (
     "/categories",
     requireRole(["MODERATOR", "ADMIN"]),
     withErrorHandling(async (req, res) => {
-      const userId = getAuthenticatedUser(req).id;
-
-      const subscriptions = await listCategorySubscriptions(subscriptionRepo, adminRepo, userId);
+      const actor = getAuthenticatedUser(req);
+      const subscriptions = await listCategorySubscriptions(subscriptionRepo, adminRepo, actor);
       res.json(subscriptions);
     })
   );
@@ -38,9 +37,8 @@ export const createSubscriptionsRouter = (
     "/categories/:categoryId",
     requireRole(["MODERATOR", "ADMIN"]),
     withErrorHandling(async (req, res) => {
-      const userId = getAuthenticatedUser(req).id;
-
-      const result = await setCategorySubscription(subscriptionRepo, userId, req.params.categoryId, req.body?.subscribed);
+      const actor = getAuthenticatedUser(req);
+      const result = await setCategorySubscription(subscriptionRepo, actor, req.params.categoryId, req.body?.subscribed);
       if (!result.ok) {
         res.status(400).json({ errors: result.errors });
         return;
