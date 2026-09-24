@@ -15,6 +15,9 @@ Monorepo for the Rene Website platform.
 - `npm run prisma:migrate -w backend`
 - `npm run prisma:seed -w backend`
 
+Le seed supprime les données existantes. Il est refusé sauf si `NODE_ENV` vaut
+`development` ou `test` **et** si `ALLOW_DESTRUCTIVE_SEED=true` est fourni explicitement.
+
 ## Comptes utilisateurs de seed (dev)
 
 Les comptes suivants sont créés par le seed Prisma (utilisation locale uniquement) :
@@ -33,3 +36,8 @@ curl -X POST https://<host>/api/moderation-reminders/check \
 ```
 
 `CRON_SECRET` doit être défini dans l'environnement du backend et fourni dans l'en-tête `x-cron-secret` de la requête.
+
+## Déploiement sécurisé
+
+La configuration de production, la création des secrets Docker et les procédures de
+rotation sont décrites dans [docs/security-secrets.md](docs/security-secrets.md).
