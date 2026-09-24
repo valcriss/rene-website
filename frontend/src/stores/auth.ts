@@ -2,41 +2,21 @@ import { computed, ref } from "vue";
 import { defineStore } from "pinia";
 import {
   login as loginApi,
+  getSession as getSessionApi,
+  logout as logoutApi,
   requestPasswordReset as requestPasswordResetApi,
   resetPassword as resetPasswordApi,
   signup as signupApi
 } from "../api/auth";
-import { TOKEN_STORAGE_KEY, USER_ID_STORAGE_KEY } from "../api/authHeaders";
 
 export type Role = "VISITOR" | "EDITOR" | "MODERATOR" | "ADMIN";
 
-const STORAGE_KEY = "rene-auth-role";
-const USER_NAME_KEY = "rene-auth-user-name";
-const USER_EMAIL_KEY = "rene-auth-user-email";
-
-// No `window` (and therefore no persisted session) exists during SSR: an anonymous visitor
-// is exactly what an anonymous crawler request should render as.
-const hasWindow = () => typeof window !== "undefined";
-
-const loadRole = (): Role => {
-  const stored = hasWindow() ? window.localStorage.getItem(STORAGE_KEY) : null;
-  if (stored === "EDITOR" || stored === "MODERATOR" || stored === "ADMIN") {
-    return stored;
-  }
-  return "VISITOR";
-};
-
-const loadToken = () => (hasWindow() ? window.localStorage.getItem(TOKEN_STORAGE_KEY) : null);
-const loadUserId = () => (hasWindow() ? window.localStorage.getItem(USER_ID_STORAGE_KEY) : null);
-const loadUserName = () => (hasWindow() ? window.localStorage.getItem(USER_NAME_KEY) ?? "" : "");
-const loadUserEmail = () => (hasWindow() ? window.localStorage.getItem(USER_EMAIL_KEY) ?? "" : "");
-
 export const useAuthStore = defineStore("auth", () => {
-  const role = ref<Role>(loadRole());
-  const token = ref<string | null>(loadToken());
-  const userId = ref<string | null>(loadUserId());
-  const userName = ref(loadUserName());
-  const userEmail = ref(loadUserEmail());
+  const role = ref<Role>("VISITOR");
+  const userId = ref<string | null>(null);
+  const userName = ref("");
+  const userEmail = ref("");
+  const sessionInitialized = ref(false);
   const email = ref("");
   const password = ref("");
   const signupName = ref("");
@@ -59,23 +39,31 @@ export const useAuthStore = defineStore("auth", () => {
 
   const login = (nextRole: Role) => {
     role.value = nextRole;
-    if (hasWindow()) {
-      window.localStorage.setItem(STORAGE_KEY, nextRole);
-    }
   };
 
-  const setSession = (payload: { token: string; user: { id: string; name: string; email: string; role: Role } }) => {
+  const setSession = (payload: { user: { id: string; name: string; email: string; role: Role } }) => {
     role.value = payload.user.role;
-    token.value = payload.token;
     userId.value = payload.user.id;
     userName.value = payload.user.name;
     userEmail.value = payload.user.email;
-    if (hasWindow()) {
-      window.localStorage.setItem(STORAGE_KEY, payload.user.role);
-      window.localStorage.setItem(TOKEN_STORAGE_KEY, payload.token);
-      window.localStorage.setItem(USER_ID_STORAGE_KEY, payload.user.id);
-      window.localStorage.setItem(USER_NAME_KEY, payload.user.name);
-      window.localStorage.setItem(USER_EMAIL_KEY, payload.user.email);
+  };
+
+  const clearSession = () => {
+    role.value = "VISITOR";
+    userId.value = null;
+    userName.value = "";
+    userEmail.value = "";
+  };
+
+  const restoreSession = async () => {
+    try {
+      const session = await getSessionApi();
+      if (session) setSession(session);
+      else clearSession();
+    } catch {
+      clearSession();
+    } finally {
+      sessionInitialized.value = true;
     }
   };
 
@@ -118,18 +106,12 @@ export const useAuthStore = defineStore("auth", () => {
     login(nextRole);
   };
 
-  const logout = () => {
-    role.value = "VISITOR";
-    token.value = null;
-    userId.value = null;
-    userName.value = "";
-    userEmail.value = "";
-    if (hasWindow()) {
-      window.localStorage.removeItem(STORAGE_KEY);
-      window.localStorage.removeItem(TOKEN_STORAGE_KEY);
-      window.localStorage.removeItem(USER_ID_STORAGE_KEY);
-      window.localStorage.removeItem(USER_NAME_KEY);
-      window.localStorage.removeItem(USER_EMAIL_KEY);
+  const logout = async () => {
+    clearSession();
+    try {
+      await logoutApi();
+    } catch {
+      // Local state must still be cleared if the server is temporarily unreachable.
     }
   };
 
@@ -161,10 +143,10 @@ export const useAuthStore = defineStore("auth", () => {
 
   return {
     role,
-    token,
     userId,
     userName,
     userEmail,
+    sessionInitialized,
     email,
     password,
     signupName,
@@ -189,6 +171,7 @@ export const useAuthStore = defineStore("auth", () => {
     requestPasswordResetWithEmail,
     confirmPasswordReset,
     setRole,
+    restoreSession,
     logout,
     resetCredentials,
     resetSignupForm,

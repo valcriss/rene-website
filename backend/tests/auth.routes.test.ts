@@ -27,7 +27,13 @@ const buildRepo = (
   updatePasswordHash: async () => undefined,
   createPasswordResetToken: async () => undefined,
   getPasswordResetTokenByHash: options?.getPasswordResetTokenByHash ?? (async () => null),
-  deletePasswordResetTokensByUserId: async () => undefined
+  deletePasswordResetTokensByUserId: async () => undefined,
+  createSession: async () => undefined,
+  getSessionById: async () => null,
+  getSessionByRefreshTokenHash: async () => null,
+  rotateSession: async () => undefined,
+  revokeSessionFamily: async () => undefined,
+  invalidateUserSessions: async () => undefined
 });
 
 describe("auth routes", () => {
@@ -59,7 +65,7 @@ describe("auth routes", () => {
     expect(response.status).toBe(401);
   });
 
-  it("returns token on success", async () => {
+  it("returns secure session cookies on success", async () => {
     const app = express();
     app.use(express.json());
     app.use("/api", createAuthRouter(buildRepo(await hashPassword("secret"))));
@@ -69,7 +75,11 @@ describe("auth routes", () => {
       .send({ email: "test@example.com", password: "secret" });
 
     expect(response.status).toBe(200);
-    expect(response.body.token).toBeDefined();
+    expect(response.body.token).toBeUndefined();
+    const cookies = String(response.headers["set-cookie"]);
+    expect(cookies).toContain("rene_access=");
+    expect(cookies).toContain("HttpOnly");
+    expect(cookies).toContain("SameSite=Strict");
     expect(response.body.user.email).toBe("test@example.com");
   });
 
@@ -113,7 +123,7 @@ describe("auth routes", () => {
     });
 
     expect(response.status).toBe(201);
-    expect(response.body.token).toBeDefined();
+    expect(response.body.token).toBeUndefined();
     expect(response.body.user.role).toBe("EDITOR");
   });
 

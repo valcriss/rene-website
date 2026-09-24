@@ -72,6 +72,7 @@ export const createAdminRouter = (repo: AdminRepository, authRepo: AuthRepositor
       res.status(status).json({ errors: result.errors });
       return;
     }
+    await authRepo.invalidateUserSessions?.(req.params.id);
     res.json(result.value);
   });
 

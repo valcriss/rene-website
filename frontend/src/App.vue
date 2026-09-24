@@ -30,12 +30,13 @@ const editorStore = useEditorStore();
 const adminStore = useAdminStore();
 
 setSessionExpiredHandler(() => {
-  authStore.logout();
+  void authStore.logout();
 });
 
 watch(
-  [() => route.path, () => authStore.isAuthenticated],
-  ([path, authenticated]) => {
+  [() => route.path, () => authStore.isAuthenticated, () => authStore.sessionInitialized],
+  ([path, authenticated, initialized]) => {
+    if (!initialized) return;
     if ((path === "/login" || path === "/signup" || path === "/forgot-password" || path === "/reset-password") && authenticated) {
       router.replace("/backoffice").catch(() => {});
       return;

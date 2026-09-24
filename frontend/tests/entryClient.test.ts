@@ -7,9 +7,14 @@ const piniaMock = { state: { value: {} as Record<string, unknown> } };
 const appMock = { mount: mountMock };
 
 const createAppMock = vi.fn(() => ({ app: appMock, router: routerMock, pinia: piniaMock }));
+const restoreSessionMock = vi.fn(() => Promise.resolve());
 
 vi.mock("../src/appFactory", () => ({
   createApp: createAppMock
+}));
+
+vi.mock("../src/stores/auth", () => ({
+  useAuthStore: () => ({ restoreSession: restoreSessionMock })
 }));
 
 vi.mock("../src/styles.css", () => ({}));
@@ -23,6 +28,7 @@ describe("entry-client", () => {
     mountMock.mockClear();
     isReadyMock.mockClear();
     createAppMock.mockClear();
+    restoreSessionMock.mockClear();
     piniaMock.state.value = {};
     document.body.innerHTML = "";
   });
@@ -32,6 +38,7 @@ describe("entry-client", () => {
     await flush();
 
     expect(createAppMock).toHaveBeenCalled();
+    expect(restoreSessionMock).toHaveBeenCalled();
     expect(mountMock).toHaveBeenCalledWith("#app");
   });
 

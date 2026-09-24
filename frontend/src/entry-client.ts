@@ -1,5 +1,6 @@
 import { createHead } from "@unhead/vue/client";
 import { createApp } from "./appFactory";
+import { useAuthStore } from "./stores/auth";
 import "./styles.css";
 import "leaflet/dist/leaflet.css";
 
@@ -14,6 +15,6 @@ if (stateElement?.textContent) {
   }
 }
 
-router.isReady().then(() => {
+Promise.all([router.isReady(), useAuthStore(pinia).restoreSession()]).then(() => {
   app.mount("#app");
 });

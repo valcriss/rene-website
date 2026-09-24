@@ -1,6 +1,3 @@
-export const TOKEN_STORAGE_KEY = "rene-auth-token";
-export const USER_ID_STORAGE_KEY = "rene-auth-user-id";
-
 type SessionExpiredHandler = () => void;
 
 let sessionExpiredHandler: SessionExpiredHandler | null = null;
@@ -25,9 +22,12 @@ export const buildAuthHeaders = (_role?: string, includeJson = true) => {
     headers["Content-Type"] = "application/json";
   }
 
-  const token = typeof window !== "undefined" ? window.localStorage.getItem(TOKEN_STORAGE_KEY) : null;
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
+  const csrfCookie = typeof document === "undefined" ? undefined : document.cookie
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith("rene_csrf="));
+  if (csrfCookie) {
+    headers["X-CSRF-Token"] = decodeURIComponent(csrfCookie.slice("rene_csrf=".length));
   }
 
   return headers;

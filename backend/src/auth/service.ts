@@ -1,6 +1,5 @@
 import { AuthRepository } from "./repository";
 import { hashPassword, needsPasswordRehash, verifyPassword } from "./password";
-import { signUserToken } from "./jwt";
 import {
   buildPasswordResetUrl,
   generatePasswordResetToken,
@@ -11,11 +10,11 @@ import { AuthUser } from "./types";
 import { notifyPasswordResetRequested } from "../notifications/service";
 
 export type LoginResult =
-  | { ok: true; value: { token: string; user: AuthUser } }
+  | { ok: true; value: { user: AuthUser } }
   | { ok: false; errors: string[] };
 
 export type SignupResult =
-  | { ok: true; value: { token: string; user: AuthUser } }
+  | { ok: true; value: { user: AuthUser } }
   | { ok: false; errors: string[]; code: "validation" | "conflict" };
 
 export type ForgotPasswordResult =
@@ -29,22 +28,10 @@ export type ResetPasswordResult =
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const minPasswordLength = 8;
 
-const createAuthResponse = (user: AuthUser): LoginResult => {
-  const tokenResult = signUserToken({
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    role: user.role
-  });
-
-  if (!tokenResult.ok) {
-    return { ok: false, errors: tokenResult.errors };
-  }
-
+const createAuthResponse = (user: AuthUser): { ok: true; value: { user: AuthUser } } => {
   return {
     ok: true,
     value: {
-      token: tokenResult.value,
       user
     }
   };
@@ -132,12 +119,7 @@ export const signup = async (repo: AuthRepository, input: unknown): Promise<Sign
     return { ok: false, code: "conflict", errors: ["Un compte existe déjà avec cet email."] };
   }
 
-  const authResponse = createAuthResponse(createdUser);
-  if (!authResponse.ok) {
-    return { ok: false, code: "validation", errors: authResponse.errors };
-  }
-
-  return authResponse;
+  return createAuthResponse(createdUser);
 };
 
 export const requestPasswordReset = async (
@@ -243,6 +225,7 @@ export const resetPassword = async (
   }
 
   await repo.updatePasswordHash(passwordResetToken.userId, await hashPassword(password));
+  await repo.invalidateUserSessions?.(passwordResetToken.userId);
   await repo.deletePasswordResetTokensByUserId(passwordResetToken.userId);
 
   return {

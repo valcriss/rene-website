@@ -2,7 +2,7 @@ import express from "express";
 import { createAdminRouter } from "./admin/routes";
 import { createPublicSettingsRouter } from "./admin/publicRoutes";
 import { createAdminRepository } from "./admin/repositoryFactory";
-import { authenticateOptional } from "./auth/middleware";
+import { createAuthenticationMiddleware, csrfProtection } from "./auth/middleware";
 import { createAudiencesRouter } from "./audiences/routes";
 import { createAuthRouter } from "./auth/routes";
 import { createAuthRepository } from "./auth/repositoryFactory";
@@ -23,9 +23,11 @@ import { registerStatic } from "./static";
 
 export const createApp = () => {
   const app = express();
+  const authRepository = createAuthRepository();
 
   app.use(express.json());
-  app.use(authenticateOptional);
+  app.use(createAuthenticationMiddleware(authRepository));
+  app.use(csrfProtection);
 
   app.use((req, res, next) => {
     const start = Date.now();
@@ -38,7 +40,6 @@ export const createApp = () => {
   });
 
   const eventRepository = createEventRepository();
-  const authRepository = createAuthRepository();
   const categorySubscriptionRepository = createCategorySubscriptionRepository();
   const moderationReminderRepository = createModerationReminderRepository();
   const communeRepository = createCommuneRepository();
