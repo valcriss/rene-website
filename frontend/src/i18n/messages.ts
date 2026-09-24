@@ -221,8 +221,23 @@ export const messages = {
         users: "Utilisateurs",
         categories: "Cat\u00e9gories",
         audiences: "Publics concern\u00e9s",
-        settings: "R\u00e9glages"
+        settings: "R\u00e9glages",
+        profile: "Mon profil",
+        profileLead: "Abonnements aux notifications de mod\u00e9ration"
       }
+    },
+    profile: {
+      eyebrow: "Espace personnel",
+      title: "Mon profil",
+      lead: "G\u00e9rez vos informations de compte et vos abonnements aux notifications de mod\u00e9ration.",
+      denied: "Cette page est r\u00e9serv\u00e9e aux mod\u00e9rateurs et administrateurs.",
+      account: "Compte",
+      notifications: "Notifications",
+      categorySubscriptionsTitle: "Abonnements par cat\u00e9gorie",
+      categorySubscriptionsLead:
+        "Vous \u00eates abonn\u00e9 par d\u00e9faut aux notifications de mod\u00e9ration de toutes les cat\u00e9gories, y compris les nouvelles. D\u00e9sabonnez-vous de celles qui ne vous concernent pas.",
+      subscribed: "Abonn\u00e9",
+      unsubscribed: "D\u00e9sabonn\u00e9"
     },
     editor: {
       myEventsEyebrow: "Mes \u00e9v\u00e9nements",
@@ -713,8 +728,23 @@ export const messages = {
         users: "Users",
         categories: "Categories",
         audiences: "Audiences",
-        settings: "Settings"
+        settings: "Settings",
+        profile: "My profile",
+        profileLead: "Moderation notification subscriptions"
       }
+    },
+    profile: {
+      eyebrow: "Personal space",
+      title: "My profile",
+      lead: "Manage your account information and your moderation notification subscriptions.",
+      denied: "This page is reserved for moderators and administrators.",
+      account: "Account",
+      notifications: "Notifications",
+      categorySubscriptionsTitle: "Category subscriptions",
+      categorySubscriptionsLead:
+        "You are subscribed by default to moderation notifications for every category, including new ones. Unsubscribe from the ones that don't concern you.",
+      subscribed: "Subscribed",
+      unsubscribed: "Unsubscribed"
     },
     editor: {
       myEventsEyebrow: "My events",

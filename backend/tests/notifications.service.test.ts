@@ -7,12 +7,14 @@ import {
   notifyContactMessage,
   notifyEventDeleted,
   notifyEventPublished,
+  notifyModerationReminder,
   notifyPasswordResetRequested,
   notifyEventRejected,
   notifyEventResubmitted,
   notifyEventSubmitted
 } from "../src/notifications/service";
 import { AuthRepository } from "../src/auth/repository";
+import { CategorySubscriptionRepository } from "../src/subscriptions/repository";
 import { Event } from "../src/events/types";
 
 const baseEvent: Event = {
@@ -82,6 +84,48 @@ describe("notifications service", () => {
 
   it("notifies moderators on resubmission", async () => {
     await notifyEventResubmitted({ ...baseEvent, status: "PENDING" }, authRepo);
+
+    expect(sendEmail).toHaveBeenCalledTimes(2);
+  });
+
+  it("notifies moderators on a moderation reminder", async () => {
+    await notifyModerationReminder(baseEvent, authRepo);
+
+    expect(sendEmail).toHaveBeenCalledTimes(2);
+    expect((sendEmail as jest.Mock).mock.calls[0][0].subject).toBe("Relance modération : Concert");
+  });
+
+  it("excludes moderators unsubscribed from the event's category on submit", async () => {
+    const subscriptionRepo: CategorySubscriptionRepository = {
+      listUnsubscribedCategoryIds: async (userId) => (userId === "m1" ? ["music"] : []),
+      setSubscription: async () => undefined
+    };
+
+    await notifyEventSubmitted(baseEvent, authRepo, subscriptionRepo);
+
+    expect(sendEmail).toHaveBeenCalledTimes(1);
+    expect((sendEmail as jest.Mock).mock.calls[0][0].to).toBe("admin@test");
+  });
+
+  it("excludes moderators unsubscribed from the event's category on resubmission", async () => {
+    const subscriptionRepo: CategorySubscriptionRepository = {
+      listUnsubscribedCategoryIds: async (userId) => (userId === "a1" ? ["music"] : []),
+      setSubscription: async () => undefined
+    };
+
+    await notifyEventResubmitted({ ...baseEvent, status: "PENDING" }, authRepo, subscriptionRepo);
+
+    expect(sendEmail).toHaveBeenCalledTimes(1);
+    expect((sendEmail as jest.Mock).mock.calls[0][0].to).toBe("mod@test");
+  });
+
+  it("notifies every moderator when the event has no category, even with a subscription repo", async () => {
+    const subscriptionRepo: CategorySubscriptionRepository = {
+      listUnsubscribedCategoryIds: async () => ["music"],
+      setSubscription: async () => undefined
+    };
+
+    await notifyEventSubmitted({ ...baseEvent, categoryId: null }, authRepo, subscriptionRepo);
 
     expect(sendEmail).toHaveBeenCalledTimes(2);
   });

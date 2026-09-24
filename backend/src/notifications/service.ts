@@ -1,5 +1,6 @@
 import { Event } from "../events/types";
 import { AuthRepository } from "../auth/repository";
+import { CategorySubscriptionRepository } from "../subscriptions/repository";
 import { sendEmail, MailResult } from "./mailer";
 import {
   buildPasswordResetBody,
@@ -14,6 +15,8 @@ import {
   buildRejectedSubject,
   buildDeletedBody,
   buildDeletedSubject,
+  buildModerationReminderBody,
+  buildModerationReminderSubject,
   buildContactMessageBody,
   buildContactMessageSubject,
   buildUserInvitationBody,
@@ -47,16 +50,51 @@ const resolveCreatorEmail = async (event: Event, authRepo: AuthRepository) => {
   return event.contactEmail ?? null;
 };
 
-export const notifyEventSubmitted = async (event: Event, authRepo: AuthRepository): Promise<MailResult> => {
+// When a subscription repository is supplied, moderators/admins who unsubscribed from the
+// event's category are skipped; without one (e.g. callers that don't care about subscriptions),
+// everyone with the role is notified, matching the previous unconditional behavior.
+const resolveSubscribedModeratorEmails = async (
+  categoryId: string | null,
+  authRepo: AuthRepository,
+  subscriptionRepo?: CategorySubscriptionRepository
+): Promise<string[]> => {
   const moderators = await authRepo.listUsersByRole(["MODERATOR", "ADMIN"]);
-  const emails = moderators.map((user) => user.email);
+  if (!categoryId || !subscriptionRepo) {
+    return moderators.map((user) => user.email);
+  }
+
+  const results = await Promise.all(
+    moderators.map(async (user) => {
+      const unsubscribedIds = await subscriptionRepo.listUnsubscribedCategoryIds(user.id);
+      return unsubscribedIds.includes(categoryId) ? null : user.email;
+    })
+  );
+
+  return results.filter((email): email is string => email !== null);
+};
+
+export const notifyEventSubmitted = async (
+  event: Event,
+  authRepo: AuthRepository,
+  subscriptionRepo?: CategorySubscriptionRepository
+): Promise<MailResult> => {
+  const emails = await resolveSubscribedModeratorEmails(event.categoryId, authRepo, subscriptionRepo);
   return sendToMany(emails, buildSubmittedSubject(event), buildSubmittedBody(event));
 };
 
-export const notifyEventResubmitted = async (event: Event, authRepo: AuthRepository): Promise<MailResult> => {
+export const notifyEventResubmitted = async (
+  event: Event,
+  authRepo: AuthRepository,
+  subscriptionRepo?: CategorySubscriptionRepository
+): Promise<MailResult> => {
+  const emails = await resolveSubscribedModeratorEmails(event.categoryId, authRepo, subscriptionRepo);
+  return sendToMany(emails, buildResubmittedSubject(event), buildResubmittedBody(event));
+};
+
+export const notifyModerationReminder = async (event: Event, authRepo: AuthRepository): Promise<MailResult> => {
   const moderators = await authRepo.listUsersByRole(["MODERATOR", "ADMIN"]);
   const emails = moderators.map((user) => user.email);
-  return sendToMany(emails, buildResubmittedSubject(event), buildResubmittedBody(event));
+  return sendToMany(emails, buildModerationReminderSubject(event), buildModerationReminderBody(event));
 };
 
 export const notifyEventPublished = async (event: Event, authRepo: AuthRepository): Promise<MailResult> => {

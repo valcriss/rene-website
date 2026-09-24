@@ -18,6 +18,7 @@ const BackofficeAdminUsersPage = () => import("./pages/backoffice/BackofficeAdmi
 const BackofficeAdminCategoriesPage = () => import("./pages/backoffice/BackofficeAdminCategoriesPage.vue");
 const BackofficeAdminAudiencesPage = () => import("./pages/backoffice/BackofficeAdminAudiencesPage.vue");
 const BackofficeAdminSettingsPage = () => import("./pages/backoffice/BackofficeAdminSettingsPage.vue");
+const BackofficeProfilePage = () => import("./pages/backoffice/BackofficeProfilePage.vue");
 
 const routes = [
   { path: "/", name: "home", component: HomePage },
@@ -45,7 +46,8 @@ const routes = [
       { path: "admin/users", name: "backoffice-admin-users", component: BackofficeAdminUsersPage },
       { path: "admin/categories", name: "backoffice-admin-categories", component: BackofficeAdminCategoriesPage },
       { path: "admin/audiences", name: "backoffice-admin-audiences", component: BackofficeAdminAudiencesPage },
-      { path: "admin/settings", name: "backoffice-admin-settings", component: BackofficeAdminSettingsPage }
+      { path: "admin/settings", name: "backoffice-admin-settings", component: BackofficeAdminSettingsPage },
+      { path: "profile", name: "backoffice-profile", component: BackofficeProfilePage }
     ]
   },
   { path: "/event/:id", name: "event-detail", component: EventDetailPage }

@@ -11,6 +11,10 @@ import { createContactRouter } from "./contact/routes";
 import { createEventRouter } from "./events/routes";
 import { createEventRepository } from "./events/repositoryFactory";
 import { createGeocodingRouter } from "./geocoding/routes";
+import { createModerationReminderRouter } from "./moderationReminders/routes";
+import { createModerationReminderRepository } from "./moderationReminders/repositoryFactory";
+import { createSubscriptionsRouter } from "./subscriptions/routes";
+import { createCategorySubscriptionRepository } from "./subscriptions/repositoryFactory";
 import { createUploadRouter } from "./uploads/routes";
 import { getUploadDir } from "./uploads/storage";
 import { registerStatic } from "./static";
@@ -33,10 +37,13 @@ export const createApp = () => {
 
   const eventRepository = createEventRepository();
   const authRepository = createAuthRepository();
+  const categorySubscriptionRepository = createCategorySubscriptionRepository();
+  const moderationReminderRepository = createModerationReminderRepository();
   app.use("/api", createAuthRouter(authRepository));
-  app.use("/api", createEventRouter(eventRepository, authRepository));
+  app.use("/api", createEventRouter(eventRepository, authRepository, categorySubscriptionRepository));
   app.use("/api", createGeocodingRouter());
   app.use("/api", createUploadRouter());
+  app.use("/api", createModerationReminderRouter(eventRepository, moderationReminderRepository, authRepository));
   app.use("/uploads", express.static(getUploadDir()));
 
   const adminRepository = createAdminRepository();
@@ -45,6 +52,7 @@ export const createApp = () => {
   app.use("/api/audiences", createAudiencesRouter(adminRepository));
   app.use("/api/settings", createPublicSettingsRouter(adminRepository));
   app.use("/api", createContactRouter(adminRepository));
+  app.use("/api/subscriptions", createSubscriptionsRouter(categorySubscriptionRepository, adminRepository));
 
   app.get("/api/health", (_req, res) => {
     res.json({ status: "ok" });

@@ -2,6 +2,8 @@ import {
   buildContactMessageBody,
   buildContactMessageSubject,
   buildDeletedBody,
+  buildModerationReminderBody,
+  buildModerationReminderSubject,
   buildPublishedBody,
   buildRejectedBody,
   buildResubmittedBody,
@@ -75,6 +77,15 @@ describe("notification templates", () => {
   it("builds submitted body", () => {
     const body = buildSubmittedBody(baseEvent);
     expect(body).toContain("en attente");
+  });
+
+  it("builds moderation reminder subject and body", () => {
+    const subject = buildModerationReminderSubject(baseEvent);
+    const body = buildModerationReminderBody(baseEvent);
+
+    expect(subject).toBe("Relance modération : Concert");
+    expect(body).toContain("depuis plus de 3 jours");
+    expect(body).toContain("Salle, Descartes");
   });
 
   it("builds deleted body", () => {
