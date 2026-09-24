@@ -11,13 +11,15 @@ describe("i18n", () => {
     setLocale("fr");
   });
 
-  it("resolves locale from storage, browser, and fallback", () => {
+  it("resolves the explicitly saved locale when one was chosen", () => {
     window.localStorage.setItem("rene-website-locale", "en");
     expect(resolveInitialLocale()).toBe("en");
+  });
 
+  it("defaults to French deterministically when no locale was explicitly saved, regardless of browser language (issue #57)", () => {
     window.localStorage.removeItem("rene-website-locale");
     Object.defineProperty(window.navigator, "language", { value: "en-US", configurable: true });
-    expect(resolveInitialLocale()).toBe("en");
+    expect(resolveInitialLocale()).toBe("fr");
 
     Object.defineProperty(window.navigator, "language", { value: "es-ES", configurable: true });
     expect(resolveInitialLocale()).toBe("fr");
