@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from "pinia";
 import EventDetailView from "../src/components/events/EventDetailView.vue";
 import { useCategoriesStore } from "../src/stores/categories";
 import { useEventsStore } from "../src/stores/events";
+import { createTestRouter } from "./testRouter";
 
 describe("EventDetailView", () => {
   beforeEach(() => {
@@ -252,10 +253,12 @@ describe("EventDetailView", () => {
       }
     ];
 
+    const router = createTestRouter("/event/1");
+    await router.isReady();
     const wrapper = mount(EventDetailView, {
       props: { eventId: "1" },
       global: {
-        plugins: [pinia],
+        plugins: [pinia, router],
         stubs: {
           EventMap: { template: "<div></div>" }
         }
@@ -268,7 +271,10 @@ describe("EventDetailView", () => {
     expect(wrapper.text().match(/Texte/g)?.length ?? 0).toBe(1);
     expect(wrapper.find("[data-testid='related-events']").exists()).toBe(true);
 
-    await wrapper.find("[data-testid='related-event-card-2']").trigger("click");
+    const relatedCard = wrapper.find("[data-testid='related-event-card-2']");
+    expect(relatedCard.attributes("href")).toBe("/event/2");
+
+    await relatedCard.trigger("click");
     expect(wrapper.emitted("select")?.[0]).toEqual(["2"]);
 
     const setupState = (wrapper.vm as unknown as {

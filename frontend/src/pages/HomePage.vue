@@ -36,11 +36,13 @@
           v-if="carouselEvents.length > 0 && currentCarouselEvent"
           class="group relative overflow-hidden rounded-[2.25rem] border border-slate-900/10 bg-slate-950 text-white shadow-[0_36px_120px_-52px_rgba(15,23,42,0.55)]"
           :data-testid="`featured-card-${currentCarouselEvent.id}`"
-          role="button"
-          tabindex="0"
-          @click="openEventDetail(currentCarouselEvent.id)"
-          @keydown.enter="openEventDetail(currentCarouselEvent.id)"
         >
+          <RouterLink
+            :to="`/event/${currentCarouselEvent.id}`"
+            class="absolute inset-0 z-10"
+            :aria-label="currentCarouselEvent.title"
+            :data-testid="`featured-card-link-${currentCarouselEvent.id}`"
+          />
           <img
             class="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
             :src="getEventImage(currentCarouselEvent)"
@@ -85,7 +87,7 @@
                 <span class="text-sm font-medium uppercase tracking-[0.24em] text-white/82 [text-shadow:0_2px_10px_rgba(15,23,42,0.8)]">
                   {{ t("home.recommended") }}
                 </span>
-                <div v-if="carouselEvents.length > 1" class="ml-auto flex items-center gap-2">
+                <div v-if="carouselEvents.length > 1" class="relative z-20 ml-auto flex items-center gap-2">
                   <button
                     type="button"
                     class="rounded-full border border-white/20 bg-white/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-white backdrop-blur transition hover:bg-white/20"
@@ -104,7 +106,7 @@
                   </button>
                 </div>
               </div>
-              <div v-if="carouselEvents.length > 1" class="flex gap-2 pt-2">
+              <div v-if="carouselEvents.length > 1" class="relative z-20 flex gap-2 pt-2">
                 <button
                   v-for="(_eventItem, index) in carouselEvents"
                   :key="index"
@@ -185,60 +187,57 @@
               <li
                 v-for="eventItem in spotlightEvents"
                 :key="eventItem.id"
-                class="group cursor-pointer overflow-hidden rounded-[2rem] border border-sky-100 bg-white shadow-[0_24px_72px_-54px_rgba(30,41,59,0.28)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_32px_84px_-46px_rgba(30,41,59,0.24)]"
-                role="button"
-                tabindex="0"
-                :data-testid="`event-card-${eventItem.id}`"
-                @click="openEventDetail(eventItem.id)"
-                @keydown.enter="openEventDetail(eventItem.id)"
+                class="group overflow-hidden rounded-[2rem] border border-sky-100 bg-white shadow-[0_24px_72px_-54px_rgba(30,41,59,0.28)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_32px_84px_-46px_rgba(30,41,59,0.24)]"
               >
-                <div class="relative aspect-[16/10] overflow-hidden bg-sky-100">
-                  <img
-                    class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
-                    :src="getEventImage(eventItem)"
-                    :alt="eventItem.title"
-                    @error="markImageError(eventItem.id)"
-                  />
-                  <div class="absolute left-5 top-5 flex flex-wrap gap-2">
-                    <span class="rounded-full bg-white/95 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-800 shadow-sm">
-                      {{ formatEventDateBadge(eventItem.occurrences) }}
-                    </span>
-                    <span
-                      v-if="getCategoryName(eventItem.categoryId)"
-                      class="rounded-full px-3 py-1.5 text-xs font-semibold ring-1 shadow-sm"
-                      :style="getCategoryTheme(eventItem.categoryId)"
-                    >
-                      {{ getCategoryName(eventItem.categoryId) }}
-                    </span>
-                  </div>
-                </div>
-
-                <div class="space-y-4 p-5 sm:p-6">
-                  <div class="space-y-3">
-                    <p class="text-sm font-medium uppercase tracking-[0.22em] text-sky-700/80">
-                      {{ getEventLocationSummary(eventItem.occurrences) }}
-                    </p>
-                    <h4 class="font-display text-2xl font-semibold leading-tight text-slate-950">
-                      {{ eventItem.title }}
-                    </h4>
-                    <p class="text-base leading-7 text-slate-600 [display:-webkit-box] [-webkit-line-clamp:3] [-webkit-box-orient:vertical] overflow-hidden">
-                      {{ getEventShortExcerpt(eventItem) }}
-                    </p>
-                    <p v-if="formatUpdatedAtLabel(eventItem.updatedAt)" class="text-xs text-slate-400">
-                      {{ formatUpdatedAtLabel(eventItem.updatedAt) }}
-                    </p>
+                <RouterLink :to="`/event/${eventItem.id}`" class="block" :data-testid="`event-card-${eventItem.id}`">
+                  <div class="relative aspect-[16/10] overflow-hidden bg-sky-100">
+                    <img
+                      class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
+                      :src="getEventImage(eventItem)"
+                      :alt="eventItem.title"
+                      @error="markImageError(eventItem.id)"
+                    />
+                    <div class="absolute left-5 top-5 flex flex-wrap gap-2">
+                      <span class="rounded-full bg-white/95 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-800 shadow-sm">
+                        {{ formatEventDateBadge(eventItem.occurrences) }}
+                      </span>
+                      <span
+                        v-if="getCategoryName(eventItem.categoryId)"
+                        class="rounded-full px-3 py-1.5 text-xs font-semibold ring-1 shadow-sm"
+                        :style="getCategoryTheme(eventItem.categoryId)"
+                      >
+                        {{ getCategoryName(eventItem.categoryId) }}
+                      </span>
+                    </div>
                   </div>
 
-                  <div class="flex items-center justify-between gap-4 border-t border-sky-100 pt-4">
-                    <span class="text-sm font-semibold text-slate-900">{{ t("home.viewEvent") }}</span>
-                    <span
-                      v-if="isMultisiteEvent(eventItem.occurrences)"
-                      class="text-xs font-medium uppercase tracking-[0.22em] text-sky-700/70"
-                    >
-                      {{ t("home.multisite") }}
-                    </span>
+                  <div class="space-y-4 p-5 sm:p-6">
+                    <div class="space-y-3">
+                      <p class="text-sm font-medium uppercase tracking-[0.22em] text-sky-700/80">
+                        {{ getEventLocationSummary(eventItem.occurrences) }}
+                      </p>
+                      <h4 class="font-display text-2xl font-semibold leading-tight text-slate-950">
+                        {{ eventItem.title }}
+                      </h4>
+                      <p class="text-base leading-7 text-slate-600 [display:-webkit-box] [-webkit-line-clamp:3] [-webkit-box-orient:vertical] overflow-hidden">
+                        {{ getEventShortExcerpt(eventItem) }}
+                      </p>
+                      <p v-if="formatUpdatedAtLabel(eventItem.updatedAt)" class="text-xs text-slate-400">
+                        {{ formatUpdatedAtLabel(eventItem.updatedAt) }}
+                      </p>
+                    </div>
+
+                    <div class="flex items-center justify-between gap-4 border-t border-sky-100 pt-4">
+                      <span class="text-sm font-semibold text-slate-900">{{ t("home.viewEvent") }}</span>
+                      <span
+                        v-if="isMultisiteEvent(eventItem.occurrences)"
+                        class="text-xs font-medium uppercase tracking-[0.22em] text-sky-700/70"
+                      >
+                        {{ t("home.multisite") }}
+                      </span>
+                    </div>
                   </div>
-                </div>
+                </RouterLink>
               </li>
             </ul>
 

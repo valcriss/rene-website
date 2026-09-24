@@ -3,14 +3,13 @@
 
   <EventDetailView :event-id="detailEventId" @select="openEventDetail">
     <template #header>
-      <button
-        type="button"
+      <RouterLink
+        to="/"
         class="inline-flex items-center justify-center gap-2 rounded-full border border-sky-100 bg-white px-4 py-2 text-sm font-medium text-sky-900 shadow-sm transition hover:bg-sky-50"
-        @click="goToHome"
       >
         <font-awesome-icon class="h-4 w-4" :icon="faArrowLeft" />
         <span>{{ $t("detail.backToAgenda") }}</span>
-      </button>
+      </RouterLink>
     </template>
   </EventDetailView>
 </template>
@@ -47,10 +46,6 @@ usePageSeo({
   image: () => seoEvent.value?.image,
   type: "article"
 });
-
-const goToHome = () => {
-  router.push("/");
-};
 
 const goToLogin = () => {
   router.push("/login");

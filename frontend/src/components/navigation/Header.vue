@@ -77,20 +77,18 @@
             </div>
           </div>
         </div>
-        <button
-          type="button"
+        <RouterLink
+          to="/contact"
           class="hidden text-sm font-medium text-slate-600 transition hover:text-slate-900 sm:inline"
-          @click="goToContact"
         >
           {{ t("navigation.contact") }}
-        </button>
-        <button
-          type="button"
+        </RouterLink>
+        <RouterLink
+          to="/mentions-legales"
           class="hidden text-sm font-medium text-slate-600 transition hover:text-slate-900 sm:inline"
-          @click="goToLegalNotice"
         >
           {{ t("navigation.legalNotice") }}
-        </button>
+        </RouterLink>
       </div>
     </div>
   </header>
@@ -195,14 +193,6 @@ const toggleAccountMenu = () => {
 const goToBackoffice = () => {
   closeMenu();
   router?.push("/backoffice");
-};
-
-const goToContact = () => {
-  router?.push("/contact");
-};
-
-const goToLegalNotice = () => {
-  router?.push("/mentions-legales");
 };
 
 const handleLogout = () => {

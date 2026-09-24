@@ -74,7 +74,10 @@ describe("HomePage", () => {
     await wrapper.find("[data-testid='login']").trigger("click");
     expect(pushSpy).toHaveBeenCalledWith("/login");
 
-    await wrapper.find("[data-testid='event-card-1']").trigger("click");
+    const eventCardLink = wrapper.get("[data-testid='event-card-1']");
+    expect(eventCardLink.element.tagName).toBe("A");
+    expect(eventCardLink.attributes("href")).toBe("/event/1");
+    await eventCardLink.trigger("click");
     expect(pushSpy).toHaveBeenCalledWith("/event/1");
 
     expect(wrapper.get("[data-testid='event-grid']").classes()).toContain("xl:grid-cols-3");
@@ -120,6 +123,11 @@ describe("HomePage", () => {
 
     expect(wrapper.find("[data-testid='featured-card-1']").exists()).toBe(true);
     expect(wrapper.find("[data-testid='event-card-1']").exists()).toBe(true);
+
+    const featuredLink = wrapper.get("[data-testid='featured-card-link-1']");
+    expect(featuredLink.element.tagName).toBe("A");
+    expect(featuredLink.attributes("href")).toBe("/event/1");
+    expect(featuredLink.attributes("aria-label")).toBe("Concert");
 
     await wrapper.get("button[aria-label='Événement suivant']").trigger("click");
 

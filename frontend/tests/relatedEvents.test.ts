@@ -3,19 +3,23 @@ import { createPinia, setActivePinia } from "pinia";
 import RelatedEvents from "../src/components/events/RelatedEvents.vue";
 import { useCategoriesStore } from "../src/stores/categories";
 import { useEventsStore } from "../src/stores/events";
+import { createTestRouter } from "./testRouter";
 
 describe("RelatedEvents", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
   });
 
-  it("renders fallback category theme and emits from keyboard", async () => {
+  it("renders a real, crawlable link for each card and emits on click", async () => {
     const categoriesStore = useCategoriesStore();
     const eventsStore = useEventsStore();
     categoriesStore.categories = [];
     eventsStore.events = [];
+    const router = createTestRouter("/");
+    await router.isReady();
 
     const wrapper = mount(RelatedEvents, {
+      global: { plugins: [router] },
       props: {
         events: [
           {
@@ -47,10 +51,13 @@ describe("RelatedEvents", () => {
     });
 
     const card = wrapper.get('[data-testid="related-event-card-1"]');
+    expect(card.element.tagName).toBe("A");
+    expect(card.attributes("href")).toBe("/event/1");
     expect(card.text()).not.toContain("unknown");
+    expect(card.text()).toContain("Lecture");
     expect(wrapper.text()).toContain("Contenu");
 
-    await card.trigger("keydown.enter");
+    await card.trigger("click");
     expect(wrapper.emitted("select")?.[0]).toEqual(["1"]);
 
     const setupState = (wrapper.vm as {

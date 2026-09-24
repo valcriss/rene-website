@@ -14,51 +14,53 @@
       <li
         v-for="eventItem in events"
         :key="eventItem.id"
-        class="group cursor-pointer overflow-hidden rounded-[1.75rem] border border-sky-100 bg-white shadow-[0_20px_64px_-52px_rgba(30,41,59,0.28)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_28px_72px_-46px_rgba(30,41,59,0.26)]"
-        role="button"
-        tabindex="0"
-        :data-testid="`related-event-card-${eventItem.id}`"
-        @click="emitSelect(eventItem.id)"
-        @keydown.enter="emitSelect(eventItem.id)"
+        class="group overflow-hidden rounded-[1.75rem] border border-sky-100 bg-white shadow-[0_20px_64px_-52px_rgba(30,41,59,0.28)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_28px_72px_-46px_rgba(30,41,59,0.26)]"
       >
-        <div class="relative aspect-[16/10] overflow-hidden bg-sky-100">
-          <img
-            class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
-            :src="getEventImage(eventItem)"
-            :alt="eventItem.title"
-            @error="markImageError(eventItem.id)"
-          />
-          <div class="absolute left-4 top-4 flex flex-wrap gap-2">
-            <span class="rounded-full bg-white/95 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-800 shadow-sm">
-              {{ formatEventDateBadge(eventItem.occurrences) }}
-            </span>
-            <span
-              v-if="getCategoryName(eventItem.categoryId)"
-              class="rounded-full px-3 py-1 text-xs font-semibold ring-1 shadow-sm"
-              :style="getCategoryTheme(eventItem.categoryId)"
-            >
-              {{ getCategoryName(eventItem.categoryId) }}
-            </span>
+        <RouterLink
+          :to="`/event/${eventItem.id}`"
+          class="block"
+          :data-testid="`related-event-card-${eventItem.id}`"
+          @click="emitSelect(eventItem.id)"
+        >
+          <div class="relative aspect-[16/10] overflow-hidden bg-sky-100">
+            <img
+              class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
+              :src="getEventImage(eventItem)"
+              :alt="eventItem.title"
+              @error="markImageError(eventItem.id)"
+            />
+            <div class="absolute left-4 top-4 flex flex-wrap gap-2">
+              <span class="rounded-full bg-white/95 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-800 shadow-sm">
+                {{ formatEventDateBadge(eventItem.occurrences) }}
+              </span>
+              <span
+                v-if="getCategoryName(eventItem.categoryId)"
+                class="rounded-full px-3 py-1 text-xs font-semibold ring-1 shadow-sm"
+                :style="getCategoryTheme(eventItem.categoryId)"
+              >
+                {{ getCategoryName(eventItem.categoryId) }}
+              </span>
+            </div>
           </div>
-        </div>
 
-        <div class="space-y-3 p-5">
-          <p class="text-xs font-semibold uppercase tracking-[0.22em] text-sky-700/75">
-            {{ getEventLocationSummary(eventItem.occurrences) }}
-          </p>
-          <h3 class="font-display text-2xl font-semibold leading-tight text-slate-950">
-            {{ eventItem.title }}
-          </h3>
-          <p class="text-sm leading-6 text-slate-600 [display:-webkit-box] [-webkit-line-clamp:3] [-webkit-box-orient:vertical] overflow-hidden">
-            {{ getEventExcerpt(eventItem) }}
-          </p>
-          <p v-if="formatUpdatedAtLabel(eventItem.updatedAt)" class="text-xs text-slate-400">
-            {{ formatUpdatedAtLabel(eventItem.updatedAt) }}
-          </p>
-          <div class="border-t border-sky-100 pt-3">
-            <span class="text-sm font-semibold text-slate-900">{{ $t("home.viewEvent") }}</span>
+          <div class="space-y-3 p-5">
+            <p class="text-xs font-semibold uppercase tracking-[0.22em] text-sky-700/75">
+              {{ getEventLocationSummary(eventItem.occurrences) }}
+            </p>
+            <h3 class="font-display text-2xl font-semibold leading-tight text-slate-950">
+              {{ eventItem.title }}
+            </h3>
+            <p class="text-sm leading-6 text-slate-600 [display:-webkit-box] [-webkit-line-clamp:3] [-webkit-box-orient:vertical] overflow-hidden">
+              {{ getEventExcerpt(eventItem) }}
+            </p>
+            <p v-if="formatUpdatedAtLabel(eventItem.updatedAt)" class="text-xs text-slate-400">
+              {{ formatUpdatedAtLabel(eventItem.updatedAt) }}
+            </p>
+            <div class="border-t border-sky-100 pt-3">
+              <span class="text-sm font-semibold text-slate-900">{{ $t("home.viewEvent") }}</span>
+            </div>
           </div>
-        </div>
+        </RouterLink>
       </li>
     </ul>
   </section>
