@@ -70,8 +70,11 @@ type PrismaEvent = {
   status: "DRAFT" | "PENDING" | "PUBLISHED" | "REJECTED";
   featured: boolean;
   publishedAt: Date | null;
+  publishedByUserId?: string | null;
   publicationEndAt: Date;
   rejectionReason: string | null;
+  rejectedByUserId?: string | null;
+  rejectedAt?: Date | null;
   archivedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -190,8 +193,11 @@ const toEvent = (data: PrismaEvent): Event => ({
   status: data.status,
   featured: data.featured,
   publishedAt: data.publishedAt ? data.publishedAt.toISOString() : null,
+  publishedByUserId: data.publishedByUserId ?? null,
   publicationEndAt: data.publicationEndAt.toISOString(),
   rejectionReason: data.rejectionReason,
+  rejectedByUserId: data.rejectedByUserId ?? null,
+  rejectedAt: data.rejectedAt ? data.rejectedAt.toISOString() : null,
   archivedAt: data.archivedAt ? data.archivedAt.toISOString() : null,
   pendingRevision: data.pendingRevision ? toRevision(data.pendingRevision) : null,
   createdAt: data.createdAt.toISOString(),
@@ -424,7 +430,7 @@ export const createPrismaEventRepository = (): EventRepository => ({
       return null;
     }
   },
-  publishPendingRevision: async (id, publishedAt) => {
+  publishPendingRevision: async (id, publishedAt, publishedByUserId) => {
     try {
       const updated = await prismaClient.$transaction(async (transaction) => {
         const existing = await transaction.event.findUnique({ where: { id }, include: includeOccurrencesAndRevision });
@@ -467,7 +473,10 @@ export const createPrismaEventRepository = (): EventRepository => ({
             featured: false,
             status: "PUBLISHED",
             publishedAt: new Date(publishedAt),
+            publishedByUserId: publishedByUserId ?? null,
             rejectionReason: null,
+            rejectedByUserId: null,
+            rejectedAt: null,
             publicationEndAt: computePublicationEndAt(revisionOccurrences),
             occurrences: {
               deleteMany: {},
@@ -541,7 +550,10 @@ export const createPrismaEventRepository = (): EventRepository => ({
           status,
           featured: data.featured,
           publishedAt: data.publishedAt ? new Date(data.publishedAt) : null,
+          publishedByUserId: data.publishedByUserId ?? null,
           rejectionReason: data.rejectionReason,
+          rejectedByUserId: data.rejectedByUserId ?? null,
+          rejectedAt: data.rejectedAt ? new Date(data.rejectedAt) : null,
           publicationEndAt: new Date(data.publicationEndAt)
         }
       });

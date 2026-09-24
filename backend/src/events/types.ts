@@ -75,8 +75,11 @@ export type Event = Omit<CreateEventInput, "occurrences"> & {
   slug: string | null;
   status: EventStatus;
   publishedAt: string | null;
+  publishedByUserId?: string | null;
   publicationEndAt: string;
   rejectionReason: string | null;
+  rejectedByUserId?: string | null;
+  rejectedAt?: string | null;
   archivedAt: string | null;
   pendingRevision: EventRevision | null;
   createdAt: string;
@@ -85,4 +88,4 @@ export type Event = Omit<CreateEventInput, "occurrences"> & {
 
 // The public contract intentionally excludes creator identity, moderation rejection reasons and
 // any in-progress revision, none of which are meant to ever reach an anonymous visitor or a crawler.
-export type PublicEvent = Omit<Event, "createdByUserId" | "rejectionReason" | "pendingRevision">;
+export type PublicEvent = Omit<Event, "createdByUserId" | "publishedByUserId" | "rejectionReason" | "rejectedByUserId" | "rejectedAt" | "pendingRevision">;

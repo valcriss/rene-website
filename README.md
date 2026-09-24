@@ -53,3 +53,6 @@ des artefacts Photon sont documentés dans [docs/security-containers.md](docs/se
 
 Les scans CI/CD, les seuils bloquants et la procédure de triage sont décrits dans
 [docs/security-ci-triage.md](docs/security-ci-triage.md).
+
+La journalisation structurée, l'audit métier, la rétention et la consultation lors
+d'un incident sont décrits dans [docs/security-audit.md](docs/security-audit.md).

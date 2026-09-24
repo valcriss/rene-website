@@ -421,7 +421,7 @@ export const publishEvent = async (
     if (current.pendingRevision.status !== "PENDING") {
       return badRequest(["Révision non soumise."]);
     }
-    const updatedRevision = await repo.publishPendingRevision(id, now);
+    const updatedRevision = await repo.publishPendingRevision(id, now, actor.id);
     if (!updatedRevision) {
       return notFound("Révision introuvable.");
     }
@@ -435,7 +435,10 @@ export const publishEvent = async (
   const updated = await repo.updateStatus(id, "PUBLISHED", {
     featured,
     publishedAt: now,
+    publishedByUserId: actor.id,
     rejectionReason: null,
+    rejectedByUserId: null,
+    rejectedAt: null,
     publicationEndAt: current.publicationEndAt
   });
   if (!updated) {
@@ -596,7 +599,10 @@ export const rejectEvent = async (
 
   const updated = await repo.updateStatus(id, "REJECTED", {
     publishedAt: null,
+    publishedByUserId: null,
     rejectionReason: reason,
+    rejectedByUserId: actor.id,
+    rejectedAt: new Date().toISOString(),
     publicationEndAt: current.publicationEndAt
   });
   if (!updated) {
