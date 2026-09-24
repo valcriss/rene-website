@@ -5,6 +5,7 @@ const LoginPage = () => import("./pages/LoginPage.vue");
 const SignupPage = () => import("./pages/SignupPage.vue");
 const ForgotPasswordPage = () => import("./pages/ForgotPasswordPage.vue");
 const ResetPasswordPage = () => import("./pages/ResetPasswordPage.vue");
+const ContactPage = () => import("./pages/ContactPage.vue");
 const EventDetailPage = () => import("./pages/EventDetailPage.vue");
 const BackofficeLayout = () => import("./pages/backoffice/BackofficeLayout.vue");
 const BackofficeEventsPage = () => import("./pages/backoffice/BackofficeEventsPage.vue");
@@ -23,6 +24,7 @@ const routes = [
   { path: "/signup", name: "signup", component: SignupPage },
   { path: "/forgot-password", name: "forgot-password", component: ForgotPasswordPage },
   { path: "/reset-password", name: "reset-password", component: ResetPasswordPage },
+  { path: "/contact", name: "contact", component: ContactPage },
   {
     path: "/backoffice",
     component: BackofficeLayout,

@@ -14,6 +14,8 @@ import {
   buildRejectedSubject,
   buildDeletedBody,
   buildDeletedSubject,
+  buildContactMessageBody,
+  buildContactMessageSubject,
   buildUserInvitationBody,
   buildUserInvitationSubject
 } from "./templates";
@@ -84,6 +86,17 @@ export const notifyPasswordResetRequested = async (
     to: email,
     subject: buildPasswordResetSubject(),
     text: buildPasswordResetBody(resetUrl, ttlMinutes)
+  });
+
+export const notifyContactMessage = async (
+  to: string,
+  contact: { name: string; email: string; message: string }
+): Promise<MailResult> =>
+  sendEmail({
+    to,
+    subject: buildContactMessageSubject(contact.name),
+    text: buildContactMessageBody(contact.name, contact.email, contact.message),
+    replyTo: contact.email
   });
 
 export const notifyUserInvited = async (

@@ -1,10 +1,12 @@
 import { mount } from "@vue/test-utils";
+import { vi } from "vitest";
 import Search from "../src/components/home/Search.vue";
 import Filters from "../src/components/home/Filters.vue";
 import DateFilter from "../src/components/home/filters/DateFilter.vue";
 import EventTypeFilter from "../src/components/home/filters/EventTypeFilter.vue";
 import Header from "../src/components/navigation/Header.vue";
 import type { EventFilters } from "../src/events/filterEvents";
+import { createTestRouter } from "./testRouter";
 
 const baseFilters = (): EventFilters => ({
   search: "",
@@ -132,6 +134,21 @@ describe("home components", () => {
     }
 
     expect(button.exists()).toBe(true);
+  });
+
+  it("Header navigates to the contact page", async () => {
+    const router = createTestRouter("/");
+    await router.isReady();
+    const pushSpy = vi.spyOn(router, "push");
+    const wrapper = mount(Header, { global: { plugins: [router] } });
+
+    const button = wrapper.findAll("button").find((item) => item.text() === "Contact");
+    if (!button) {
+      throw new Error("Contact button not found");
+    }
+    await button.trigger("click");
+
+    expect(pushSpy).toHaveBeenCalledWith("/contact");
   });
 
   it("Header keeps account dropdown above page content", async () => {

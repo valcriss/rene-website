@@ -77,6 +77,13 @@
             </div>
           </div>
         </div>
+        <button
+          type="button"
+          class="hidden text-sm font-medium text-slate-600 transition hover:text-slate-900 sm:inline"
+          @click="goToContact"
+        >
+          {{ t("navigation.contact") }}
+        </button>
       </div>
     </div>
   </header>
@@ -181,6 +188,10 @@ const toggleAccountMenu = () => {
 const goToBackoffice = () => {
   closeMenu();
   router?.push("/backoffice");
+};
+
+const goToContact = () => {
+  router?.push("/contact");
 };
 
 const handleLogout = () => {

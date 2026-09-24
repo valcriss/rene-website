@@ -5,6 +5,7 @@ export type EmailMessage = {
   to: string;
   subject: string;
   text: string;
+  replyTo?: string;
 };
 
 export type MailResult =
@@ -33,7 +34,8 @@ export const sendEmail = async (message: EmailMessage): Promise<MailResult> => {
       from: config.value.senderEmail,
       to: message.to,
       subject: message.subject,
-      text: message.text
+      text: message.text,
+      replyTo: message.replyTo
     });
 
     return { ok: true };
