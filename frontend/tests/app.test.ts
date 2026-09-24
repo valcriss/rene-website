@@ -1244,6 +1244,15 @@ describe("App", () => {
       if (url === "/api/audiences") {
         return Promise.resolve({ ok: true, json: () => Promise.resolve([{ id: "all", name: "Tous publics" }]) });
       }
+      if (url.startsWith("/api/communes")) {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve([
+              { id: "commune-1", codeInsee: "37069", codePostal: "37100", nomCommune: "Descartes", libelleAcheminement: "DESCARTES" }
+            ])
+        });
+      }
       if (url.startsWith("/api/uploads")) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ url: "/uploads/test.png" }) });
       }
@@ -1275,7 +1284,7 @@ describe("App", () => {
     await fireEvent.update(editorForm.getByLabelText("Fin"), "2026-01-15T22:00");
     await fireEvent.update(editorForm.getByLabelText("Lieu"), "Salle");
     await fireEvent.update(editorForm.getByLabelText("Code postal"), "37100");
-    await fireEvent.update(editorForm.getByLabelText("Ville"), "Descartes");
+    await waitFor(() => expect(editorForm.getByLabelText("Ville")).toHaveValue("Descartes"));
     const richEditor = editorForm.getByLabelText("Description") as HTMLElement;
     richEditor.innerHTML = "<p>Desc</p>";
     await fireEvent.input(richEditor);
@@ -1525,6 +1534,15 @@ describe("App", () => {
       if (url === "/api/categories") {
         return Promise.resolve({ ok: true, json: () => Promise.resolve([{ id: "atelier", name: "Atelier" }]) });
       }
+      if (url.startsWith("/api/communes")) {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve([
+              { id: "commune-1", codeInsee: "37069", codePostal: "37100", nomCommune: "Descartes", libelleAcheminement: "DESCARTES" }
+            ])
+        });
+      }
       if (url.startsWith("/api/uploads")) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve({ url: "/uploads/test.png" }) });
       }
@@ -1555,7 +1573,7 @@ describe("App", () => {
     await fireEvent.update(editorForm.getByLabelText("Fin"), "2026-01-15T22:00");
     await fireEvent.update(editorForm.getByLabelText("Lieu"), "Salle");
     await fireEvent.update(editorForm.getByLabelText("Code postal"), "37100");
-    await fireEvent.update(editorForm.getByLabelText("Ville"), "Descartes");
+    await waitFor(() => expect(editorForm.getByLabelText("Ville")).toHaveValue("Descartes"));
     const richEditor = editorForm.getByLabelText("Description") as HTMLElement;
     richEditor.innerHTML = "<p>Desc</p>";
     await fireEvent.input(richEditor);

@@ -20,4 +20,9 @@ until npx prisma migrate deploy --schema prisma/schema.prisma; do
 done
 
 echo "Prisma migrations applied."
+
+echo "Importing communes referential data..."
+npm run communes:import
+echo "Communes referential data ready."
+
 exec "$@"

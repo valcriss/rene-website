@@ -28,6 +28,7 @@ COPY --from=builder /app/backend/package.json ./backend/package.json
 COPY --from=builder /app/backend/dist ./backend/dist
 COPY --from=builder /app/backend/prisma ./backend/prisma
 COPY --from=builder /app/frontend/dist ./frontend/dist
+COPY communes.csv ./communes.csv
 COPY docker/backend-entrypoint.sh /usr/local/bin/backend-entrypoint.sh
 
 RUN chmod +x /usr/local/bin/backend-entrypoint.sh \

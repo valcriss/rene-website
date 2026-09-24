@@ -9,6 +9,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "admin:init": "node -e \"require('./dist/admin/initAdmin').runInitAdminCli(process.argv.slice(1)).catch((error) => { console.error(error instanceof Error ? error.message : error); process.exit(1); })\" --",
+    "communes:import": "node -e \"require('./dist/communes/importCli').runCommunesImportCli().catch((error) => { console.error(error instanceof Error ? error.message : error); process.exit(1); })\"",
     "lint": "eslint . --ext .ts",
     "test": "jest --coverage",
     "prisma:generate": "prisma generate",

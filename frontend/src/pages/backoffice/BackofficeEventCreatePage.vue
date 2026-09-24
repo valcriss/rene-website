@@ -203,11 +203,33 @@
                   </label>
                   <label class="text-sm text-slate-600">
                     {{ t("common.postalCode") }}
-                    <input v-model="occurrence.postalCode" type="text" class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm" />
+                    <input
+                      v-model="occurrence.postalCode"
+                      type="text"
+                      inputmode="numeric"
+                      maxlength="5"
+                      class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"
+                      :placeholder="t('editor.placeholders.postalCode')"
+                      :data-testid="`occurrence-postal-code-${index}`"
+                      @input="onPostalCodeInput(index)"
+                    />
                   </label>
                   <label class="text-sm text-slate-600">
                     {{ t("common.city") }}
-                    <input v-model="occurrence.city" type="text" class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm" />
+                    <select
+                      v-model="occurrence.city"
+                      class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"
+                      :disabled="cityOptions(index).length === 0"
+                      :data-testid="`occurrence-city-select-${index}`"
+                    >
+                      <option value="">{{ cityPlaceholder(index) }}</option>
+                      <option v-for="option in cityOptions(index)" :key="option" :value="option">{{ option }}</option>
+                    </select>
+                    <p v-if="communesLoading(index)" class="mt-2 text-xs text-slate-500">{{ t("editor.communesLoading") }}</p>
+                    <p v-else-if="communesError(index)" class="mt-2 text-xs text-rose-600">{{ communesError(index) }}</p>
+                    <p v-else-if="isPostalCodeComplete(index) && cityOptions(index).length === 0" class="mt-2 text-xs text-slate-500">
+                      {{ t("editor.communesNoMatch") }}
+                    </p>
                   </label>
                 </div>
 
@@ -414,6 +436,7 @@ import LoadingSpinner from "../../components/LoadingSpinner.vue";
 import { useAuthStore } from "../../stores/auth";
 import { useAudiencesStore } from "../../stores/audiences";
 import { useCategoriesStore } from "../../stores/categories";
+import { useCommunesStore } from "../../stores/communes";
 import { useEditorStore } from "../../stores/editor";
 import { useEventsStore } from "../../stores/events";
 import type { EventItem } from "../../api/events";
@@ -423,6 +446,7 @@ const { t } = useI18n();
 const authStore = useAuthStore();
 const categoriesStore = useCategoriesStore();
 const audiencesStore = useAudiencesStore();
+const communesStore = useCommunesStore();
 const editorStore = useEditorStore();
 const eventsStore = useEventsStore();
 
@@ -543,7 +567,53 @@ const publishedEditLead = computed(() => {
 onMounted(() => {
   categoriesStore.loadCategories();
   audiencesStore.loadAudiences();
+  editorForm.value.occurrences.forEach((occurrence) => {
+    const postalCode = (occurrence.postalCode ?? "").trim();
+    if (POSTAL_CODE_PATTERN.test(postalCode)) {
+      communesStore.searchByPostalCode(postalCode);
+    }
+  });
 });
+
+const POSTAL_CODE_PATTERN = /^\d{5}$/;
+
+const isPostalCodeComplete = (index: number) => POSTAL_CODE_PATTERN.test((editorForm.value.occurrences[index]?.postalCode ?? "").trim());
+
+const cityOptions = (index: number) => {
+  const occurrence = editorForm.value.occurrences[index];
+  const postalCode = (occurrence?.postalCode ?? "").trim();
+  const matches = communesStore.getResults(postalCode).map((commune) => commune.nomCommune);
+  const currentCity = occurrence?.city?.trim();
+  if (currentCity && !matches.includes(currentCity)) {
+    return [currentCity, ...matches];
+  }
+  return matches;
+};
+
+const cityPlaceholder = (index: number) => (isPostalCodeComplete(index) ? t("editor.selectCity") : t("editor.enterPostalCodeFirst"));
+
+const communesLoading = (index: number) => communesStore.isLoading(editorForm.value.occurrences[index]?.postalCode ?? "");
+
+const communesError = (index: number) => communesStore.getError(editorForm.value.occurrences[index]?.postalCode ?? "");
+
+const onPostalCodeInput = (index: number) => {
+  const occurrence = editorForm.value.occurrences[index];
+  if (!occurrence) {
+    return;
+  }
+
+  occurrence.city = "";
+  const postalCode = (occurrence.postalCode ?? "").trim();
+  if (!POSTAL_CODE_PATTERN.test(postalCode)) {
+    return;
+  }
+
+  communesStore.searchByPostalCode(postalCode).then((results) => {
+    if (results.length === 1) {
+      occurrence.city = results[0].nomCommune;
+    }
+  });
+};
 
 const goToEvents = () => {
   router.push("/backoffice/events");

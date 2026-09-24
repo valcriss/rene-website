@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom";
-import { fireEvent, render, screen } from "@testing-library/vue";
+import { fireEvent, render, screen, waitFor } from "@testing-library/vue";
 import { mount } from "@vue/test-utils";
 import { createPinia } from "pinia";
 import { describe, expect, it, vi, afterEach } from "vitest";
@@ -764,5 +764,129 @@ describe("BackofficeEventCreatePage", () => {
     await fireEvent.click(toggles[1]);
 
     expect(setup.editorStore.useManualLocation).toEqual([false, true]);
+  });
+
+  const buildFetchMockWithCommunes = (communesByPostalCode: Record<string, unknown[]>) =>
+    vi.fn((url: string) => {
+      if (url.startsWith("/api/communes")) {
+        const postalCode = new URL(url, "http://localhost").searchParams.get("postalCode") ?? "";
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(communesByPostalCode[postalCode] ?? []) });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+    });
+
+  it("auto-selects the city when the postal code matches a single commune", async () => {
+    vi.stubGlobal(
+      "fetch",
+      buildFetchMockWithCommunes({
+        "37160": [{ id: "1", codeInsee: "37069", codePostal: "37160", nomCommune: "Descartes", libelleAcheminement: "DESCARTES" }]
+      })
+    );
+
+    const setup = await setupPage();
+    setup.categoriesStore.hasLoaded = true;
+    renderPage(setup);
+
+    await fireEvent.update(screen.getByLabelText("Code postal"), "37160");
+
+    await waitFor(() => expect(screen.getByTestId("occurrence-city-select-0")).toHaveValue("Descartes"));
+    expect(setup.editorStore.editorForm.occurrences[0].city).toBe("Descartes");
+  });
+
+  it("lists every commune sharing a postal code and lets the user pick one", async () => {
+    vi.stubGlobal(
+      "fetch",
+      buildFetchMockWithCommunes({
+        "37160": [
+          { id: "1", codeInsee: "37069", codePostal: "37160", nomCommune: "Descartes", libelleAcheminement: "DESCARTES" },
+          { id: "2", codeInsee: "37273", codePostal: "37160", nomCommune: "La Celle-Guenand", libelleAcheminement: "LA CELLE GUENAND" }
+        ]
+      })
+    );
+
+    const setup = await setupPage();
+    setup.categoriesStore.hasLoaded = true;
+    renderPage(setup);
+
+    await fireEvent.update(screen.getByLabelText("Code postal"), "37160");
+
+    const citySelect = screen.getByTestId("occurrence-city-select-0") as HTMLSelectElement;
+    await waitFor(() => expect(citySelect.options.length).toBe(3));
+    expect(setup.editorStore.editorForm.occurrences[0].city).toBe("");
+
+    await fireEvent.update(citySelect, "La Celle-Guenand");
+
+    expect(setup.editorStore.editorForm.occurrences[0].city).toBe("La Celle-Guenand");
+  });
+
+  it("shows a message when no commune matches the postal code", async () => {
+    vi.stubGlobal("fetch", buildFetchMockWithCommunes({}));
+
+    const setup = await setupPage();
+    setup.categoriesStore.hasLoaded = true;
+    renderPage(setup);
+
+    await fireEvent.update(screen.getByLabelText("Code postal"), "99999");
+
+    expect(await screen.findByText("Aucune commune ne correspond à ce code postal.")).toBeInTheDocument();
+    expect((screen.getByTestId("occurrence-city-select-0") as HTMLSelectElement).disabled).toBe(true);
+  });
+
+  it("shows a loading indicator while communes are being fetched", async () => {
+    let resolveFetch: (value: unknown) => void = () => {};
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.startsWith("/api/communes")) {
+          return new Promise((resolve) => {
+            resolveFetch = resolve;
+          });
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+      })
+    );
+
+    const setup = await setupPage();
+    setup.categoriesStore.hasLoaded = true;
+    renderPage(setup);
+
+    await fireEvent.update(screen.getByLabelText("Code postal"), "37160");
+
+    expect(await screen.findByText("Recherche des communes…")).toBeInTheDocument();
+
+    resolveFetch({ ok: true, json: () => Promise.resolve([]) });
+    await waitFor(() => expect(screen.queryByText("Recherche des communes…")).not.toBeInTheDocument());
+  });
+
+  it("prefetches communes for an existing postal code and keeps the saved city selectable", async () => {
+    vi.stubGlobal(
+      "fetch",
+      buildFetchMockWithCommunes({
+        "37160": [{ id: "1", codeInsee: "37273", codePostal: "37160", nomCommune: "La Celle-Guenand", libelleAcheminement: "LA CELLE GUENAND" }]
+      })
+    );
+
+    const setup = await setupPage();
+    setup.categoriesStore.hasLoaded = true;
+    setup.editorStore.editorForm.occurrences[0].postalCode = "37160";
+    setup.editorStore.editorForm.occurrences[0].city = "Descartes";
+    renderPage(setup);
+
+    const citySelect = (await screen.findByTestId("occurrence-city-select-0")) as HTMLSelectElement;
+    await waitFor(() => expect(citySelect.options.length).toBe(3));
+    expect(citySelect.value).toBe("Descartes");
+  });
+
+  it("shows the postal code hint before a postal code has been entered", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) }))
+    );
+
+    const setup = await setupPage();
+    setup.categoriesStore.hasLoaded = true;
+    renderPage(setup);
+
+    expect(screen.getByText("Saisissez d'abord un code postal")).toBeInTheDocument();
   });
 });

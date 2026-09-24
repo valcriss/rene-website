@@ -227,6 +227,18 @@ model PasswordResetToken {
   @@index([expiresAt])
 }
 
+model Commune {
+  id                  String @id @default(uuid()) @db.Uuid
+  codeInsee           String
+  codePostal          String
+  nomCommune          String
+  libelleAcheminement String
+
+  @@unique([codeInsee, codePostal])
+  @@index([codePostal])
+  @@index([nomCommune])
+}
+
 model SiteSetting {
   id               String   @id @default("default")
   contactEmail     String   @default("contact@rene-website.test")
