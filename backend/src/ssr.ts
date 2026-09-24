@@ -50,7 +50,7 @@ const createDevRenderer = async (): Promise<SsrRenderer> => {
     render: async (url: string) => {
       const rawTemplate = await fs.readFile(path.join(FRONTEND_ROOT, "index.html"), "utf-8");
       const template = await vite.transformIndexHtml(url, rawTemplate);
-      const { render } = await vite.ssrLoadModule("/src/entry-server.ts") as unknown as EntryServerModule;
+      const { render } = (await vite.ssrLoadModule("/src/entry-server.ts")) as unknown as EntryServerModule;
       const { html, stateScript } = await render(url);
       return { html: applyTemplate(template, html, stateScript) };
     }
