@@ -7,6 +7,8 @@ export type AuthUser = {
   role: UserRole;
 };
 
+export type AuthenticatedActor = Pick<AuthUser, "id" | "role">;
+
 export type AuthUserWithPassword = AuthUser & {
   passwordHash: string;
 };

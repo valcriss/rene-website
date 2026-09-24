@@ -9,8 +9,8 @@ jest.mock("../src/events/service", () => {
   const actual = jest.requireActual("../src/events/service");
   return {
     ...actual,
-    submitEvent: jest.fn(async () => ({ ok: false, errors: ["Autre erreur"] })),
-    deleteEvent: jest.fn(async () => ({ ok: false, errors: ["Autre erreur"] }))
+    submitEvent: jest.fn(async () => ({ ok: false, errors: ["Autre erreur"], status: 400 })),
+    deleteEvent: jest.fn(async () => ({ ok: false, errors: ["Autre erreur"], status: 400 }))
   };
 });
 

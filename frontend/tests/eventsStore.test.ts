@@ -234,7 +234,7 @@ describe("events store", () => {
   it("archives and unarchives an event", async () => {
     const store = useEventsStore();
     const authStore = useAuthStore();
-    authStore.setRole("MODERATOR");
+    authStore.setRole("ADMIN");
     store.events = [buildEvent({ id: "1", archivedAt: null })];
 
     const archiveMock = vi.mocked(archiveEvent);
@@ -242,7 +242,7 @@ describe("events store", () => {
 
     await store.handleArchive("1");
 
-    expect(archiveMock).toHaveBeenCalledWith("1", "MODERATOR");
+    expect(archiveMock).toHaveBeenCalledWith("1", "ADMIN");
     expect(store.events[0].archivedAt).toBe("2026-02-01T00:00:00.000Z");
 
     const unarchiveMock = vi.mocked(unarchiveEvent);
@@ -250,7 +250,7 @@ describe("events store", () => {
 
     await store.handleUnarchive("1");
 
-    expect(unarchiveMock).toHaveBeenCalledWith("1", "MODERATOR");
+    expect(unarchiveMock).toHaveBeenCalledWith("1", "ADMIN");
     expect(store.events[0].archivedAt).toBeNull();
   });
 

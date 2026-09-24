@@ -298,7 +298,7 @@
                     {{ t("common.edit") }}
                   </button>
                   <button
-                    v-if="canModerate && eventItem.status === 'PUBLISHED'"
+                    v-if="isAdmin && eventItem.status === 'PUBLISHED'"
                     type="button"
                     class="rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 transition hover:bg-amber-100"
                     @click="toggleFeatured(eventItem)"
@@ -306,7 +306,7 @@
                     {{ eventItem.featured ? t("moderation.removeFeatured") : t("moderation.markAsFeatured") }}
                   </button>
                   <button
-                    v-if="canModerate && eventItem.status === 'PUBLISHED'"
+                    v-if="isAdmin && eventItem.status === 'PUBLISHED'"
                     type="button"
                     class="rounded-full border border-slate-300 bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-200"
                     @click="toggleArchived(eventItem)"
@@ -314,7 +314,7 @@
                     {{ isEventArchived(eventItem) ? t("editor.unarchive") : t("editor.archive") }}
                   </button>
                   <button
-                    v-if="canModerate"
+                    v-if="isAdmin"
                     type="button"
                     class="rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-100"
                     @click="handleDelete(eventItem.id)"
@@ -436,7 +436,7 @@
                       {{ t("common.edit") }}
                     </button>
                     <button
-                      v-if="canModerate"
+                      v-if="isAdmin"
                       type="button"
                       class="rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 transition hover:bg-amber-100"
                       @click="toggleFeatured(eventItem)"
@@ -444,7 +444,7 @@
                       {{ eventItem.featured ? t("moderation.removeFeatured") : t("moderation.markAsFeatured") }}
                     </button>
                     <button
-                      v-if="canModerate"
+                      v-if="isAdmin"
                       type="button"
                       class="rounded-full border border-slate-300 bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-200"
                       @click="toggleArchived(eventItem)"
@@ -527,7 +527,7 @@ const authStore = useAuthStore();
 const editorStore = useEditorStore();
 const eventsStore = useEventsStore();
 
-const { canEdit, canModerate } = storeToRefs(authStore);
+const { canEdit, isAdmin } = storeToRefs(authStore);
 const {
   myDraftEvents,
   myEditorialReviewEvents,
@@ -588,7 +588,7 @@ const lastEditableEvent = computed(
     myPublishedEvents.value.find((eventItem) => canEditEvent(eventItem)) ??
     null
 );
-const showOtherArticles = computed(() => canModerate.value);
+const showOtherArticles = computed(() => isAdmin.value);
 const draftLocationWarning = computed(() =>
   route.query.saved === "draft"
     ? route.query.location === "approximate"
