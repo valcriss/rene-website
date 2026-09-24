@@ -29,10 +29,14 @@ describe("EventDetailPage", () => {
     const { router, wrapper } = await makeWrapper();
     const pushSpy = vi.spyOn(router, "push");
 
-    const headerButton = wrapper
-      .findAll("button")
-      .find((button) => button.text().includes("Retour"));
-    await headerButton?.trigger("click");
+    const backToAgendaLink = wrapper
+      .findAll("a")
+      .find((link) => link.text().includes("Retour"));
+    if (!backToAgendaLink) {
+      throw new Error("Back to agenda link not found");
+    }
+    expect(backToAgendaLink.attributes("href")).toBe("/");
+    await backToAgendaLink.trigger("click");
     expect(pushSpy).toHaveBeenCalledWith("/");
 
     await wrapper.find("[data-testid='login']").trigger("click");

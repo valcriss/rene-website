@@ -136,34 +136,42 @@ describe("home components", () => {
     expect(button.exists()).toBe(true);
   });
 
-  it("Header navigates to the contact page", async () => {
+  it("Header renders a real, crawlable link to the contact page", async () => {
     const router = createTestRouter("/");
     await router.isReady();
     const pushSpy = vi.spyOn(router, "push");
     const wrapper = mount(Header, { global: { plugins: [router] } });
 
-    const button = wrapper.findAll("button").find((item) => item.text() === "Contact");
-    if (!button) {
-      throw new Error("Contact button not found");
+    const link = wrapper.findAll("a").find((item) => item.text() === "Contact");
+    if (!link) {
+      throw new Error("Contact link not found");
     }
-    await button.trigger("click");
+    expect(link.attributes("href")).toBe("/contact");
 
-    expect(pushSpy).toHaveBeenCalledWith("/contact");
+    await link.trigger("click");
+
+    expect(pushSpy).toHaveBeenCalledWith(
+      "/contact"
+    );
   });
 
-  it("Header navigates to the legal notice page", async () => {
+  it("Header renders a real, crawlable link to the legal notice page", async () => {
     const router = createTestRouter("/");
     await router.isReady();
     const pushSpy = vi.spyOn(router, "push");
     const wrapper = mount(Header, { global: { plugins: [router] } });
 
-    const button = wrapper.findAll("button").find((item) => item.text() === "Mentions légales");
-    if (!button) {
-      throw new Error("Legal notice button not found");
+    const link = wrapper.findAll("a").find((item) => item.text() === "Mentions légales");
+    if (!link) {
+      throw new Error("Legal notice link not found");
     }
-    await button.trigger("click");
+    expect(link.attributes("href")).toBe("/mentions-legales");
 
-    expect(pushSpy).toHaveBeenCalledWith("/mentions-legales");
+    await link.trigger("click");
+
+    expect(pushSpy).toHaveBeenCalledWith(
+      "/mentions-legales"
+    );
   });
 
   it("Header keeps account dropdown above page content", async () => {
