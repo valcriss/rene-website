@@ -31,7 +31,8 @@ COPY --from=builder /app/frontend/dist ./frontend/dist
 COPY communes.csv ./communes.csv
 COPY docker/backend-entrypoint.sh /usr/local/bin/backend-entrypoint.sh
 
-RUN chmod +x /usr/local/bin/backend-entrypoint.sh \
+RUN sed -i 's/\r$//' /usr/local/bin/backend-entrypoint.sh \
+	&& chmod +x /usr/local/bin/backend-entrypoint.sh \
 	&& mkdir -p /app/uploads
 
 WORKDIR /app/backend

@@ -1,27 +1,22 @@
-version: "3.9"
 services:
   rene:
     image: ghcr.io/valcriss/rene-website:latest
     container_name: "rene"
     environment:
+      NODE_ENV: production
       PORT: 3000
-      DATABASE_URL: postgres://rene:rene@db:5432/rene
-      JWT_SECRET: change-me
+      DATABASE_URL_FILE: /run/secrets/database_url
+      MIGRATION_DATABASE_URL_FILE: /run/secrets/migration_database_url
+      JWT_SECRET_FILE: /run/secrets/jwt_secret
+      CRON_SECRET_FILE: /run/secrets/cron_secret
       PHOTON_URL: http://photon:2322
       UPLOAD_DIR: /app/uploads
-      # SMTP settings for transactional emails such as password reset.
-      # Required: SMTP_HOST and SENDER_EMAIL.
-      # Optional: SMTP_PORT defaults to 587, SMTP_SECURE defaults to false.
-      # Port 587 uses STARTTLS, so SMTP_SECURE must be "false".
-      # Port 465 uses implicit TLS, so SMTP_SECURE must be "true".
-      # Amazon SES example: SMTP_HOST=email-smtp.eu-west-1.amazonaws.com, SMTP_PORT=587, SMTP_SECURE="false".
-      # Optional auth: set SMTP_USER and SMTP_PASSWORD together if your SMTP server requires authentication.
-      SMTP_HOST: smtp.example.com
-      SMTP_PORT: 587
-      SMTP_SECURE: "false"
-      SMTP_USER: ""
-      SMTP_PASSWORD: ""
-      SENDER_EMAIL: noreply@example.com
+      SMTP_HOST: ${SMTP_HOST:?Set SMTP_HOST in the deployment environment}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:?Set SMTP_USER in the deployment environment}
+      SMTP_PASSWORD_FILE: /run/secrets/smtp_password
+      SENDER_EMAIL: ${SENDER_EMAIL:?Set SENDER_EMAIL in the deployment environment}
     ports:
       - "3000:3000"
     depends_on:
@@ -31,20 +26,32 @@ services:
         condition: service_started
     volumes:
       - uploads-data:/app/uploads
+    secrets:
+      - database_url
+      - migration_database_url
+      - jwt_secret
+      - cron_secret
+      - smtp_password
     restart: unless-stopped
 
   db:
     image: postgres:16
     environment:
-      POSTGRES_USER: rene
-      POSTGRES_PASSWORD: rene
-      POSTGRES_DB: rene
+      POSTGRES_USER: ${POSTGRES_MIGRATION_USER:?Set POSTGRES_MIGRATION_USER in the deployment environment}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_migration_password
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in the deployment environment}
+      APP_DATABASE_USER: ${POSTGRES_APP_USER:?Set POSTGRES_APP_USER in the deployment environment}
+      APP_DATABASE_PASSWORD_FILE: /run/secrets/postgres_app_password
     volumes:
       - db-data:/var/lib/postgresql/data
+      - ./docker/postgres-init.sh:/docker-entrypoint-initdb.d/10-app-role.sh:ro
+    secrets:
+      - postgres_migration_password
+      - postgres_app_password
     healthcheck:
       test:
         - CMD-SHELL
-        - pg_isready -U rene -d rene
+        - pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"
       interval: 10s
       timeout: 5s
       retries: 5
@@ -134,3 +141,19 @@ volumes:
   db-data:
   photon-data:
   uploads-data:
+
+secrets:
+  database_url:
+    file: ${DATABASE_URL_SECRET_FILE:?Set DATABASE_URL_SECRET_FILE in the deployment environment}
+  migration_database_url:
+    file: ${MIGRATION_DATABASE_URL_SECRET_FILE:?Set MIGRATION_DATABASE_URL_SECRET_FILE in the deployment environment}
+  jwt_secret:
+    file: ${JWT_SECRET_FILE:?Set JWT_SECRET_FILE in the deployment environment}
+  cron_secret:
+    file: ${CRON_SECRET_FILE:?Set CRON_SECRET_FILE in the deployment environment}
+  smtp_password:
+    file: ${SMTP_PASSWORD_SECRET_FILE:?Set SMTP_PASSWORD_SECRET_FILE in the deployment environment}
+  postgres_migration_password:
+    file: ${POSTGRES_MIGRATION_PASSWORD_SECRET_FILE:?Set POSTGRES_MIGRATION_PASSWORD_SECRET_FILE in the deployment environment}
+  postgres_app_password:
+    file: ${POSTGRES_APP_PASSWORD_SECRET_FILE:?Set POSTGRES_APP_PASSWORD_SECRET_FILE in the deployment environment}

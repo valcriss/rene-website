@@ -2,6 +2,7 @@ import path from "path";
 import dotenv from "dotenv";
 import { Prisma, PrismaClient } from "@prisma/client";
 import { createHash } from "node:crypto";
+import { assertDestructiveSeedAllowed } from "../src/config/seedSafety";
 
 dotenv.config({ path: path.resolve(process.cwd(), "..", ".env") });
 dotenv.config({ path: path.resolve(process.cwd(), ".env") });
@@ -29,6 +30,7 @@ const getDatabaseInfo = () => {
 };
 
 const seed = async () => {
+  assertDestructiveSeedAllowed();
   // eslint-disable-next-line no-console
   console.log(`Seed démarré (${getDatabaseInfo()}).`);
 
