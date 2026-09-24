@@ -16,6 +16,7 @@ import { createEventRepository } from "./events/repositoryFactory";
 import { createGeocodingRouter } from "./geocoding/routes";
 import { createModerationReminderRouter } from "./moderationReminders/routes";
 import { createModerationReminderRepository } from "./moderationReminders/repositoryFactory";
+import { createSeoRouter } from "./seo/routes";
 import { createSubscriptionsRouter } from "./subscriptions/routes";
 import { createCategorySubscriptionRepository } from "./subscriptions/repositoryFactory";
 import { createUploadedAssetRouter, createUploadRouter } from "./uploads/routes";
@@ -63,6 +64,8 @@ export const createApp = () => {
   app.get("/api/health", (_req, res) => {
     res.json({ status: "ok" });
   });
+
+  app.use(createSeoRouter(eventRepository));
 
   if (process.env.NODE_ENV !== "test") {
     registerStatic(app, eventRepository);

@@ -23,7 +23,7 @@ const FRONTEND_ROOT = path.resolve(__dirname, "../../frontend");
 
 // Falls back to a same-host default in dev, where SITE_URL isn't required; production always
 // validates SITE_URL at startup (backend/src/config/environment.ts), so it's always set there.
-const resolveSiteUrl = (): string => process.env.SITE_URL?.trim() || `http://localhost:${process.env.PORT ?? "3000"}`;
+export const resolveSiteUrl = (): string => process.env.SITE_URL?.trim() || `http://localhost:${process.env.PORT ?? "3000"}`;
 
 // `unhead/server` ships ESM-only, and this module is loaded transitively by almost every
 // backend test (via app.ts -> static.ts -> ssr.ts) that never touches SSR rendering itself;
