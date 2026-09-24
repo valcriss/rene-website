@@ -14,7 +14,8 @@
     "test": "jest --coverage",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:seed": "ts-node prisma/seed.ts"
+    "prisma:seed": "ts-node prisma/seed.ts",
+    "prisma:backfill-event-slugs": "ts-node prisma/backfillEventSlugs.ts"
   },
   "dependencies": {
     "@prisma/client": "6.12.0",

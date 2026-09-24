@@ -3,6 +3,13 @@ import { Event, CreateEventInput, EventRevisionStatus, EventStatus } from "./typ
 export interface EventRepository {
   list(): Promise<Event[]>;
   getById(id: string): Promise<Event | null>;
+  findBySlug(slug: string): Promise<Event | null>;
+  // Given a slug that no longer belongs to any event, returns the current slug of the event it
+  // used to point to (if any), so a stale link can be 301-redirected instead of 404ing.
+  resolveSlugRedirect(oldSlug: string): Promise<string | null>;
+  // Sets the event's slug. When it already had a different one, that previous slug is archived
+  // into the redirect history first, so old links keep resolving after an explicit change.
+  setSlug(id: string, slug: string): Promise<Event | null>;
   create(input: CreateEventInput): Promise<Event>;
   update(id: string, input: CreateEventInput): Promise<Event | null>;
   upsertPendingRevision(id: string, input: CreateEventInput, status: EventRevisionStatus): Promise<Event | null>;

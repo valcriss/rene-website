@@ -24,6 +24,7 @@ const baseEvent: Event = {
   audienceId: null,
   occurrences: [],
   organizerName: null,
+  slug: null,
   featured: false,
   status: "DRAFT",
   publishedAt: null,

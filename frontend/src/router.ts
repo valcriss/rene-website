@@ -51,7 +51,7 @@ const routes = [
       { path: "profile", name: "backoffice-profile", component: BackofficeProfilePage }
     ]
   },
-  { path: "/event/:id", name: "event-detail", component: EventDetailPage },
+  { path: "/evenements/:slug", name: "event-detail", component: EventDetailPage },
   { path: "/:pathMatch(.*)*", name: "not-found", component: NotFoundPage }
 ];
 

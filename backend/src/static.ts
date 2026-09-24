@@ -1,11 +1,11 @@
 import path from "node:path";
 import express from "express";
 import { EventRepository } from "./events/repository";
-import { getPublicEventPageStatus } from "./events/service";
+import { getPublicEventPageStatus, getPublicEventPageStatusBySlug } from "./events/service";
 import { createSsrRenderer, SsrRenderer } from "./ssr";
 
 // Top-level SPA routes that exist regardless of any dynamic data — kept in sync with
-// frontend/src/router.ts. A path outside this list (and outside /event/:id) is a genuine
+// frontend/src/router.ts. A path outside this list (and outside /evenements/:slug) is a genuine
 // unknown URL and must get a real 404, not a soft one.
 const KNOWN_STATIC_ROUTES = new Set([
   "/",
@@ -19,7 +19,10 @@ const NOINDEX_ROUTES = new Set(["/login", "/signup", "/forgot-password", "/reset
 
 const isBackofficeRoute = (pathname: string) => pathname === "/backoffice" || pathname.startsWith("/backoffice/");
 
+// Legacy UUID-based detail URL, kept only to 301-redirect to the stable slug URL.
 const EVENT_DETAIL_PATTERN = /^\/event\/([^/]+)$/;
+// Canonical, human-readable detail URL (issue #50).
+const EVENT_SLUG_PATTERN = /^\/evenements\/([^/]+)$/;
 
 const sendNoindexIndex = (res: express.Response, indexPath: string, status = 200) => {
   res.status(status).set("X-Robots-Tag", "noindex").sendFile(indexPath);
@@ -64,9 +67,38 @@ export const registerStatic = (app: express.Express, eventRepository: EventRepos
       return;
     }
 
+    const slugMatch = pathname.match(EVENT_SLUG_PATTERN);
+    if (slugMatch) {
+      void (async () => {
+        const slug = slugMatch[1];
+        const status = await getPublicEventPageStatusBySlug(eventRepository, slug);
+        if (status !== 404) {
+          const renderer = await getRenderer();
+          const { html } = await renderer.render(req.originalUrl);
+          res.status(status).type("html").send(html);
+          return;
+        }
+
+        const currentSlug = await eventRepository.resolveSlugRedirect(slug);
+        if (currentSlug) {
+          res.redirect(301, `/evenements/${currentSlug}`);
+          return;
+        }
+
+        res.status(404).sendFile(indexPath);
+      })();
+      return;
+    }
+
     const eventMatch = pathname.match(EVENT_DETAIL_PATTERN);
     if (eventMatch) {
       void (async () => {
+        const event = await eventRepository.getById(eventMatch[1]);
+        if (event?.slug) {
+          res.redirect(301, `/evenements/${event.slug}`);
+          return;
+        }
+
         const [status, renderer] = await Promise.all([
           getPublicEventPageStatus(eventRepository, eventMatch[1]),
           getRenderer()

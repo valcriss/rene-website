@@ -3,7 +3,7 @@ import { requireRole } from "../auth/roles";
 import { AuthRepository } from "../auth/repository";
 import { CategorySubscriptionRepository } from "../subscriptions/repository";
 import { EventRepository } from "./repository";
-import { archiveEvent, createEvent, deleteEvent, getEvent, getEventForActor, listEvents, publishEvent, rejectEvent, submitEvent, unarchiveEvent, updateEvent, updateEventFeatured } from "./service";
+import { archiveEvent, createEvent, deleteEvent, getEvent, getEventForActor, listEvents, publishEvent, rejectEvent, submitEvent, unarchiveEvent, updateEvent, updateEventFeatured, updateEventSlug } from "./service";
 import {
   notifyEventDeleted,
   notifyEventPublished,
@@ -139,6 +139,16 @@ export const createEventRouter = (
 
   router.patch("/events/:id/featured", requireRole(["ADMIN"]), withErrorHandling(async (req, res) => {
     const result = await updateEventFeatured(repo, req.params.id, req.body?.featured, getAuthenticatedUser(req));
+    if (!result.ok) {
+      res.status(result.status).json({ errors: result.errors });
+      return;
+    }
+
+    res.json(result.value);
+  }));
+
+  router.patch("/events/:id/slug", requireRole(["ADMIN"]), withErrorHandling(async (req, res) => {
+    const result = await updateEventSlug(repo, req.params.id, req.body?.slug, getAuthenticatedUser(req));
     if (!result.ok) {
       res.status(result.status).json({ errors: result.errors });
       return;

@@ -179,6 +179,8 @@ export const useEventsStore = defineStore("events", () => {
 
   const getEventById = (id: string) => events.value.find((event) => event.id === id) ?? null;
 
+  const getEventBySlug = (slug: string) => events.value.find((event) => event.slug === slug) ?? null;
+
   const getModerationEventById = (id: string) => {
     const event = getEventById(id);
     if (!event) {
@@ -530,6 +532,7 @@ export const useEventsStore = defineStore("events", () => {
     availableCities,
     availableTypes,
     getEventById,
+    getEventBySlug,
     getModerationEventById,
     getEditionSnapshot,
     getRelatedPublishedEvents,

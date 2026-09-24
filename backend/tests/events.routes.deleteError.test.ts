@@ -32,6 +32,9 @@ describe("events routes delete errors", () => {
     const repo: EventRepository = {
       list: async () => [],
       getById: async () => null,
+      findBySlug: async () => null,
+      resolveSlugRedirect: async () => null,
+      setSlug: async () => null,
       create: async () => {
         throw new Error("boom");
       },
@@ -63,6 +66,9 @@ describe("events routes delete errors", () => {
     const repo: EventRepository = {
       list: async () => [],
       getById: async () => null,
+      findBySlug: async () => null,
+      resolveSlugRedirect: async () => null,
+      setSlug: async () => null,
       create: async () => {
         throw new Error("boom");
       },

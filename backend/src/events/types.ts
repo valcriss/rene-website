@@ -69,6 +69,7 @@ export type Event = Omit<CreateEventInput, "occurrences"> & {
   id: string;
   createdByUserId: string | null;
   occurrences: EventOccurrence[];
+  slug: string | null;
   status: EventStatus;
   publishedAt: string | null;
   publicationEndAt: string;

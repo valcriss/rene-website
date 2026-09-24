@@ -306,6 +306,7 @@ describe("App", () => {
                 {
                   id: "1",
                   title: "Concert archivé",
+                  slug: "concert-archive-descartes-2026",
                   eventStartAt: "2026-01-15T20:00:00.000Z",
                   eventEndAt: "2026-01-15T22:00:00.000Z",
                   venueName: "Salle",
@@ -323,7 +324,7 @@ describe("App", () => {
         })
       )
     );
-    await renderWithRouter("/event/1");
+    await renderWithRouter("/evenements/concert-archive-descartes-2026");
 
     expect(await screen.findByText("Événement introuvable.")).toBeInTheDocument();
   });
@@ -340,6 +341,7 @@ describe("App", () => {
                 {
                   id: "1",
                   title: "Concert terminé",
+                  slug: "concert-termine-descartes-2026",
                   eventStartAt: "2026-01-15T20:00:00.000Z",
                   eventEndAt: "2026-01-15T22:00:00.000Z",
                   venueName: "Salle",
@@ -356,7 +358,7 @@ describe("App", () => {
         })
       )
     );
-    await renderWithRouter("/event/1");
+    await renderWithRouter("/evenements/concert-termine-descartes-2026");
 
     expect(await screen.findByText("Concert terminé")).toBeInTheDocument();
     expect(screen.getByTestId("event-ended-banner")).toBeInTheDocument();
@@ -446,6 +448,7 @@ describe("App", () => {
                 {
                   id: "1",
                   title: "Concert",
+                  slug: "concert-descartes-2026",
                   eventStartAt: "2026-01-15T20:00:00.000Z",
                   eventEndAt: "2026-01-15T22:00:00.000Z",
                   venueName: "Salle",
@@ -468,7 +471,7 @@ describe("App", () => {
     const eventCard = await screen.findByTestId("event-card-1");
     await fireEvent.click(eventCard);
 
-    await waitFor(() => expect(router.currentRoute.value.path).toBe("/event/1"));
+    await waitFor(() => expect(router.currentRoute.value.path).toBe("/evenements/concert-descartes-2026"));
   });
 
   it("shows event detail with action links", async () => {
@@ -483,6 +486,7 @@ describe("App", () => {
                 {
                   id: "1",
                   title: "Concert",
+                  slug: "concert-descartes-2026",
                   content: "Une soirée dédiée au jazz.",
                   eventStartAt: "2026-01-15T20:00:00.000Z",
                   eventEndAt: "2026-01-15T22:00:00.000Z",
@@ -505,6 +509,7 @@ describe("App", () => {
                 {
                   id: "2",
                   title: "Festival voisin",
+                  slug: "festival-voisin-descartes-2026",
                   content: "A découvrir aussi.",
                   eventStartAt: "2026-01-16T20:00:00.000Z",
                   eventEndAt: "2026-01-16T22:00:00.000Z",
@@ -529,7 +534,7 @@ describe("App", () => {
     await setDateRange("2026-01-01", "2026-12-31");
 
     await fireEvent.click(await screen.findByTestId("event-card-1"));
-    await waitFor(() => expect(router.currentRoute.value.path).toBe("/event/1"));
+    await waitFor(() => expect(router.currentRoute.value.path).toBe("/evenements/concert-descartes-2026"));
 
     expect(await screen.findByTestId("event-detail")).toBeInTheDocument();
     expect(await screen.findByRole("img", { name: "Concert" })).toBeInTheDocument();
@@ -570,6 +575,7 @@ describe("App", () => {
                 {
                   id: "1",
                   title: "Concert",
+                  slug: "concert-descartes-2026",
                   eventStartAt: "2026-01-15T20:00:00.000Z",
                   eventEndAt: "2026-01-15T22:00:00.000Z",
                   venueName: "Salle",
@@ -590,7 +596,7 @@ describe("App", () => {
     await setDateRange("2026-01-01", "2026-12-31");
 
     await fireEvent.click(await screen.findByTestId("event-card-1"));
-    await waitFor(() => expect(router.currentRoute.value.path).toBe("/event/1"));
+    await waitFor(() => expect(router.currentRoute.value.path).toBe("/evenements/concert-descartes-2026"));
 
     expect(await screen.findByTestId("event-detail")).toBeInTheDocument();
     expect((await screen.findAllByText("Non renseigné")).length).toBeGreaterThan(0);
@@ -598,14 +604,14 @@ describe("App", () => {
 
   it("shows loading state on detail route", async () => {
     vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
-    await renderWithRouter("/event/1");
+    await renderWithRouter("/evenements/quelconque");
 
     expect(await screen.findByText("Chargement de l'événement...")).toBeInTheDocument();
   });
 
   it("shows not found when event does not exist", async () => {
     vi.stubGlobal("fetch", vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) })));
-    await renderWithRouter("/event/404");
+    await renderWithRouter("/evenements/inconnu");
 
     expect(await screen.findByText("Événement introuvable.")).toBeInTheDocument();
   });

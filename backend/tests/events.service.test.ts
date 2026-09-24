@@ -14,7 +14,8 @@ import {
   submitEvent as submitEventForActor,
   unarchiveEvent as unarchiveEventForActor,
   updateEvent as updateEventForActor,
-  updateEventFeatured as updateEventFeaturedForActor
+  updateEventFeatured as updateEventFeaturedForActor,
+  updateEventSlug
 } from "../src/events/service";
 import { EventRepository } from "../src/events/repository";
 import { Event, EventOccurrence, EventOccurrenceInput } from "../src/events/types";
@@ -87,6 +88,7 @@ const fallbackEvent: Event = {
   audienceId: "all",
   occurrences: [baseOccurrence],
   organizerName: "Association",
+  slug: null,
   featured: false,
   status: "DRAFT",
   publishedAt: null,
@@ -101,6 +103,9 @@ const fallbackEvent: Event = {
 const createRepo = (event: Event | null, overrides: Partial<EventRepository> = {}): EventRepository => ({
   list: async () => (event ? [event] : []),
   getById: async () => event,
+  findBySlug: async () => null,
+  resolveSlugRedirect: async () => null,
+  setSlug: async (_id, slug) => (event ? { ...event, slug } : null),
   create: async () => event ?? fallbackEvent,
   update: async () => event,
   upsertPendingRevision: async () => event,
@@ -151,6 +156,7 @@ describe("event services", () => {
     audienceId: "all",
     occurrences: [baseOccurrence],
     organizerName: "Association",
+    slug: null,
     featured: false,
     status: "DRAFT",
     publishedAt: null,
@@ -221,6 +227,7 @@ describe("event services", () => {
           pricingInfo: undefined,
           websiteUrl: undefined,
           socialLinks: undefined,
+          slug: null,
           featured: false,
           status: "PUBLISHED",
           publishedAt: null,
@@ -575,12 +582,34 @@ describe("event services", () => {
   it("publishEvent succeeds", async () => {
     const repo = createRepo(baseEvent, {
       list: async () => [],
-      updateStatus: async () => ({ ...baseEvent, status: "PUBLISHED", featured: true, publishedAt: "2026-01-01T00:00:00.000Z" })
+      updateStatus: async () => ({ ...baseEvent, status: "PUBLISHED", featured: true, publishedAt: "2026-01-01T00:00:00.000Z" }),
+      setSlug: async (_id, slug) => ({
+        ...baseEvent,
+        status: "PUBLISHED",
+        featured: true,
+        publishedAt: "2026-01-01T00:00:00.000Z",
+        slug
+      })
     });
     const result = await publishEvent(repo, "id", true);
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.value.featured).toBe(true);
+      expect(result.value.slug).toBe("concert-descartes-2026");
+    }
+  });
+
+  it("publishEvent keeps the freshly published event when slug assignment races and fails", async () => {
+    const repo = createRepo(baseEvent, {
+      list: async () => [],
+      updateStatus: async () => ({ ...baseEvent, status: "PUBLISHED", featured: true, publishedAt: "2026-01-01T00:00:00.000Z" }),
+      setSlug: async () => null
+    });
+    const result = await publishEvent(repo, "id", true);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.featured).toBe(true);
+      expect(result.value.slug).toBeNull();
     }
   });
 
@@ -619,6 +648,32 @@ describe("event services", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.errors).toContain("Événement introuvable.");
+    }
+  });
+
+  it("updateEventSlug forbids non-admin actors", async () => {
+    const repo = createRepo({ ...baseEvent, status: "PUBLISHED" });
+    const editor: EventActor = { id: "editor-1", role: "EDITOR" };
+
+    const result = await updateEventSlug(repo, "id", "concert-descartes-2026", editor);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.status).toBe(403);
+    }
+  });
+
+  it("updateEventSlug returns not found when the repository fails to persist the new slug", async () => {
+    const repo = createRepo(
+      { ...baseEvent, status: "PUBLISHED", slug: "concert-descartes-2026" },
+      { setSlug: async () => null }
+    );
+
+    const result = await updateEventSlug(repo, "id", "concert-jazz-descartes-2026", adminActor);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.status).toBe(404);
     }
   });
 

@@ -26,7 +26,7 @@ describe("router", () => {
         "/backoffice/admin/categories",
         "/backoffice/admin/settings",
         "/backoffice/profile",
-        "/event/:id",
+        "/evenements/:slug",
         "/:pathMatch(.*)*"
       ])
     );
