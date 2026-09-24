@@ -1,19 +1,26 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { uploadImage } from "../src/api/uploads";
+import { TOKEN_STORAGE_KEY } from "../src/api/authHeaders";
 
 describe("uploads api", () => {
   afterEach(() => {
+    window.localStorage.clear();
     vi.unstubAllGlobals();
   });
 
   it("uploads an image", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({ url: "/uploads/test.png" }) }))
+    window.localStorage.setItem(TOKEN_STORAGE_KEY, "signed-token");
+    const fetchMock = vi.fn(() =>
+      Promise.resolve({ ok: true, json: () => Promise.resolve({ url: "/uploads/test.webp" }) })
     );
+    vi.stubGlobal("fetch", fetchMock);
 
     const file = new File(["image"], "photo.png", { type: "image/png" });
-    await expect(uploadImage(file)).resolves.toBe("/uploads/test.png");
+    await expect(uploadImage(file)).resolves.toBe("/uploads/test.webp");
+    expect(fetchMock).toHaveBeenCalledWith("/api/uploads", expect.objectContaining({
+      method: "POST",
+      headers: { Authorization: "Bearer signed-token" }
+    }));
   });
 
   it("surfaces API errors", async () => {
