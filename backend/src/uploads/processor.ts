@@ -1,4 +1,4 @@
-import sharp from "sharp";
+import sharpRuntime from "sharp";
 import { cleanupExpiredPendingUploads, persistProcessedUpload } from "./storage";
 
 export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
@@ -12,7 +12,24 @@ type UploadCandidate = {
   originalname: string;
 };
 
-type ImageFactory = (input: Buffer, options: sharp.SharpOptions) => sharp.Sharp;
+type ImageMetadata = {
+  format?: string;
+  pages?: number;
+};
+
+type ImagePipeline = {
+  metadata: () => Promise<ImageMetadata>;
+  rotate: () => ImagePipeline;
+  webp: (options: { quality: number; effort: number }) => ImagePipeline;
+  toBuffer: () => Promise<Buffer>;
+};
+
+type ImageFactory = (
+  input: Buffer,
+  options: { failOn: "error"; limitInputPixels: number; animated: false }
+) => ImagePipeline;
+
+const defaultImageFactory = sharpRuntime as unknown as ImageFactory;
 
 const formatByMime: Record<string, SupportedFormat> = {
   "image/jpeg": "jpeg",
@@ -78,11 +95,14 @@ const matchesBinaryEnvelope = (contents: Buffer, format: SupportedFormat) => {
 };
 
 export const isDecodedMetadataAllowed = (
-  metadata: Pick<sharp.Metadata, "format" | "pages">,
+  metadata: ImageMetadata,
   declaredFormat: SupportedFormat
 ) => metadata.format === declaredFormat && (metadata.pages ?? 1) === 1;
 
-export const processAndPersistUpload = async (file: UploadCandidate, createImage: ImageFactory = sharp) => {
+export const processAndPersistUpload = async (
+  file: UploadCandidate,
+  createImage: ImageFactory = defaultImageFactory
+) => {
   const declaredFormat = getDeclaredUploadFormat(file.originalname, file.mimetype);
   if (!declaredFormat || !matchesBinaryEnvelope(file.buffer, declaredFormat)) {
     return reject();

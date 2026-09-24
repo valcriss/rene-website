@@ -1,6 +1,9 @@
 {
   "name": "rene-website",
   "private": true,
+  "engines": {
+    "node": ">=24.9.0"
+  },
   "workspaces": [
     "backend",
     "frontend"
@@ -9,6 +12,7 @@
     "lint": "npm run lint -w backend && npm run lint -w frontend",
     "test": "npm run test -w backend && npm run test -w frontend",
     "build": "npm run build -w backend && npm run build -w frontend",
+    "audit:security": "npm audit --audit-level=high",
     "dev": "concurrently -n backend,frontend -c blue,green \"npm run dev -w backend\" \"npm run dev -w frontend\""
   },
   "devDependencies": {

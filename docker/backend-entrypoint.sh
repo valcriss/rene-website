@@ -58,7 +58,7 @@ retry_delay="${PRISMA_MIGRATE_RETRY_DELAY:-2}"
 attempt=1
 
 echo "Running Prisma migrations..."
-until DATABASE_URL="$migration_database_url" npx prisma migrate deploy --schema prisma/schema.prisma; do
+until DATABASE_URL="$migration_database_url" node /app/node_modules/prisma/build/index.js migrate deploy --schema prisma/schema.prisma; do
   if [ "$attempt" -ge "$max_attempts" ]; then
     echo "Prisma migrate deploy failed after ${attempt} attempts."
     exit 1
@@ -72,7 +72,7 @@ done
 echo "Prisma migrations applied."
 
 echo "Importing communes referential data..."
-DATABASE_URL="$app_database_url" npm run communes:import
+DATABASE_URL="$app_database_url" node -e 'require("./dist/communes/importCli").runCommunesImportCli().catch((error) => { console.error(error instanceof Error ? error.message : error); process.exit(1); })'
 echo "Communes referential data ready."
 
 export DATABASE_URL="$app_database_url"
