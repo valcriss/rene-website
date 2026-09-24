@@ -1,15 +1,46 @@
 import { mount } from "@vue/test-utils";
-import { createPinia } from "pinia";
+import { createPinia, setActivePinia } from "pinia";
 import { vi } from "vitest";
 import EventDetailPage from "../src/pages/EventDetailPage.vue";
+import { useEventsStore } from "../src/stores/events";
 import { createTestRouter } from "./testRouter";
 
 const makeWrapper = async () => {
-  const router = createTestRouter("/event/123");
+  const pinia = createPinia();
+  setActivePinia(pinia);
+  const eventsStore = useEventsStore();
+  eventsStore.events = [
+    {
+      id: "123",
+      title: "Concert",
+      content: "Soirée",
+      image: null,
+      categoryId: null,
+      audienceId: null,
+      occurrences: [],
+      organizerName: null,
+      status: "PUBLISHED",
+      slug: "concert-descartes-2026"
+    },
+    {
+      id: "42",
+      title: "Autre événement",
+      content: "Contenu",
+      image: null,
+      categoryId: null,
+      audienceId: null,
+      occurrences: [],
+      organizerName: null,
+      status: "PUBLISHED",
+      slug: "autre-evenement-descartes-2026"
+    }
+  ];
+
+  const router = createTestRouter("/evenements/concert-descartes-2026");
   await router.isReady();
   const wrapper = mount(EventDetailPage, {
     global: {
-      plugins: [router, createPinia()],
+      plugins: [router, pinia],
       stubs: {
         NavigationHeader: {
           template: "<button data-testid='login' @click=\"$emit('login')\"></button>"
@@ -43,6 +74,6 @@ describe("EventDetailPage", () => {
     expect(pushSpy).toHaveBeenCalledWith("/login");
 
     await wrapper.find("[data-testid='select']").trigger("click");
-    expect(pushSpy).toHaveBeenCalledWith("/event/42");
+    expect(pushSpy).toHaveBeenCalledWith("/evenements/autre-evenement-descartes-2026");
   });
 });

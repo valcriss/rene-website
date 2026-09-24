@@ -207,4 +207,56 @@ describe("inMemoryEventRepository", () => {
     await repo.upsertPendingRevision(created.id, payload, "PENDING");
     await expect(repo.submitPendingRevision(created.id)).resolves.toBeNull();
   });
+
+  it("finds an event by its current slug", async () => {
+    const repo = createInMemoryEventRepository();
+    const created = await repo.create(payload);
+    await repo.setSlug(created.id, "concert-descartes-2026");
+
+    await expect(repo.findBySlug("concert-descartes-2026")).resolves.toMatchObject({ id: created.id });
+    await expect(repo.findBySlug("unknown-slug")).resolves.toBeNull();
+  });
+
+  it("returns null when setting the slug of a missing event", async () => {
+    const repo = createInMemoryEventRepository();
+
+    await expect(repo.setSlug("missing", "some-slug")).resolves.toBeNull();
+  });
+
+  it("archives the previous slug into redirect history on an explicit slug change", async () => {
+    const repo = createInMemoryEventRepository();
+    const created = await repo.create(payload);
+    await repo.setSlug(created.id, "concert-descartes-2026");
+
+    const updated = await repo.setSlug(created.id, "concert-jazz-descartes-2026");
+
+    expect(updated?.slug).toBe("concert-jazz-descartes-2026");
+    await expect(repo.resolveSlugRedirect("concert-descartes-2026")).resolves.toBe("concert-jazz-descartes-2026");
+  });
+
+  it("returns null resolving a redirect for a slug that was never assigned", async () => {
+    const repo = createInMemoryEventRepository();
+
+    await expect(repo.resolveSlugRedirect("never-existed")).resolves.toBeNull();
+  });
+
+  it("returns null resolving a redirect whose event was since deleted", async () => {
+    const repo = createInMemoryEventRepository();
+    const created = await repo.create(payload);
+    await repo.setSlug(created.id, "concert-descartes-2026");
+    await repo.setSlug(created.id, "concert-jazz-descartes-2026");
+    await repo.delete(created.id);
+
+    await expect(repo.resolveSlugRedirect("concert-descartes-2026")).resolves.toBeNull();
+  });
+
+  it("does not create a redirect entry when setSlug is called with the same slug again", async () => {
+    const repo = createInMemoryEventRepository();
+    const created = await repo.create(payload);
+    await repo.setSlug(created.id, "concert-descartes-2026");
+
+    await repo.setSlug(created.id, "concert-descartes-2026");
+
+    await expect(repo.resolveSlugRedirect("concert-descartes-2026")).resolves.toBeNull();
+  });
 });

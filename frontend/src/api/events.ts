@@ -74,6 +74,7 @@ export type EventItem = {
   pricingInfo?: string;
   websiteUrl?: string;
   socialLinks?: SocialLink[];
+  slug?: string | null;
   featured?: boolean;
   status: EventStatus;
   publishedAt?: string | null;

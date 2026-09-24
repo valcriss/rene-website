@@ -32,6 +32,7 @@ const publishedEvent: Event = {
   organizerName: "Association",
   contactEmail: "contact@example.com",
   contactPhone: "0102030405",
+  slug: "concert-descartes-2026",
   featured: false,
   status: "PUBLISHED",
   publishedAt: "2026-01-01T00:00:00.000Z",
@@ -46,6 +47,9 @@ const publishedEvent: Event = {
 const buildRepo = (events: Event[]): EventRepository => ({
   list: async () => events,
   getById: async (id) => events.find((event) => event.id === id) ?? null,
+  findBySlug: async (slug) => events.find((event) => event.slug === slug) ?? null,
+  resolveSlugRedirect: async () => null,
+  setSlug: async () => null,
   create: async () => publishedEvent,
   update: async () => null,
   upsertPendingRevision: async () => null,

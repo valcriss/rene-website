@@ -7,6 +7,8 @@ jest.mock("@prisma/client", () => {
   const findCategory = jest.fn();
   const findAudience = jest.fn();
   const transaction = jest.fn();
+  const findSlugRedirect = jest.fn();
+  const createSlugRedirect = jest.fn();
 
   const client = {
     event: {
@@ -21,6 +23,10 @@ jest.mock("@prisma/client", () => {
     },
     audience: {
       findUnique: findAudience
+    },
+    eventSlugRedirect: {
+      findUnique: findSlugRedirect,
+      create: createSlugRedirect
     },
     $transaction: transaction
   };
@@ -37,7 +43,9 @@ jest.mock("@prisma/client", () => {
       remove,
       findCategory,
       findAudience,
-      transaction
+      transaction,
+      findSlugRedirect,
+      createSlugRedirect
     }
   };
 });
@@ -53,6 +61,8 @@ const prismaMocks = jest.requireMock("@prisma/client").__mocks as {
   findCategory: jest.Mock;
   findAudience: jest.Mock;
   transaction: jest.Mock;
+  findSlugRedirect: jest.Mock;
+  createSlugRedirect: jest.Mock;
 };
 
 const includeOccurrencesAndRevision = {
@@ -70,6 +80,8 @@ describe("createPrismaEventRepository", () => {
     prismaMocks.findCategory.mockReset();
     prismaMocks.findAudience.mockReset();
     prismaMocks.transaction.mockClear();
+    prismaMocks.findSlugRedirect.mockReset();
+    prismaMocks.createSlugRedirect.mockReset();
   });
 
   const baseOccurrence = {
@@ -789,5 +801,88 @@ describe("createPrismaEventRepository", () => {
     const result = await repo.publishPendingRevision("1", "2026-01-20T00:00:00.000Z");
 
     expect(result).toBeNull();
+  });
+
+  it("finds an event by slug", async () => {
+    const repo = createPrismaEventRepository();
+    prismaMocks.findUnique.mockResolvedValue(buildEvent({ slug: "concert-descartes-2026" }));
+
+    const result = await repo.findBySlug("concert-descartes-2026");
+
+    expect(result?.slug).toBe("concert-descartes-2026");
+    expect(prismaMocks.findUnique).toHaveBeenCalledWith({
+      where: { slug: "concert-descartes-2026" },
+      include: includeOccurrencesAndRevision
+    });
+  });
+
+  it("returns null finding a slug that matches no event", async () => {
+    const repo = createPrismaEventRepository();
+    prismaMocks.findUnique.mockResolvedValue(null);
+
+    await expect(repo.findBySlug("unknown")).resolves.toBeNull();
+  });
+
+  it("resolves a slug redirect to the event's current slug", async () => {
+    const repo = createPrismaEventRepository();
+    prismaMocks.findSlugRedirect.mockResolvedValue({ id: "redirect-1", eventId: "1", slug: "ancien-slug", createdAt: new Date() });
+    prismaMocks.findUnique.mockResolvedValue(buildEvent({ slug: "concert-descartes-2026" }));
+
+    const result = await repo.resolveSlugRedirect("ancien-slug");
+
+    expect(result).toBe("concert-descartes-2026");
+  });
+
+  it("returns null resolving a redirect that does not exist", async () => {
+    const repo = createPrismaEventRepository();
+    prismaMocks.findSlugRedirect.mockResolvedValue(null);
+
+    await expect(repo.resolveSlugRedirect("unknown")).resolves.toBeNull();
+  });
+
+  it("returns null resolving a redirect whose event no longer exists", async () => {
+    const repo = createPrismaEventRepository();
+    prismaMocks.findSlugRedirect.mockResolvedValue({ id: "redirect-1", eventId: "1", slug: "ancien-slug", createdAt: new Date() });
+    prismaMocks.findUnique.mockResolvedValue(null);
+
+    await expect(repo.resolveSlugRedirect("ancien-slug")).resolves.toBeNull();
+  });
+
+  it("sets a slug and archives the previous one into redirect history", async () => {
+    const repo = createPrismaEventRepository();
+    prismaMocks.findUnique
+      .mockResolvedValueOnce(buildEvent({ slug: "ancien-slug" }))
+      .mockResolvedValueOnce(buildEvent({ slug: "nouveau-slug" }));
+    prismaMocks.update.mockResolvedValue(buildEvent({ slug: "nouveau-slug" }));
+
+    const result = await repo.setSlug("1", "nouveau-slug");
+
+    expect(result?.slug).toBe("nouveau-slug");
+    expect(prismaMocks.createSlugRedirect).toHaveBeenCalledWith({ data: { eventId: "1", slug: "ancien-slug" } });
+  });
+
+  it("sets a slug without touching redirect history when the event had none yet", async () => {
+    const repo = createPrismaEventRepository();
+    prismaMocks.findUnique.mockResolvedValueOnce(buildEvent({ slug: null }));
+    prismaMocks.update.mockResolvedValue(buildEvent({ slug: "nouveau-slug" }));
+
+    const result = await repo.setSlug("1", "nouveau-slug");
+
+    expect(result?.slug).toBe("nouveau-slug");
+    expect(prismaMocks.createSlugRedirect).not.toHaveBeenCalled();
+  });
+
+  it("returns null setting the slug of a missing event", async () => {
+    const repo = createPrismaEventRepository();
+    prismaMocks.findUnique.mockResolvedValueOnce(null);
+
+    await expect(repo.setSlug("missing", "nouveau-slug")).resolves.toBeNull();
+  });
+
+  it("returns null when the setSlug transaction fails", async () => {
+    const repo = createPrismaEventRepository();
+    prismaMocks.transaction.mockRejectedValueOnce(new Error("boom"));
+
+    await expect(repo.setSlug("1", "nouveau-slug")).resolves.toBeNull();
   });
 });

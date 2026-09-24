@@ -25,12 +25,13 @@ import EventDetailView from "../components/events/EventDetailView.vue";
 import { useEventsStore } from "../stores/events";
 import { usePageSeo } from "../composables/usePageSeo";
 import { buildPlainTextDescription } from "../utils/seo";
+import { getEventDetailPath } from "../utils/eventLinks";
 
 const router = useRouter();
 const route = useRoute();
 const { t } = useI18n();
 const eventsStore = useEventsStore();
-const detailEventId = computed(() => String(route.params.id));
+const detailEventId = computed(() => eventsStore.getEventBySlug(String(route.params.slug))?.id ?? "");
 
 // Mirrors EventDetailView's own visibility rule (hide only manually archived events) so the
 // meta tags always match what the page actually shows, without duplicating its store wiring.
@@ -52,6 +53,9 @@ const goToLogin = () => {
 };
 
 const openEventDetail = (id: string) => {
-  router.push(`/event/${id}`);
+  const event = eventsStore.getEventById(id);
+  if (event) {
+    router.push(getEventDetailPath(event));
+  }
 };
 </script>

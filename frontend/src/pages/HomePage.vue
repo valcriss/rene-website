@@ -38,7 +38,7 @@
           :data-testid="`featured-card-${currentCarouselEvent.id}`"
         >
           <RouterLink
-            :to="`/event/${currentCarouselEvent.id}`"
+            :to="getEventDetailPath(currentCarouselEvent)"
             class="absolute inset-0 z-10"
             :aria-label="currentCarouselEvent.title"
             :data-testid="`featured-card-link-${currentCarouselEvent.id}`"
@@ -189,7 +189,7 @@
                 :key="eventItem.id"
                 class="group overflow-hidden rounded-[2rem] border border-sky-100 bg-white shadow-[0_24px_72px_-54px_rgba(30,41,59,0.28)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_32px_84px_-46px_rgba(30,41,59,0.24)]"
               >
-                <RouterLink :to="`/event/${eventItem.id}`" class="block" :data-testid="`event-card-${eventItem.id}`">
+                <RouterLink :to="getEventDetailPath(eventItem)" class="block" :data-testid="`event-card-${eventItem.id}`">
                   <div class="relative aspect-[16/10] overflow-hidden bg-sky-100">
                     <img
                       class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
@@ -280,6 +280,7 @@ import { useSettingsStore } from "../stores/settings";
 import { formatEventDateBadge, getEarliestOccurrence, getEventLocationSummary, isMultisiteEvent } from "../utils/occurrences";
 import { usePageSeo } from "../composables/usePageSeo";
 import { buildPlainTextDescription } from "../utils/seo";
+import { getEventDetailPath } from "../utils/eventLinks";
 
 type CategoryTheme = {
   backgroundColor: string;
@@ -414,7 +415,10 @@ const handleLogout = () => {
 };
 
 const openEventDetail = (id: string) => {
-  router.push(`/event/${id}`);
+  const event = eventsStore.getEventById(id);
+  if (event) {
+    router.push(getEventDetailPath(event));
+  }
 };
 
 const goToPreviousSlide = () => {

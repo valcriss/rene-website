@@ -2,6 +2,7 @@ import { EventRepository } from "./repository";
 import { validateCreateEvent, validateEventCompleteness } from "./validation";
 import { Event, EventOccurrenceInput, GeolocationPrecision, PublicEvent } from "./types";
 import { geocodeEventLocation } from "../geocoding/photon";
+import { generateUniqueEventSlug } from "./slug";
 import {
   claimLocalUploads,
   deleteLocalUploads,
@@ -20,6 +21,11 @@ const invalidFeaturedError = "La mise en avant doit être un booléen.";
 const deleteForbiddenError = "Suppression non autorisée.";
 const forbiddenError = "Action non autorisée.";
 const notFoundError = "Événement introuvable.";
+const invalidSlugError = "Le slug doit être en minuscules, alphanumérique, séparé par des tirets.";
+const slugTakenError = "Ce slug est déjà utilisé par un autre événement.";
+const unpublishedSlugError = "Seuls les événements publiés peuvent avoir un slug personnalisé.";
+
+const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 export type EventActor = AuthenticatedActor;
 
@@ -162,6 +168,7 @@ const toPublicEvent = (event: Event): PublicEvent => ({
   pricingInfo: event.pricingInfo,
   websiteUrl: event.websiteUrl,
   socialLinks: event.socialLinks,
+  slug: event.slug,
   featured: event.featured,
   status: event.status,
   publishedAt: event.publishedAt,
@@ -194,6 +201,19 @@ export const getPublicEventPageStatus = async (
   id: string
 ): Promise<PublicEventPageStatus> => {
   const event = await repo.getById(id);
+  if (!event || event.status !== "PUBLISHED") {
+    return 404;
+  }
+  return event.archivedAt ? 410 : 200;
+};
+
+// Same rule as getPublicEventPageStatus, resolved by canonical slug instead of id — used for the
+// public /evenements/:slug route.
+export const getPublicEventPageStatusBySlug = async (
+  repo: EventRepository,
+  slug: string
+): Promise<PublicEventPageStatus> => {
+  const event = await repo.findBySlug(slug);
   if (!event || event.status !== "PUBLISHED") {
     return 404;
   }
@@ -418,6 +438,16 @@ export const publishEvent = async (
   if (!updated) {
     return notFound();
   }
+
+  // The slug is generated once, at first publication, and never touched again by a later edit —
+  // only an explicit slug change (updateEventSlug) may move it.
+  if (!updated.slug) {
+    const slug = await generateUniqueEventSlug(repo, updated.title, updated.occurrences);
+    const withSlug = await repo.setSlug(id, slug);
+    if (withSlug) {
+      return { ok: true, value: withSlug };
+    }
+  }
   return { ok: true, value: updated };
 };
 
@@ -447,6 +477,44 @@ export const updateEventFeatured = async (
     return notFound();
   }
 
+  return { ok: true, value: updated };
+};
+
+// An explicit, admin-triggered slug change — distinct from the automatic first-publication slug
+// and from ordinary title edits, which never touch the slug. The previous slug is archived into
+// the redirect history so old links keep resolving.
+export const updateEventSlug = async (
+  repo: EventRepository,
+  id: string,
+  slug: unknown,
+  actor: EventActor
+): Promise<ServiceResult<Event>> => {
+  if (actor.role !== "ADMIN") {
+    return forbidden();
+  }
+  if (typeof slug !== "string" || !SLUG_PATTERN.test(slug)) {
+    return badRequest([invalidSlugError]);
+  }
+
+  const current = await repo.getById(id);
+  if (!current) {
+    return notFound();
+  }
+  if (current.status !== "PUBLISHED") {
+    return badRequest([unpublishedSlugError]);
+  }
+
+  if (slug !== current.slug) {
+    const existingOwner = await repo.findBySlug(slug);
+    if (existingOwner && existingOwner.id !== id) {
+      return badRequest([slugTakenError]);
+    }
+  }
+
+  const updated = await repo.setSlug(id, slug);
+  if (!updated) {
+    return notFound();
+  }
   return { ok: true, value: updated };
 };
 

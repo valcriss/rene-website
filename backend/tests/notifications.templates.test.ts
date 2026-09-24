@@ -38,6 +38,7 @@ const baseEvent: Event = {
   audienceId: "all",
   occurrences: [baseOccurrence],
   organizerName: "Association",
+  slug: null,
   status: "PENDING",
   publishedAt: null,
   publicationEndAt: "2026-01-15T22:00:00.000Z",

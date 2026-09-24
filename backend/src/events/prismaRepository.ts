@@ -17,7 +17,18 @@ type PrismaEventsClient = {
     update(args: unknown): Promise<PrismaEvent>;
     delete(args: unknown): Promise<void>;
   };
+  eventSlugRedirect: {
+    findUnique(args: unknown): Promise<PrismaEventSlugRedirect | null>;
+    create(args: unknown): Promise<PrismaEventSlugRedirect>;
+  };
   $transaction<T>(handler: (transaction: PrismaEventsClient) => Promise<T>): Promise<T>;
+};
+
+type PrismaEventSlugRedirect = {
+  id: string;
+  eventId: string;
+  slug: string;
+  createdAt: Date;
 };
 
 type PrismaEventOccurrence = {
@@ -52,6 +63,7 @@ type PrismaEvent = {
   pricingInfo: string | null;
   websiteUrl: string | null;
   socialLinks: unknown;
+  slug: string | null;
   status: "DRAFT" | "PENDING" | "PUBLISHED" | "REJECTED";
   featured: boolean;
   publishedAt: Date | null;
@@ -162,6 +174,7 @@ const toEvent = (data: PrismaEvent): Event => ({
   pricingInfo: data.pricingInfo ?? undefined,
   websiteUrl: data.websiteUrl ?? undefined,
   socialLinks: asSocialLinks(data.socialLinks),
+  slug: data.slug,
   status: data.status,
   featured: data.featured,
   publishedAt: data.publishedAt ? data.publishedAt.toISOString() : null,
@@ -249,6 +262,33 @@ export const createPrismaEventRepository = (): EventRepository => ({
       .then((items) => sortEventsByEarliestOccurrence(items.map(toEvent))),
   getById: async (id: string) =>
     prismaClient.event.findUnique({ where: { id }, include: includeOccurrencesAndRevision }).then((item) => (item ? toEvent(item) : null)),
+  findBySlug: async (slug: string) =>
+    prismaClient.event.findUnique({ where: { slug }, include: includeOccurrencesAndRevision }).then((item) => (item ? toEvent(item) : null)),
+  resolveSlugRedirect: async (oldSlug: string) => {
+    const redirect = await prismaClient.eventSlugRedirect.findUnique({ where: { slug: oldSlug } });
+    if (!redirect) {
+      return null;
+    }
+    const event = await prismaClient.event.findUnique({ where: { id: redirect.eventId }, include: includeOccurrencesAndRevision });
+    return event?.slug ?? null;
+  },
+  setSlug: async (id: string, slug: string) => {
+    try {
+      const updated = await prismaClient.$transaction(async (transaction) => {
+        const existing = await transaction.event.findUnique({ where: { id }, include: includeOccurrencesAndRevision });
+        if (!existing) {
+          return null;
+        }
+        if (existing.slug && existing.slug !== slug) {
+          await transaction.eventSlugRedirect.create({ data: { eventId: id, slug: existing.slug } });
+        }
+        return transaction.event.update({ where: { id }, data: { slug }, include: includeOccurrencesAndRevision });
+      });
+      return updated ? toEvent(updated as PrismaEvent) : null;
+    } catch {
+      return null;
+    }
+  },
   create: async (input: CreateEventInput) => {
     await ensureCategoryExists(input.categoryId);
     await ensureAudienceExists(input.audienceId);

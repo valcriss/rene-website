@@ -71,6 +71,7 @@ describe("entry-server render", () => {
                 }
               ],
               organizerName: "Association locale",
+              slug: "concert-au-parc-descartes-2026",
               status: "PUBLISHED",
               publishedAt: "2026-01-01T00:00:00.000Z",
               publicationEndAt: "2026-06-15T22:00:00.000Z",
@@ -84,7 +85,7 @@ describe("entry-server render", () => {
       })
     );
 
-    const result = await render("/event/1", "https://rene.example.org");
+    const result = await render("/evenements/concert-au-parc-descartes-2026", "https://rene.example.org");
 
     expect(result.html).toContain("Concert au parc");
     expect(result.html).toContain("Une belle soirée en plein air.");
@@ -107,6 +108,7 @@ describe("entry-server render", () => {
               audienceId: null,
               occurrences: [],
               organizerName: null,
+              slug: "concert-au-parc",
               status: "PUBLISHED",
               publishedAt: "2026-01-01T00:00:00.000Z",
               publicationEndAt: "2026-06-15T22:00:00.000Z",
@@ -120,12 +122,12 @@ describe("entry-server render", () => {
       })
     );
 
-    const result = await render("/event/1", "https://rene.example.org");
+    const result = await render("/evenements/concert-au-parc", "https://rene.example.org");
     const fullHtml = transformHtmlTemplate(result.head, BASE_TEMPLATE);
 
     expect(fullHtml).toContain("<title>Concert au parc — R3ne</title>");
-    expect(fullHtml).toContain('<link rel="canonical" href="https://rene.example.org/event/1">');
-    expect(fullHtml).toContain('<meta property="og:url" content="https://rene.example.org/event/1">');
+    expect(fullHtml).toContain('<link rel="canonical" href="https://rene.example.org/evenements/concert-au-parc">');
+    expect(fullHtml).toContain('<meta property="og:url" content="https://rene.example.org/evenements/concert-au-parc">');
     expect(fullHtml).toContain('<meta property="og:image" content="https://rene.example.org/uploads/concert.jpg">');
     expect(fullHtml).toContain('<meta property="og:type" content="article">');
   });

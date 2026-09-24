@@ -83,6 +83,9 @@ describe("events routes", () => {
         throw new Error("boom");
       },
       getById: async () => null,
+      findBySlug: async () => null,
+      resolveSlugRedirect: async () => null,
+      setSlug: async () => null,
       create: async () => {
         throw new Error("boom");
       },
@@ -499,6 +502,118 @@ describe("events routes", () => {
       .send({ featured: true });
 
     expect(response.status).toBe(404);
+  });
+
+  it("assigns a slug on first publication and lets an admin explicitly change it", async () => {
+    const app = createApp();
+    const createResponse = await request(app)
+      .post("/api/events")
+      .set("Authorization", authHeader("EDITOR"))
+      .send(validPayload);
+    const id = createResponse.body.id;
+
+    await request(app).post(`/api/events/${id}/submit`).set("Authorization", authHeader("EDITOR"));
+    const publishResponse = await request(app)
+      .post(`/api/events/${id}/publish`)
+      .set("Authorization", authHeader("MODERATOR"));
+
+    expect(publishResponse.status).toBe(200);
+    expect(publishResponse.body.slug).toBe("concert-descartes-2026");
+
+    const slugResponse = await request(app)
+      .patch(`/api/events/${id}/slug`)
+      .set("Authorization", authHeader("ADMIN"))
+      .send({ slug: "concert-jazz-descartes-2026" });
+
+    expect(slugResponse.status).toBe(200);
+    expect(slugResponse.body.slug).toBe("concert-jazz-descartes-2026");
+  });
+
+  it("returns 400 for an invalid slug format", async () => {
+    const app = createApp();
+    const createResponse = await request(app)
+      .post("/api/events")
+      .set("Authorization", authHeader("EDITOR"))
+      .send(validPayload);
+    const id = createResponse.body.id;
+    await request(app).post(`/api/events/${id}/submit`).set("Authorization", authHeader("EDITOR"));
+    await request(app).post(`/api/events/${id}/publish`).set("Authorization", authHeader("MODERATOR"));
+
+    const response = await request(app)
+      .patch(`/api/events/${id}/slug`)
+      .set("Authorization", authHeader("ADMIN"))
+      .send({ slug: "Not A Valid Slug!" });
+
+    expect(response.status).toBe(400);
+  });
+
+  it("returns 400 changing the slug of an event that was never published", async () => {
+    const app = createApp();
+    const createResponse = await request(app)
+      .post("/api/events")
+      .set("Authorization", authHeader("EDITOR"))
+      .send(validPayload);
+    const id = createResponse.body.id;
+
+    const response = await request(app)
+      .patch(`/api/events/${id}/slug`)
+      .set("Authorization", authHeader("ADMIN"))
+      .send({ slug: "concert-descartes-2026" });
+
+    expect(response.status).toBe(400);
+  });
+
+  it("returns 400 when the requested slug is already used by another event", async () => {
+    const app = createApp();
+
+    const firstCreate = await request(app)
+      .post("/api/events")
+      .set("Authorization", authHeader("EDITOR"))
+      .send(validPayload);
+    await request(app).post(`/api/events/${firstCreate.body.id}/submit`).set("Authorization", authHeader("EDITOR"));
+    await request(app).post(`/api/events/${firstCreate.body.id}/publish`).set("Authorization", authHeader("MODERATOR"));
+
+    const secondCreate = await request(app)
+      .post("/api/events")
+      .set("Authorization", authHeader("EDITOR"))
+      .send({ ...validPayload, title: "Autre concert" });
+    await request(app).post(`/api/events/${secondCreate.body.id}/submit`).set("Authorization", authHeader("EDITOR"));
+    await request(app).post(`/api/events/${secondCreate.body.id}/publish`).set("Authorization", authHeader("MODERATOR"));
+
+    const response = await request(app)
+      .patch(`/api/events/${secondCreate.body.id}/slug`)
+      .set("Authorization", authHeader("ADMIN"))
+      .send({ slug: "concert-descartes-2026" });
+
+    expect(response.status).toBe(400);
+  });
+
+  it("returns 404 when changing the slug of a missing event", async () => {
+    const app = createApp();
+    const response = await request(app)
+      .patch("/api/events/missing/slug")
+      .set("Authorization", authHeader("ADMIN"))
+      .send({ slug: "concert-descartes-2026" });
+
+    expect(response.status).toBe(404);
+  });
+
+  it("returns 403 when a non-admin tries to change a slug", async () => {
+    const app = createApp();
+    const createResponse = await request(app)
+      .post("/api/events")
+      .set("Authorization", authHeader("EDITOR"))
+      .send(validPayload);
+    const id = createResponse.body.id;
+    await request(app).post(`/api/events/${id}/submit`).set("Authorization", authHeader("EDITOR"));
+    await request(app).post(`/api/events/${id}/publish`).set("Authorization", authHeader("MODERATOR"));
+
+    const response = await request(app)
+      .patch(`/api/events/${id}/slug`)
+      .set("Authorization", authHeader("MODERATOR"))
+      .send({ slug: "concert-jazz-descartes-2026" });
+
+    expect(response.status).toBe(403);
   });
 
   it("archives and unarchives a published event", async () => {

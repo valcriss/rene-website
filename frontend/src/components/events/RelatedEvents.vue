@@ -17,7 +17,7 @@
         class="group overflow-hidden rounded-[1.75rem] border border-sky-100 bg-white shadow-[0_20px_64px_-52px_rgba(30,41,59,0.28)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_28px_72px_-46px_rgba(30,41,59,0.26)]"
       >
         <RouterLink
-          :to="`/event/${eventItem.id}`"
+          :to="getEventDetailPath(eventItem)"
           class="block"
           :data-testid="`related-event-card-${eventItem.id}`"
           @click="emitSelect(eventItem.id)"
@@ -73,6 +73,7 @@ import type { EventItem } from "../../api/events";
 import { useCategoriesStore } from "../../stores/categories";
 import { useEventsStore } from "../../stores/events";
 import { formatEventDateBadge, getEventLocationSummary } from "../../utils/occurrences";
+import { getEventDetailPath } from "../../utils/eventLinks";
 
 type CategoryTheme = {
   backgroundColor: string;

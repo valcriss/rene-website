@@ -41,6 +41,7 @@ const baseEvent: Event = {
   audienceId: "all",
   occurrences: [baseOccurrence],
   organizerName: "Association",
+  slug: null,
   featured: false,
   status: "DRAFT",
   publishedAt: null,
@@ -74,6 +75,9 @@ const notificationMocks = jest.requireMock("../src/notifications/service") as {
 const buildRepo = (event: Event): EventRepository => ({
   list: async () => [event],
   getById: async () => event,
+  findBySlug: async (slug) => (event.slug === slug ? event : null),
+  resolveSlugRedirect: async () => null,
+  setSlug: async (_id, slug) => ({ ...event, slug }),
   create: async () => event,
   update: async () => event,
   upsertPendingRevision: async () => event,

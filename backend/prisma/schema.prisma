@@ -53,6 +53,7 @@ model Event {
   pricingInfo      String?
   websiteUrl       String?
   socialLinks      Json?
+  slug             String?     @unique
   status           EventStatus @default(DRAFT)
   featured         Boolean     @default(false)
   publishedAt      DateTime?
@@ -68,6 +69,7 @@ model Event {
   pendingRevision  EventRevision?
   occurrences      EventOccurrence[]
   moderationReminders ModerationReminder[]
+  slugRedirects    EventSlugRedirect[]
 
   @@index([status])
   @@index([featured])
@@ -75,6 +77,19 @@ model Event {
   @@index([audienceId])
   @@index([createdByUserId])
   @@index([archivedAt])
+}
+
+// Minimal history of an event's previous slugs, so a link built before an explicit slug change
+// keeps resolving (301) to the event's current canonical URL instead of breaking.
+model EventSlugRedirect {
+  id        String   @id @default(uuid()) @db.Uuid
+  eventId   String   @db.Uuid
+  slug      String   @unique
+  createdAt DateTime @default(now())
+
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([eventId])
 }
 
 model ModerationReminder {

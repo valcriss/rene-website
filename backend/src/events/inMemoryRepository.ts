@@ -17,6 +17,9 @@ const buildOccurrences = (occurrences: EventOccurrenceInput[]): EventOccurrence[
 
 export const createInMemoryEventRepository = (): EventRepository => {
   const events = new Map<string, Event>();
+  // Maps a previous slug to the event it used to belong to, for 301 redirects after an explicit
+  // slug change.
+  const slugRedirects = new Map<string, string>();
 
   const buildRevision = (
     eventId: string,
@@ -62,6 +65,33 @@ export const createInMemoryEventRepository = (): EventRepository => {
   return {
     list: async () => sortEventsByEarliestOccurrence(Array.from(events.values())),
     getById: async (id) => events.get(id) ?? null,
+    findBySlug: async (slug) => {
+      for (const event of events.values()) {
+        if (event.slug === slug) {
+          return event;
+        }
+      }
+      return null;
+    },
+    resolveSlugRedirect: async (oldSlug) => {
+      const eventId = slugRedirects.get(oldSlug);
+      if (!eventId) {
+        return null;
+      }
+      return events.get(eventId)?.slug ?? null;
+    },
+    setSlug: async (id, slug) => {
+      const existing = events.get(id);
+      if (!existing) {
+        return null;
+      }
+      if (existing.slug && existing.slug !== slug) {
+        slugRedirects.set(existing.slug, id);
+      }
+      const updated: Event = { ...existing, slug, updatedAt: new Date().toISOString() };
+      events.set(id, updated);
+      return updated;
+    },
     create: (input: CreateEventInput) => {
       const now = new Date().toISOString();
       const event: Event = {
@@ -70,6 +100,7 @@ export const createInMemoryEventRepository = (): EventRepository => {
         occurrences: buildOccurrences(input.occurrences),
         id: randomUUID(),
         createdByUserId: input.createdByUserId ?? null,
+        slug: null,
         featured: false,
         status: "DRAFT",
         publishedAt: null,
