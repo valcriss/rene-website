@@ -1,7 +1,13 @@
 import { prisma } from "../prisma/client";
 import { UserRole } from "./roles";
 import { AuthRepository } from "./repository";
-import { AuthSession, AuthUser, AuthUserWithPassword } from "./types";
+import {
+  AuthSession,
+  AuthUser,
+  AuthUserWithPassword,
+  ConsumeRateLimitInput,
+  ConsumeRateLimitResult
+} from "./types";
 
 type PrismaUser = {
   id: string;
@@ -10,6 +16,7 @@ type PrismaUser = {
   role: UserRole;
   passwordHash: string;
   sessionVersion: number;
+  emailVerifiedAt?: Date | null;
 };
 
 type PrismaPasswordResetToken = {
@@ -18,13 +25,81 @@ type PrismaPasswordResetToken = {
   expiresAt: Date;
 };
 
+type PrismaEmailVerificationToken = {
+  id: string;
+  userId: string;
+  expiresAt: Date;
+};
+
+type PrismaRateLimit = {
+  key: string;
+  attempts: number;
+  windowStartedAt: Date;
+  blockedUntil: Date | null;
+};
+
+type RateLimitStore = {
+  findUnique(args: unknown): Promise<PrismaRateLimit | null>;
+  create(args: unknown): Promise<PrismaRateLimit>;
+  update(args: unknown): Promise<PrismaRateLimit>;
+  delete(args: unknown): Promise<unknown>;
+};
+
+type RateLimitTransaction = {
+  authRateLimit: RateLimitStore;
+  $executeRawUnsafe(query: string, ...values: unknown[]): Promise<unknown>;
+};
+
+const consumePersistentRateLimit = async (
+  input: ConsumeRateLimitInput
+): Promise<ConsumeRateLimitResult> => {
+  const transaction = prisma.$transaction as unknown as <T>(
+    callback: (tx: RateLimitTransaction) => Promise<T>
+  ) => Promise<T>;
+
+  return transaction(async (tx) => {
+    // PostgreSQL advisory locks make the read/modify/write sequence atomic across API replicas.
+    await tx.$executeRawUnsafe("SELECT pg_advisory_xact_lock(hashtext($1))", input.key);
+    const current = await tx.authRateLimit.findUnique({ where: { key: input.key } });
+
+    if (current?.blockedUntil && current.blockedUntil > input.now) {
+      return {
+        allowed: false,
+        retryAfterSeconds: Math.max(1, Math.ceil((current.blockedUntil.getTime() - input.now.getTime()) / 1000))
+      };
+    }
+
+    const isNewWindow = !current || input.now.getTime() - current.windowStartedAt.getTime() >= input.limit.windowMs;
+    const attempts = isNewWindow ? 1 : current.attempts + 1;
+    const blockedUntil = attempts > input.limit.max
+      ? new Date(input.now.getTime() + Math.min(15 * 60, 5 * 2 ** (attempts - input.limit.max - 1)) * 1000)
+      : null;
+    const data = {
+      attempts,
+      windowStartedAt: isNewWindow ? input.now : current.windowStartedAt,
+      blockedUntil
+    };
+
+    if (current) {
+      await tx.authRateLimit.update({ where: { key: input.key }, data });
+    } else {
+      await tx.authRateLimit.create({ data: { key: input.key, ...data } });
+    }
+
+    return blockedUntil
+      ? { allowed: false, retryAfterSeconds: Math.ceil((blockedUntil.getTime() - input.now.getTime()) / 1000) }
+      : { allowed: true, retryAfterSeconds: 0 };
+  });
+};
+
 const toAuthUserWithPassword = (user: PrismaUser): AuthUserWithPassword => ({
   id: user.id,
   name: user.name,
   email: user.email,
   role: user.role,
   passwordHash: user.passwordHash,
-  sessionVersion: user.sessionVersion
+  ...(user.sessionVersion === undefined ? {} : { sessionVersion: user.sessionVersion }),
+  ...(user.emailVerifiedAt === undefined ? {} : { emailVerifiedAt: user.emailVerifiedAt })
 });
 
 const toAuthUser = (user: PrismaUser): AuthUser => ({
@@ -32,7 +107,8 @@ const toAuthUser = (user: PrismaUser): AuthUser => ({
   name: user.name,
   email: user.email,
   role: user.role,
-  sessionVersion: user.sessionVersion
+  ...(user.sessionVersion === undefined ? {} : { sessionVersion: user.sessionVersion }),
+  ...(user.emailVerifiedAt === undefined ? {} : { emailVerifiedAt: user.emailVerifiedAt })
 });
 
 const isUniqueConstraintError = (error: unknown) =>
@@ -67,6 +143,17 @@ export const createPrismaAuthRepository = (): AuthRepository => ({
       throw error;
     }
   },
+  createUnverifiedEditorUser: async ({ name, email, passwordHash }) => {
+    try {
+      const user = await prisma.user.create({
+        data: { name, email, role: "EDITOR", passwordHash, emailVerifiedAt: null }
+      });
+      return toAuthUser(user as PrismaUser);
+    } catch (error) {
+      if (isUniqueConstraintError(error)) return null;
+      throw error;
+    }
+  },
   updatePasswordHash: async (userId, passwordHash) => {
     await prisma.user.update({
       where: { id: userId },
@@ -98,6 +185,22 @@ export const createPrismaAuthRepository = (): AuthRepository => ({
   deletePasswordResetTokensByUserId: async (userId) => {
     await prisma.passwordResetToken.deleteMany({ where: { userId } });
   },
+  createEmailVerificationToken: async (userId, tokenHash, expiresAt) => {
+    await prisma.emailVerificationToken.deleteMany({ where: { userId } });
+    await prisma.emailVerificationToken.create({ data: { userId, tokenHash, expiresAt } });
+  },
+  getEmailVerificationTokenByHash: async (tokenHash) =>
+    prisma.emailVerificationToken
+      .findUnique({ where: { tokenHash } })
+      .then((token: PrismaEmailVerificationToken | null) =>
+        token ? { id: token.id, userId: token.userId, expiresAt: token.expiresAt } : null
+      ),
+  deleteEmailVerificationTokensByUserId: async (userId) => {
+    await prisma.emailVerificationToken.deleteMany({ where: { userId } });
+  },
+  markEmailVerified: async (userId) => {
+    await prisma.user.update({ where: { id: userId }, data: { emailVerifiedAt: new Date() } });
+  },
   createSession: async (input) => {
     await prisma.authSession.create({ data: input });
   },
@@ -125,5 +228,13 @@ export const createPrismaAuthRepository = (): AuthRepository => ({
         data: { revokedAt: new Date() }
       })
     ]);
+  },
+  consumeRateLimit: consumePersistentRateLimit,
+  clearRateLimit: async (key) => {
+    try {
+      await prisma.authRateLimit.delete({ where: { key } });
+    } catch {
+      // The limiter state may already have expired or been removed by another replica.
+    }
   }
 });

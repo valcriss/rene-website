@@ -222,6 +222,7 @@ model User {
   role         UserRole
   passwordHash String
   sessionVersion Int     @default(0)
+  emailVerifiedAt DateTime? @default(now())
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -230,6 +231,7 @@ model User {
   passwordResetTokens  PasswordResetToken[]
   categoryUnsubscriptions CategoryUnsubscription[]
   authSessions         AuthSession[]
+  emailVerificationTokens EmailVerificationToken[]
 }
 
 model AuthSession {
@@ -260,6 +262,26 @@ model PasswordResetToken {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   @@index([expiresAt])
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  tokenHash String   @unique
+  userId    String   @unique @db.Uuid
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([expiresAt])
+}
+
+model AuthRateLimit {
+  key             String   @id
+  attempts        Int
+  windowStartedAt DateTime
+  blockedUntil    DateTime?
+  updatedAt       DateTime @updatedAt
 }
 
 model Commune {

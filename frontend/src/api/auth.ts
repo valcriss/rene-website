@@ -1,3 +1,5 @@
+import { buildAuthHeaders } from "./authHeaders";
+
 export type AuthUser = {
   id: string;
   name: string;
@@ -22,6 +24,8 @@ export type ResetPasswordPayload = {
   passwordConfirmation: string;
 };
 
+export type VerifyEmailPayload = { token: string };
+
 const parseApiError = async (response: Response, fallback: string) => {
   try {
     const data = (await response.json()) as { errors?: string[]; message?: string };
@@ -40,9 +44,7 @@ const parseApiError = async (response: Response, fallback: string) => {
 const postAuthRequest = async (path: string, body: Record<string, string>, fallback: string): Promise<AuthResponse> => {
   const response = await fetch(path, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
+    headers: buildAuthHeaders(),
     body: JSON.stringify(body),
     credentials: "same-origin"
   });
@@ -57,9 +59,7 @@ const postAuthRequest = async (path: string, body: Record<string, string>, fallb
 const postVoidRequest = async (path: string, body: Record<string, string>, fallback: string): Promise<void> => {
   const response = await fetch(path, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
+    headers: buildAuthHeaders(),
     body: JSON.stringify(body),
     credentials: "same-origin"
   });
@@ -72,8 +72,8 @@ const postVoidRequest = async (path: string, body: Record<string, string>, fallb
 export const login = async (email: string, password: string): Promise<AuthResponse> =>
   postAuthRequest("/api/auth/login", { email, password }, "Connexion impossible");
 
-export const signup = async (payload: SignupPayload): Promise<AuthResponse> =>
-  postAuthRequest("/api/auth/signup", payload, "Inscription impossible");
+export const signup = async (payload: SignupPayload): Promise<void> =>
+  postVoidRequest("/api/auth/signup", payload, "Inscription impossible");
 
 export const requestPasswordReset = async (email: string): Promise<void> =>
   postVoidRequest("/api/auth/forgot-password", { email }, "Demande de réinitialisation impossible");
@@ -81,10 +81,8 @@ export const requestPasswordReset = async (email: string): Promise<void> =>
 export const resetPassword = async (payload: ResetPasswordPayload): Promise<void> =>
   postVoidRequest("/api/auth/reset-password", payload, "Réinitialisation impossible");
 
-const csrfHeader = () => {
-  const item = document.cookie.split(";").map((part) => part.trim()).find((part) => part.startsWith("rene_csrf="));
-  return item ? { "X-CSRF-Token": decodeURIComponent(item.slice("rene_csrf=".length)) } : {};
-};
+export const verifyEmail = async (payload: VerifyEmailPayload): Promise<void> =>
+  postVoidRequest("/api/auth/verify-email", payload, "Vérification de l’email impossible");
 
 export const getSession = async (): Promise<AuthResponse | null> => {
   let response = await fetch("/api/auth/session", { credentials: "same-origin" });
@@ -92,7 +90,7 @@ export const getSession = async (): Promise<AuthResponse | null> => {
     const refresh = await fetch("/api/auth/refresh", {
       method: "POST",
       credentials: "same-origin",
-      headers: csrfHeader()
+      headers: buildAuthHeaders(undefined, false)
     });
     if (!refresh.ok) return null;
     response = await fetch("/api/auth/session", { credentials: "same-origin" });
@@ -104,6 +102,6 @@ export const logout = async (): Promise<void> => {
   await fetch("/api/auth/logout", {
     method: "POST",
     credentials: "same-origin",
-    headers: csrfHeader()
+    headers: buildAuthHeaders(undefined, false)
   });
 };

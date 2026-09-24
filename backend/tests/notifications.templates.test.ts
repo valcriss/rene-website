@@ -2,6 +2,8 @@ import {
   buildContactMessageBody,
   buildContactMessageSubject,
   buildDeletedBody,
+  buildEmailVerificationBody,
+  buildEmailVerificationSubject,
   buildModerationReminderBody,
   buildModerationReminderSubject,
   buildPublishedBody,
@@ -147,5 +149,10 @@ describe("notification templates", () => {
     expect(subject).toBe("Nouveau message de contact de Marie");
     expect(body).toContain("Marie <marie@test>");
     expect(body).toContain("Bonjour, une question.");
+  });
+
+  it("builds an email-verification notification", () => {
+    expect(buildEmailVerificationSubject()).toContain("Vérifiez");
+    expect(buildEmailVerificationBody("https://rene.test/verify-email?token=abc", 1440)).toContain("token=abc");
   });
 });

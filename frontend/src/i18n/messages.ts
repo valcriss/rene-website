@@ -163,7 +163,8 @@ export const messages = {
       submit: "Cr\u00e9er mon compte",
       backToLogin: "J'ai d\u00e9j\u00e0 un compte",
       alreadyAccount: "Vous avez d\u00e9j\u00e0 un compte ?",
-      errorFallback: "Inscription impossible"
+      errorFallback: "Inscription impossible",
+      verificationSent: "Vérifiez votre boîte email pour activer votre compte avant de vous connecter."
     },
     forgotPassword: {
       eyebrow: "R\u00e9initialisation",
@@ -686,7 +687,8 @@ export const messages = {
       submit: "Create my account",
       backToLogin: "I already have an account",
       alreadyAccount: "Already have an account?",
-      errorFallback: "Signup failed"
+      errorFallback: "Signup failed",
+      verificationSent: "Check your email inbox to activate your account before signing in."
     },
     forgotPassword: {
       eyebrow: "Reset",

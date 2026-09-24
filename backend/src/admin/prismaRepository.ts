@@ -128,7 +128,8 @@ export const createPrismaAdminRepository = (): AdminRepository => {
           name: input.name,
           email: input.email,
           role: input.role,
-          passwordHash: ""
+          passwordHash: "",
+          emailVerifiedAt: null
         }
       });
       return toAdminUser(created);

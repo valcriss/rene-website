@@ -47,6 +47,7 @@ export const createAuthenticationMiddleware = (repo: AuthRepository) =>
       session.revokedAt ||
       session.expiresAt.getTime() <= Date.now() ||
       !user ||
+      user.emailVerifiedAt === null ||
       session.userId !== user.id ||
       session.sessionVersion !== currentVersion ||
       verified.value.sessionVersion !== currentVersion

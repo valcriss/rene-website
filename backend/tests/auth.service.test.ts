@@ -53,7 +53,7 @@ describe("auth service", () => {
     const result = await login(repo, {});
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.errors).toContain("L'email est requis.");
+      expect(result.errors).toContain("L'email est requis ou invalide.");
       expect(result.errors).toContain("Le mot de passe est requis.");
     }
   });
@@ -131,7 +131,7 @@ describe("auth service", () => {
     if (!result.ok) {
       expect(result.code).toBe("validation");
       expect(result.errors).toContain("Le nom est requis.");
-      expect(result.errors).toContain("L'email est requis.");
+      expect(result.errors).toContain("L'email est requis ou invalide.");
       expect(result.errors).toContain("Le mot de passe est requis.");
       expect(result.errors).toContain("La confirmation du mot de passe est requise.");
     }
@@ -159,41 +159,34 @@ describe("auth service", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.errors).toContain("L'email est invalide.");
-      expect(result.errors).toContain("Le mot de passe doit contenir au moins 8 caractères.");
+      expect(result.errors).toContain("L'email est requis ou invalide.");
+      expect(result.errors).toContain("Le mot de passe doit contenir au moins 15 caractères.");
       expect(result.errors).toContain("Les mots de passe ne correspondent pas.");
     }
   });
 
-  it("returns conflict when signup email already exists", async () => {
+  it("returns the same neutral response when signup email already exists", async () => {
     const repo = buildRepo(await hashPassword("secret"));
     const result = await signup(repo, {
       name: "Test",
       email: "test@example.com",
-      password: "secret123",
-      passwordConfirmation: "secret123"
+      password: "correct horse battery",
+      passwordConfirmation: "correct horse battery"
     });
 
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.code).toBe("conflict");
-      expect(result.errors).toEqual(["Un compte existe déjà avec cet email."]);
-    }
+    expect(result).toEqual({ ok: true, value: { user: null, message: expect.any(String) } });
   });
 
-  it("returns conflict when repository rejects duplicate signup", async () => {
+  it("returns a neutral response when repository rejects a duplicate signup", async () => {
     const repo = buildRepo(null, async () => null);
     const result = await signup(repo, {
       name: "Test",
       email: "new@example.com",
-      password: "secret123",
-      passwordConfirmation: "secret123"
+      password: "correct horse battery",
+      passwordConfirmation: "correct horse battery"
     });
 
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.code).toBe("conflict");
-    }
+    expect(result).toEqual({ ok: true, value: { user: null, message: expect.any(String) } });
   });
 
   it("signs up with editor role and token", async () => {
@@ -208,8 +201,8 @@ describe("auth service", () => {
     const result = await signup(repo, {
       name: "New User",
       email: "new@example.com",
-      password: "secret123",
-      passwordConfirmation: "secret123"
+      password: "correct horse battery",
+      passwordConfirmation: "correct horse battery"
     });
 
     expect(result.ok).toBe(true);
@@ -222,8 +215,8 @@ describe("auth service", () => {
       email: "new@example.com",
       passwordHash: expectedHash
     });
-    await expect(verifyPassword("secret123", expectedHash)).resolves.toBe(true);
-    expect(result.value.user.role).toBe("EDITOR");
+    await expect(verifyPassword("correct horse battery", expectedHash)).resolves.toBe(true);
+    expect(result.value.user?.role).toBe("EDITOR");
   });
 
   it("creates the account independently from session configuration", async () => {
@@ -232,8 +225,8 @@ describe("auth service", () => {
     const result = await signup(repo, {
       name: "New User",
       email: "new@example.com",
-      password: "secret123",
-      passwordConfirmation: "secret123"
+      password: "correct horse battery",
+      passwordConfirmation: "correct horse battery"
     });
 
     expect(result.ok).toBe(true);
@@ -247,7 +240,7 @@ describe("auth service", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.code).toBe("validation");
-      expect(result.errors).toContain("L'email est requis.");
+      expect(result.errors).toContain("L'email est requis ou invalide.");
     }
   });
 
@@ -279,7 +272,7 @@ describe("auth service", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.errors).toContain("L'email est invalide.");
+      expect(result.errors).toContain("L'email est requis ou invalide.");
     }
   });
 
@@ -296,7 +289,7 @@ describe("auth service", () => {
     expect(createPasswordResetToken).toHaveBeenCalledWith("user-1", expect.any(String), expect.any(Date));
   });
 
-  it("returns notification errors when password reset email cannot be sent", async () => {
+  it("keeps password reset responses neutral when notification cannot be sent", async () => {
     process.env.NODE_ENV = "production";
     delete process.env.SMTP_HOST;
     delete process.env.SENDER_EMAIL;
@@ -304,11 +297,7 @@ describe("auth service", () => {
 
     const result = await requestPasswordReset(repo, { email: "test@example.com" });
 
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.code).toBe("notification");
-      expect(result.errors).toContain("SMTP_HOST is required");
-    }
+    expect(result.ok).toBe(true);
   });
 
   it("rejects reset-password when payload is not an object", async () => {
@@ -333,7 +322,7 @@ describe("auth service", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.errors).toContain("Le mot de passe doit contenir au moins 8 caractères.");
+      expect(result.errors).toContain("Le mot de passe doit contenir au moins 15 caractères.");
       expect(result.errors).toContain("Les mots de passe ne correspondent pas.");
     }
   });
@@ -357,13 +346,13 @@ describe("auth service", () => {
 
     const result = await resetPassword(repo, {
       token: "valid-token",
-      password: "new-secret-123",
-      passwordConfirmation: "new-secret-123"
+      password: "new-secret-password",
+      passwordConfirmation: "new-secret-password"
     });
 
     expect(result.ok).toBe(true);
     expect(updatePasswordHash).toHaveBeenCalledWith("user-1", expect.any(String));
-    await expect(verifyPassword("new-secret-123", updatePasswordHash.mock.calls[0][1])).resolves.toBe(true);
+    await expect(verifyPassword("new-secret-password", updatePasswordHash.mock.calls[0][1])).resolves.toBe(true);
     expect(deletePasswordResetTokensByUserId).toHaveBeenCalledWith("user-1");
     expect(invalidateUserSessions).toHaveBeenCalledWith("user-1");
   });
@@ -373,8 +362,8 @@ describe("auth service", () => {
 
     const result = await resetPassword(repo, {
       token: "invalid-token",
-      password: "new-secret-123",
-      passwordConfirmation: "new-secret-123"
+      password: "new-secret-password",
+      passwordConfirmation: "new-secret-password"
     });
 
     expect(result.ok).toBe(false);
@@ -396,8 +385,8 @@ describe("auth service", () => {
 
     const result = await resetPassword(repo, {
       token: "expired-token",
-      password: "new-secret-123",
-      passwordConfirmation: "new-secret-123"
+      password: "new-secret-password",
+      passwordConfirmation: "new-secret-password"
     });
 
     expect(result.ok).toBe(false);

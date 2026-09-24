@@ -9,7 +9,7 @@
         {{ t("signup.lead") }}
       </p>
 
-      <div class="mt-6 grid gap-4">
+      <div v-if="!signupVerificationSent" class="mt-6 grid gap-4">
         <label class="text-sm text-slate-600">
           {{ t("common.name") }}
           <input
@@ -31,7 +31,7 @@
         <PasswordField v-model="signupPasswordConfirmation" :label="t('signup.passwordConfirmation')" />
       </div>
 
-      <div class="mt-6 flex flex-wrap gap-3">
+      <div v-if="!signupVerificationSent" class="mt-6 flex flex-wrap gap-3">
         <button
           type="button"
           class="rounded-lg bg-slate-900 px-4 py-2 text-sm text-white"
@@ -48,6 +48,7 @@
         </button>
         <span v-if="authError" class="text-sm text-rose-600">{{ authError }}</span>
       </div>
+      <p v-else class="mt-6 text-sm text-emerald-700">{{ t("signup.verificationSent") }}</p>
 
       <div class="mt-8 border-t border-slate-200 pt-6 text-sm text-slate-600">
         <p>{{ t("signup.alreadyAccount") }}</p>
@@ -74,15 +75,13 @@ import { useAuthStore } from "../stores/auth";
 const router = useRouter();
 const { t } = useI18n();
 const authStore = useAuthStore();
-const { signupName, signupEmail, signupPassword, signupPasswordConfirmation, authError } = storeToRefs(authStore);
+const { signupName, signupEmail, signupPassword, signupPasswordConfirmation, signupVerificationSent, authError } = storeToRefs(authStore);
 
 const handleSignup = async () => {
   authError.value = null;
 
   try {
     await authStore.signupWithPassword();
-    authStore.resetSignupForm();
-    router.push("/backoffice");
   } catch (error) {
     authError.value = error instanceof Error ? error.message : t("signup.errorFallback");
   }

@@ -50,7 +50,7 @@ describe("useAuth", () => {
     expect(auth.password).toBe("");
   });
 
-  it("signup keeps the session only in memory", async () => {
+  it("signup waits for email verification before creating a session", async () => {
     const fetchMock = vi.fn(() =>
       Promise.resolve({
         ok: true,
@@ -70,8 +70,9 @@ describe("useAuth", () => {
 
     await auth.signupWithPassword();
 
-    expect(auth.role).toBe("EDITOR");
-    expect(auth.userEmail).toBe("writer@example.com");
+    expect(auth.role).toBe("VISITOR");
+    expect(auth.userEmail).toBe("");
+    expect(auth.signupVerificationSent).toBe(true);
     expect(window.localStorage.length).toBe(0);
     vi.unstubAllGlobals();
   });
@@ -89,6 +90,7 @@ describe("useAuth", () => {
     expect(auth.signupEmail).toBe("");
     expect(auth.signupPassword).toBe("");
     expect(auth.signupPasswordConfirmation).toBe("");
+    expect(auth.signupVerificationSent).toBe(false);
   });
 
   it("requests a password reset", async () => {

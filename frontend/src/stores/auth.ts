@@ -6,7 +6,8 @@ import {
   logout as logoutApi,
   requestPasswordReset as requestPasswordResetApi,
   resetPassword as resetPasswordApi,
-  signup as signupApi
+  signup as signupApi,
+  verifyEmail as verifyEmailApi
 } from "../api/auth";
 
 export type Role = "VISITOR" | "EDITOR" | "MODERATOR" | "ADMIN";
@@ -23,6 +24,7 @@ export const useAuthStore = defineStore("auth", () => {
   const signupEmail = ref("");
   const signupPassword = ref("");
   const signupPasswordConfirmation = ref("");
+  const signupVerificationSent = ref(false);
   const authError = ref<string | null>(null);
   const passwordResetEmail = ref("");
   const passwordResetToken = ref("");
@@ -75,13 +77,13 @@ export const useAuthStore = defineStore("auth", () => {
 
   const signupWithPassword = async () => {
     authError.value = null;
-    const result = await signupApi({
+    await signupApi({
       name: signupName.value,
       email: signupEmail.value,
       password: signupPassword.value,
       passwordConfirmation: signupPasswordConfirmation.value
     });
-    setSession(result);
+    signupVerificationSent.value = true;
   };
 
   const requestPasswordResetWithEmail = async () => {
@@ -100,6 +102,10 @@ export const useAuthStore = defineStore("auth", () => {
       passwordConfirmation: passwordResetPasswordConfirmation.value
     });
     passwordResetComplete.value = true;
+  };
+
+  const verifyEmailAddress = async (token: string) => {
+    await verifyEmailApi({ token });
   };
 
   const setRole = (nextRole: Role) => {
@@ -125,6 +131,7 @@ export const useAuthStore = defineStore("auth", () => {
     signupEmail.value = "";
     signupPassword.value = "";
     signupPasswordConfirmation.value = "";
+    signupVerificationSent.value = false;
   };
 
   const resetPasswordResetRequestForm = () => {
@@ -153,6 +160,7 @@ export const useAuthStore = defineStore("auth", () => {
     signupEmail,
     signupPassword,
     signupPasswordConfirmation,
+    signupVerificationSent,
     authError,
     passwordResetEmail,
     passwordResetToken,
@@ -170,6 +178,7 @@ export const useAuthStore = defineStore("auth", () => {
     signupWithPassword,
     requestPasswordResetWithEmail,
     confirmPasswordReset,
+    verifyEmailAddress,
     setRole,
     restoreSession,
     logout,

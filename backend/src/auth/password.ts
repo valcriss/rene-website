@@ -7,10 +7,34 @@ const createLegacySha256Hash = (password: string) =>
 const isArgon2Hash = (passwordHash: string) => passwordHash.startsWith("$argon2");
 const isLegacySha256Hash = (passwordHash: string) => /^[a-f0-9]{64}$/i.test(passwordHash);
 
-export const needsPasswordRehash = (passwordHash: string) => isLegacySha256Hash(passwordHash);
+export const minimumPasswordLength = 15;
+export const maximumPasswordLength = 128;
+
+// OWASP's Argon2id baseline: 19 MiB, 2 iterations and a single parallel lane.
+export const argon2idOptions = {
+  type: argon2.argon2id,
+  memoryCost: 19 * 1024,
+  timeCost: 2,
+  parallelism: 1
+} as const;
+
+export const needsPasswordRehash = (passwordHash: string) =>
+  !isArgon2Hash(passwordHash) || argon2.needsRehash(passwordHash, argon2idOptions);
 
 export const hashPassword = async (password: string) =>
-  argon2.hash(password, { type: argon2.argon2id });
+  argon2.hash(password, argon2idOptions);
+
+export const validatePassword = (password: string): string[] => {
+  const length = Array.from(password).length;
+  const errors: string[] = [];
+  if (length < minimumPasswordLength) {
+    errors.push(`Le mot de passe doit contenir au moins ${minimumPasswordLength} caractères.`);
+  }
+  if (length > maximumPasswordLength) {
+    errors.push(`Le mot de passe ne peut pas dépasser ${maximumPasswordLength} caractères.`);
+  }
+  return errors;
+};
 
 export const verifyPassword = async (password: string, passwordHash: string) => {
   if (isArgon2Hash(passwordHash)) {
@@ -25,5 +49,8 @@ export const verifyPassword = async (password: string, passwordHash: string) => 
     return createLegacySha256Hash(password) === passwordHash;
   }
 
+  // Preserve a similar cost for an account awaiting invitation activation and an
+  // unknown account, so that an unusable hash does not become an enumeration oracle.
+  await hashPassword(password);
   return false;
 };

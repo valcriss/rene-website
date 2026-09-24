@@ -183,7 +183,8 @@ describe("createPrismaAdminRepository", () => {
         name: "Alice",
         email: "alice@test",
         role: "EDITOR",
-        passwordHash: ""
+        passwordHash: "",
+        emailVerifiedAt: null
       }
     });
     expect(created.email).toBe("alice@test");

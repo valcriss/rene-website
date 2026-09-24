@@ -4,6 +4,7 @@ import { createAuthRouter } from "../src/auth/routes";
 import { AuthRepository } from "../src/auth/repository";
 import { hashPassword } from "../src/auth/password";
 import { hashPasswordResetToken } from "../src/auth/resetToken";
+import { hashEmailVerificationToken } from "../src/auth/emailVerification";
 
 const buildRepo = (
   passwordHash: string | null,
@@ -50,7 +51,7 @@ describe("auth routes", () => {
     const response = await request(app).post("/api/auth/login").send({});
 
     expect(response.status).toBe(400);
-    expect(response.body.errors).toContain("L'email est requis.");
+    expect(response.body.errors).toContain("L'email est requis ou invalide.");
   });
 
   it("returns 401 on invalid credentials", async () => {
@@ -94,7 +95,7 @@ describe("auth routes", () => {
     expect(response.body.errors).toContain("Le nom est requis.");
   });
 
-  it("returns 409 on duplicate signup email", async () => {
+  it("returns a neutral accepted response on duplicate signup email", async () => {
     const app = express();
     app.use(express.json());
     app.use("/api", createAuthRouter(buildRepo(await hashPassword("secret"))));
@@ -102,15 +103,15 @@ describe("auth routes", () => {
     const response = await request(app).post("/api/auth/signup").send({
       name: "Test",
       email: "test@example.com",
-      password: "secret123",
-      passwordConfirmation: "secret123"
+      password: "correct horse battery",
+      passwordConfirmation: "correct horse battery"
     });
 
-    expect(response.status).toBe(409);
-    expect(response.body.errors).toContain("Un compte existe déjà avec cet email.");
+    expect(response.status).toBe(202);
+    expect(response.body.message).toContain("Si cette adresse");
   });
 
-  it("returns session payload on signup success", async () => {
+  it("requests email verification on signup success", async () => {
     const app = express();
     app.use(express.json());
     app.use("/api", createAuthRouter(buildRepo(null)));
@@ -118,13 +119,12 @@ describe("auth routes", () => {
     const response = await request(app).post("/api/auth/signup").send({
       name: "New User",
       email: "new@example.com",
-      password: "secret123",
-      passwordConfirmation: "secret123"
+      password: "correct horse battery",
+      passwordConfirmation: "correct horse battery"
     });
 
-    expect(response.status).toBe(201);
-    expect(response.body.token).toBeUndefined();
-    expect(response.body.user.role).toBe("EDITOR");
+    expect(response.status).toBe(202);
+    expect(response.body.message).toContain("Si cette adresse");
   });
 
   it("returns 400 on invalid forgot-password payload", async () => {
@@ -135,7 +135,7 @@ describe("auth routes", () => {
     const response = await request(app).post("/api/auth/forgot-password").send({});
 
     expect(response.status).toBe(400);
-    expect(response.body.errors).toContain("L'email est requis.");
+    expect(response.body.errors).toContain("L'email est requis ou invalide.");
   });
 
   it("returns 200 on forgot-password request", async () => {
@@ -151,7 +151,7 @@ describe("auth routes", () => {
     expect(response.body.message).toContain("Si un compte existe");
   });
 
-  it("returns 500 when forgot-password email cannot be sent", async () => {
+  it("keeps forgot-password response neutral when email cannot be sent", async () => {
     process.env.NODE_ENV = "production";
     delete process.env.SMTP_HOST;
     delete process.env.SENDER_EMAIL;
@@ -163,8 +163,8 @@ describe("auth routes", () => {
       email: "test@example.com"
     });
 
-    expect(response.status).toBe(500);
-    expect(response.body.errors).toContain("SMTP_HOST is required");
+    expect(response.status).toBe(200);
+    expect(response.body.message).toContain("Si un compte existe");
   });
 
   it("returns 400 on invalid reset-password payload", async () => {
@@ -199,11 +199,63 @@ describe("auth routes", () => {
 
     const response = await request(app).post("/api/auth/reset-password").send({
       token: "valid-token",
-      password: "new-secret-123",
-      passwordConfirmation: "new-secret-123"
+      password: "new-secret-password",
+      passwordConfirmation: "new-secret-password"
     });
 
     expect(response.status).toBe(200);
     expect(response.body.message).toBe("Le mot de passe a été réinitialisé.");
+  });
+
+  it("throttles sensitive auth requests with a retry hint", async () => {
+    const app = express();
+    app.use(express.json());
+    const repo = buildRepo(await hashPassword("secret"));
+    repo.consumeRateLimit = async () => ({ allowed: false, retryAfterSeconds: 9 });
+    app.use("/api", createAuthRouter(repo));
+
+    const response = await request(app).post("/api/auth/login").send({
+      email: "test@example.com",
+      password: "secret"
+    });
+    expect(response.status).toBe(429);
+    expect(response.headers["retry-after"]).toBe("9");
+  });
+
+  it("verifies a public email token exactly once", async () => {
+    const app = express();
+    app.use(express.json());
+    const repo = buildRepo(await hashPassword("secret"));
+    repo.getEmailVerificationTokenByHash = async (tokenHash) => tokenHash === hashEmailVerificationToken("valid")
+      ? { id: "verification", userId: "user-1", expiresAt: new Date(Date.now() + 60_000) }
+      : null;
+    repo.markEmailVerified = jest.fn(async () => undefined);
+    repo.deleteEmailVerificationTokensByUserId = jest.fn(async () => undefined);
+    app.use("/api", createAuthRouter(repo));
+
+    expect((await request(app).post("/api/auth/verify-email").send({ token: "valid" })).status).toBe(200);
+    expect((await request(app).post("/api/auth/verify-email").send({ token: "invalid" })).status).toBe(400);
+  });
+
+  it("applies the same throttle response to every public auth mutation", async () => {
+    const app = express();
+    app.use(express.json());
+    const repo = buildRepo(await hashPassword("secret"));
+    repo.consumeRateLimit = async () => ({ allowed: false, retryAfterSeconds: 1 });
+    app.use("/api", createAuthRouter(repo));
+
+    for (const path of ["signup", "forgot-password", "reset-password", "verify-email"]) {
+      const response = await request(app).post(`/api/auth/${path}`).send({});
+      expect(response.status).toBe(429);
+    }
+  });
+
+  it("accepts missing optional auth fields as validation input without crashing", async () => {
+    const app = express();
+    app.use(express.json());
+    app.use("/api", createAuthRouter(buildRepo(await hashPassword("secret"))));
+    expect((await request(app).post("/api/auth/forgot-password")).status).toBe(400);
+    expect((await request(app).post("/api/auth/reset-password")).status).toBe(400);
+    expect((await request(app).post("/api/auth/verify-email")).status).toBe(400);
   });
 });
