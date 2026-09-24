@@ -204,7 +204,7 @@ describe("events routes", () => {
     const app = createApp();
     const response = await request(app)
       .put("/api/events/missing")
-      .set("Authorization", authHeader("EDITOR"))
+      .set("Authorization", authHeader("ADMIN"))
       .send(validPayload);
 
     expect(response.status).toBe(404);
@@ -223,6 +223,67 @@ describe("events routes", () => {
       .send({});
 
     expect(response.status).toBe(400);
+  });
+
+  it("blocks horizontal IDOR attempts without exposing whether the event exists", async () => {
+    const app = createApp();
+    const ownerHeader = authHeader("EDITOR", "editor-owner");
+    const otherHeader = authHeader("EDITOR", "editor-other");
+    const createResponse = await request(app)
+      .post("/api/events")
+      .set("Authorization", ownerHeader)
+      .send(validPayload);
+    const id = createResponse.body.id;
+
+    const [readResponse, updateResponse, submitResponse, deleteResponse, missingResponse] = await Promise.all([
+      request(app).get(`/api/events/${id}`).set("Authorization", otherHeader),
+      request(app)
+        .put(`/api/events/${id}`)
+        .set("Authorization", otherHeader)
+        .send({ ...validPayload, title: "Titre détourné" }),
+      request(app).post(`/api/events/${id}/submit`).set("Authorization", otherHeader),
+      request(app).delete(`/api/events/${id}`).set("Authorization", otherHeader),
+      request(app).delete("/api/events/does-not-exist").set("Authorization", otherHeader)
+    ]);
+
+    for (const response of [readResponse, updateResponse, submitResponse, deleteResponse, missingResponse]) {
+      expect(response.status).toBe(403);
+      expect(response.body).toEqual({ errors: ["Action non autorisée."] });
+    }
+
+    const ownerReadResponse = await request(app).get(`/api/events/${id}`).set("Authorization", ownerHeader);
+    expect(ownerReadResponse.status).toBe(200);
+    expect(ownerReadResponse.body.title).toBe(validPayload.title);
+  });
+
+  it("filters back-office reads by ownership and moderation responsibility", async () => {
+    const app = createApp();
+    const firstEditor = authHeader("EDITOR", "editor-one");
+    const secondEditor = authHeader("EDITOR", "editor-two");
+    const first = await request(app)
+      .post("/api/events")
+      .set("Authorization", firstEditor)
+      .send({ ...validPayload, title: "Premier brouillon" });
+    const second = await request(app)
+      .post("/api/events")
+      .set("Authorization", secondEditor)
+      .send({ ...validPayload, title: "Second brouillon" });
+
+    const editorList = await request(app).get("/api/events").set("Authorization", firstEditor);
+    const moderatorDraftList = await request(app)
+      .get("/api/events")
+      .set("Authorization", authHeader("MODERATOR", "moderator-one"));
+    const adminList = await request(app).get("/api/events").set("Authorization", authHeader("ADMIN"));
+
+    expect(editorList.body.map((event: { id: string }) => event.id)).toEqual([first.body.id]);
+    expect(moderatorDraftList.body).toEqual([]);
+    expect(adminList.body).toHaveLength(2);
+
+    await request(app).post(`/api/events/${second.body.id}/submit`).set("Authorization", secondEditor);
+    const moderatorPendingList = await request(app)
+      .get("/api/events")
+      .set("Authorization", authHeader("MODERATOR", "moderator-one"));
+    expect(moderatorPendingList.body.map((event: { id: string }) => event.id)).toEqual([second.body.id]);
   });
 
   it("submits, publishes, and rejects pending content", async () => {
@@ -342,7 +403,7 @@ describe("events routes", () => {
     const app = createApp();
     const response = await request(app)
       .delete("/api/events/missing")
-      .set("Authorization", authHeader("EDITOR"));
+      .set("Authorization", authHeader("ADMIN"));
 
     expect(response.status).toBe(404);
     expect(response.body.errors).toContain("Événement introuvable.");
@@ -352,7 +413,7 @@ describe("events routes", () => {
     const app = createApp();
     const submitResponse = await request(app)
       .post("/api/events/missing/submit")
-      .set("Authorization", authHeader("EDITOR"));
+      .set("Authorization", authHeader("ADMIN"));
     const publishResponse = await request(app)
       .post("/api/events/missing/publish")
       .set("Authorization", authHeader("MODERATOR"));
@@ -440,7 +501,7 @@ describe("events routes", () => {
 
     const archiveResponse = await request(app)
       .post(`/api/events/${id}/archive`)
-      .set("Authorization", authHeader("MODERATOR"));
+      .set("Authorization", authHeader("ADMIN"));
 
     expect(archiveResponse.status).toBe(200);
     expect(typeof archiveResponse.body.archivedAt).toBe("string");
@@ -463,7 +524,7 @@ describe("events routes", () => {
 
     const response = await request(app)
       .post(`/api/events/${id}/archive`)
-      .set("Authorization", authHeader("MODERATOR"));
+      .set("Authorization", authHeader("ADMIN"));
 
     expect(response.status).toBe(400);
   });
@@ -472,10 +533,10 @@ describe("events routes", () => {
     const app = createApp();
     const archiveResponse = await request(app)
       .post("/api/events/missing/archive")
-      .set("Authorization", authHeader("MODERATOR"));
+      .set("Authorization", authHeader("ADMIN"));
     const unarchiveResponse = await request(app)
       .post("/api/events/missing/unarchive")
-      .set("Authorization", authHeader("MODERATOR"));
+      .set("Authorization", authHeader("ADMIN"));
 
     expect(archiveResponse.status).toBe(404);
     expect(unarchiveResponse.status).toBe(404);

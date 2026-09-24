@@ -1,6 +1,7 @@
 import { AdminRepository } from "../admin/repository";
 import { listAdminCategories } from "../admin/service";
 import { CategorySubscriptionRepository } from "./repository";
+import { AuthenticatedActor } from "../auth/types";
 
 export type CategorySubscriptionView = {
   id: string;
@@ -15,11 +16,11 @@ type ServiceResult<T> =
 export const listCategorySubscriptions = async (
   subscriptionRepo: CategorySubscriptionRepository,
   adminRepo: AdminRepository,
-  userId: string
+  actor: AuthenticatedActor
 ): Promise<CategorySubscriptionView[]> => {
   const [categories, unsubscribedIds] = await Promise.all([
     listAdminCategories(adminRepo),
-    subscriptionRepo.listUnsubscribedCategoryIds(userId)
+    subscriptionRepo.listUnsubscribedCategoryIds(actor.id)
   ]);
 
   return categories.map((category) => ({
@@ -31,7 +32,7 @@ export const listCategorySubscriptions = async (
 
 export const setCategorySubscription = async (
   subscriptionRepo: CategorySubscriptionRepository,
-  userId: string,
+  actor: AuthenticatedActor,
   categoryId: string,
   subscribed: unknown
 ): Promise<ServiceResult<null>> => {
@@ -39,6 +40,6 @@ export const setCategorySubscription = async (
     return { ok: false, errors: ["subscribed doit être un booléen."] };
   }
 
-  await subscriptionRepo.setSubscription(userId, categoryId, subscribed);
+  await subscriptionRepo.setSubscription(actor.id, categoryId, subscribed);
   return { ok: true, value: null };
 };

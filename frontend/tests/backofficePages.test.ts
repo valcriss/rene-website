@@ -272,8 +272,8 @@ describe("BackofficeEventsPage", () => {
     expect(within(publishedCard as HTMLElement).queryByText("Supprimer")).not.toBeInTheDocument();
   });
 
-  it("shows other articles for moderators and excludes owned items from that block", async () => {
-    const { router, pinia } = await setup("/backoffice/events", "MODERATOR");
+  it("shows other articles for administrators and excludes owned items from that block", async () => {
+    const { router, pinia } = await setup("/backoffice/events", "ADMIN");
     const eventsStore = useEventsStore(pinia);
     eventsStore.events = [
       buildEvent({ id: "1", status: "DRAFT", title: "Mon brouillon" }),

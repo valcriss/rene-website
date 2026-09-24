@@ -1,4 +1,18 @@
-import { archiveEvent, createEvent, deleteEvent, getEvent, listEvents, publishEvent, rejectEvent, submitEvent, unarchiveEvent, updateEvent, updateEventFeatured } from "../src/events/service";
+import {
+  archiveEvent as archiveEventForActor,
+  createEvent as createEventForActor,
+  deleteEvent,
+  EventActor,
+  getEvent,
+  getEventForActor,
+  listEvents,
+  publishEvent as publishEventForActor,
+  rejectEvent as rejectEventForActor,
+  submitEvent as submitEventForActor,
+  unarchiveEvent as unarchiveEventForActor,
+  updateEvent as updateEventForActor,
+  updateEventFeatured as updateEventFeaturedForActor
+} from "../src/events/service";
 import { EventRepository } from "../src/events/repository";
 import { Event, EventOccurrence, EventOccurrenceInput } from "../src/events/types";
 import { deleteUploadIfLocal } from "../src/uploads/storage";
@@ -14,6 +28,27 @@ const toStoredOccurrences = (occurrences: EventOccurrenceInput[]): EventOccurren
 jest.mock("../src/uploads/storage", () => ({
   deleteUploadIfLocal: jest.fn()
 }));
+
+const adminActor: EventActor = { id: "admin-1", role: "ADMIN" };
+
+// Existing service tests focus on validation and state transitions. These adapters keep
+// their intent explicit while the production API requires an authenticated actor.
+const createEvent = (repo: EventRepository, input: unknown, actor = adminActor) =>
+  createEventForActor(repo, input, actor);
+const updateEvent = (repo: EventRepository, id: string, input: unknown, actor = adminActor) =>
+  updateEventForActor(repo, id, input, actor);
+const submitEvent = (repo: EventRepository, id: string, actor = adminActor) =>
+  submitEventForActor(repo, id, actor);
+const publishEvent = (repo: EventRepository, id: string, featured: unknown = false, actor = adminActor) =>
+  publishEventForActor(repo, id, actor, featured);
+const updateEventFeatured = (repo: EventRepository, id: string, featured: unknown, actor = adminActor) =>
+  updateEventFeaturedForActor(repo, id, featured, actor);
+const archiveEvent = (repo: EventRepository, id: string, actor = adminActor) =>
+  archiveEventForActor(repo, id, actor);
+const unarchiveEvent = (repo: EventRepository, id: string, actor = adminActor) =>
+  unarchiveEventForActor(repo, id, actor);
+const rejectEvent = (repo: EventRepository, id: string, reason: unknown, actor = adminActor) =>
+  rejectEventForActor(repo, id, reason, actor);
 
 const baseOccurrence: EventOccurrence = {
   id: "occ-1",
@@ -389,7 +424,7 @@ describe("event services", () => {
 
   it("publishEvent returns not found", async () => {
     const repo = createRepo(null);
-    const result = await publishEvent(repo, "missing");
+    const result = await publishEventForActor(repo, "missing", adminActor);
     expect(result.ok).toBe(false);
   });
 
@@ -554,7 +589,7 @@ describe("event services", () => {
 
   it("createEvent returns error for empty creator", async () => {
     const repo = createRepo(baseEvent);
-    const result = await createEvent(repo, baseEvent, "   ");
+    const result = await createEvent(repo, baseEvent, { id: "   ", role: "EDITOR" });
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.errors).toContain("Le créateur est requis.");
@@ -813,13 +848,13 @@ describe("event services", () => {
 
   it("deleteEvent returns not found", async () => {
     const repo = createRepo(null);
-    const result = await deleteEvent(repo, "missing", { role: "EDITOR", userId: "owner-1" });
+    const result = await deleteEvent(repo, "missing", { role: "EDITOR", id: "owner-1" });
     expect(result.ok).toBe(false);
   });
 
   it("deleteEvent lets editors remove their own drafts", async () => {
     const repo = createRepo({ ...baseEvent, createdByUserId: "owner-1" });
-    const result = await deleteEvent(repo, "id", { role: "EDITOR", userId: "owner-1" });
+    const result = await deleteEvent(repo, "id", { role: "EDITOR", id: "owner-1" });
     expect(result.ok).toBe(true);
     expect(deleteUploadIfLocal).toHaveBeenCalledWith(baseEvent.image);
   });
@@ -831,7 +866,7 @@ describe("event services", () => {
       status: "PUBLISHED",
       publishedAt: "2026-01-01T00:00:00.000Z"
     });
-    const result = await deleteEvent(repo, "id", { role: "EDITOR", userId: "owner-1" });
+    const result = await deleteEvent(repo, "id", { role: "EDITOR", id: "owner-1" });
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.errors).toContain("Suppression non autorisée.");
@@ -840,21 +875,21 @@ describe("event services", () => {
 
   it("deleteEvent forbids editors from removing drafts they do not own", async () => {
     const repo = createRepo({ ...baseEvent, createdByUserId: "owner-2" });
-    const result = await deleteEvent(repo, "id", { role: "EDITOR", userId: "owner-1" });
+    const result = await deleteEvent(repo, "id", { role: "EDITOR", id: "owner-1" });
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.errors).toContain("Suppression non autorisée.");
+      expect(result.errors).toContain("Action non autorisée.");
     }
   });
 
-  it("deleteEvent lets moderators remove published events", async () => {
+  it("deleteEvent lets administrators remove published events", async () => {
     const repo = createRepo({
       ...baseEvent,
       createdByUserId: "owner-1",
       status: "PUBLISHED",
       publishedAt: "2026-01-01T00:00:00.000Z"
     });
-    const result = await deleteEvent(repo, "id", { role: "MODERATOR", userId: null });
+    const result = await deleteEvent(repo, "id", adminActor);
     expect(result.ok).toBe(true);
   });
 
@@ -863,7 +898,7 @@ describe("event services", () => {
       list: async () => [],
       delete: async () => false
     });
-    const result = await deleteEvent(repo, "id", { role: "MODERATOR", userId: null });
+    const result = await deleteEvent(repo, "id", adminActor);
     expect(result.ok).toBe(false);
   });
 
@@ -1318,5 +1353,63 @@ describe("event services", () => {
     if (!result.ok) {
       expect(result.errors).toContain("Révision non soumise.");
     }
+  });
+
+  it("filters event reads according to ownership, publication and moderation state", async () => {
+    const ownDraft = { ...baseEvent, id: "own", createdByUserId: "editor-1" };
+    const foreignDraft = { ...baseEvent, id: "foreign", createdByUserId: "editor-2" };
+    const published = { ...foreignDraft, id: "published", status: "PUBLISHED" as const };
+    const pending = { ...foreignDraft, id: "pending", status: "PENDING" as const };
+    const pendingRevision = {
+      ...foreignDraft,
+      id: "pending-revision",
+      pendingRevision: {
+        ...foreignDraft,
+        id: "revision",
+        eventId: "pending-revision",
+        status: "PENDING" as const
+      }
+    };
+    const repo = createRepo(null, {
+      list: async () => [ownDraft, foreignDraft, published, pending, pendingRevision]
+    });
+
+    await expect(listEvents(repo, { id: "editor-1", role: "EDITOR" })).resolves.toEqual([ownDraft, published]);
+    await expect(listEvents(repo, { id: "moderator-1", role: "MODERATOR" })).resolves.toEqual([
+      published,
+      pending,
+      pendingRevision
+    ]);
+    await expect(listEvents(repo, adminActor)).resolves.toHaveLength(5);
+  });
+
+  it("authorizes individual reads without leaking a foreign draft", async () => {
+    const foreignDraft = { ...baseEvent, createdByUserId: "editor-2" };
+    const repo = createRepo(foreignDraft);
+
+    const denied = await getEventForActor(repo, "id", { id: "editor-1", role: "EDITOR" });
+    expect(denied).toEqual({ ok: false, errors: ["Action non autorisée."], status: 403 });
+
+    const ownerRead = await getEventForActor(repo, "id", { id: "editor-2", role: "EDITOR" });
+    expect(ownerRead).toEqual({ ok: true, value: foreignDraft });
+
+    await expect(getEventForActor(createRepo(null), "missing", adminActor)).resolves.toEqual({
+      ok: false,
+      errors: ["Événement introuvable."],
+      status: 404
+    });
+  });
+
+  it("enforces the vertical role boundary on privileged event actions", async () => {
+    const repo = createRepo({ ...baseEvent, createdByUserId: "editor-1" });
+    const editor = { id: "editor-1", role: "EDITOR" as const };
+    const moderator = { id: "moderator-1", role: "MODERATOR" as const };
+
+    await expect(publishEvent(repo, "id", false, editor)).resolves.toMatchObject({ ok: false, status: 403 });
+    await expect(rejectEvent(repo, "id", "Motif", editor)).resolves.toMatchObject({ ok: false, status: 403 });
+    await expect(updateEventFeatured(repo, "id", true, moderator)).resolves.toMatchObject({ ok: false, status: 403 });
+    await expect(archiveEvent(repo, "id", moderator)).resolves.toMatchObject({ ok: false, status: 403 });
+    await expect(unarchiveEvent(repo, "id", moderator)).resolves.toMatchObject({ ok: false, status: 403 });
+    await expect(updateEvent(repo, "id", baseEvent, moderator)).resolves.toMatchObject({ ok: false, status: 403 });
   });
 });

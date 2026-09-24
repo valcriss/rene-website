@@ -118,7 +118,9 @@ const parseApiError = async (response: Response, fallback: string) => {
 };
 
 export const fetchEvents = async (): Promise<EventItem[]> => {
-  const response = await fetch("/api/events");
+  const response = await fetch("/api/events", {
+    headers: buildAuthHeaders(undefined, false)
+  });
   if (!response.ok) {
     throw new Error("Impossible de charger les événements");
   }
