@@ -183,6 +183,8 @@
                     </div>
                   </div>
                 </div>
+
+                <ShareEvent :url="shareUrl" :title="detailEvent.title" />
               </section>
 
               <section class="rounded-[2rem] border border-sky-100 bg-gradient-to-br from-white to-sky-50/70 p-5 shadow-[0_20px_72px_-54px_rgba(30,41,59,0.18)] sm:p-6">
@@ -327,15 +329,19 @@ import {
 import EventMap from "../EventMap.vue";
 import LoadingSpinner from "../LoadingSpinner.vue";
 import RelatedEvents from "./RelatedEvents.vue";
+import ShareEvent from "./ShareEvent.vue";
 import type { EventItem, SocialLinkType } from "../../api/events";
 import { useAudiencesStore } from "../../stores/audiences";
 import { useCategoriesStore } from "../../stores/categories";
 import { useEventsStore } from "../../stores/events";
+import { useSiteUrl } from "../../composables/useSiteUrl";
 import { getEventAddressLabel, getEventLocationLabel } from "../../utils/eventLocation";
 import { formatPhoneNumber } from "../../utils/formatters";
 import { isEventArchived } from "../../utils/eventArchive";
 import { formatEventDateBadge, getEarliestOccurrence, getEventLocationSummary, sortOccurrences } from "../../utils/occurrences";
 import { buildEventMapPins } from "../../utils/mapPins";
+import { getEventDetailPath } from "../../utils/eventLinks";
+import { toAbsoluteUrl } from "../../utils/seo";
 
 type CategoryTheme = {
   backgroundColor: string;
@@ -363,6 +369,7 @@ const audiencesStore = useAudiencesStore();
 const { isLoading, imageErrorById } = storeToRefs(eventsStore);
 const { categories } = storeToRefs(categoriesStore);
 const { audiences } = storeToRefs(audiencesStore);
+const siteUrl = useSiteUrl();
 
 const detailEvent = computed(() => {
   if (props.event) {
@@ -412,6 +419,13 @@ const detailUpdatedAtLabel = computed(() => formatUpdatedAtLabel(detailEvent.val
 const detailOccurrences = computed(() => sortOccurrences(detailEvent.value?.occurrences ?? []));
 const detailPrimaryOccurrence = computed(() => getEarliestOccurrence(detailEvent.value?.occurrences ?? []));
 const detailMapPins = computed(() => (detailEvent.value ? buildEventMapPins([detailEvent.value]) : []));
+
+// Sharing must always point at the canonical, indexable URL (issue #54) — the same slug-based
+// path used for canonical/OG tags (usePageSeo) — never the current window location, which could
+// carry a legacy /event/:id path pending its 301 redirect.
+const shareUrl = computed(() =>
+  detailEvent.value ? toAbsoluteUrl(siteUrl, getEventDetailPath(detailEvent.value)) : ""
+);
 
 const detailDateBadge = computed(() => formatEventDateBadge(detailEvent.value?.occurrences ?? []));
 
