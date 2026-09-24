@@ -2,6 +2,8 @@ import express from "express";
 import request from "supertest";
 import { EventRepository } from "../src/events/repository";
 import { AuthRepository } from "../src/auth/repository";
+import { authenticateOptional } from "../src/auth/middleware";
+import { authHeader } from "./authTestUtils";
 
 jest.mock("../src/events/service", () => {
   const actual = jest.requireActual("../src/events/service");
@@ -46,11 +48,12 @@ describe("events routes delete errors", () => {
     };
     const app = express();
     app.use(express.json());
+    app.use(authenticateOptional);
     app.use("/api", createEventRouter(repo, authRepo));
 
     const response = await request(app)
       .delete("/api/events/whatever")
-      .set("x-user-role", "EDITOR");
+      .set("Authorization", authHeader("EDITOR"));
 
     expect(response.status).toBe(400);
     expect(response.body.errors).toContain("Autre erreur");
@@ -76,11 +79,12 @@ describe("events routes delete errors", () => {
     };
     const app = express();
     app.use(express.json());
+    app.use(authenticateOptional);
     app.use("/api", createEventRouter(repo, authRepo));
 
     const response = await request(app)
       .post("/api/events/whatever/submit")
-      .set("x-user-role", "EDITOR");
+      .set("Authorization", authHeader("EDITOR"));
 
     expect(response.status).toBe(400);
     expect(response.body.errors).toContain("Autre erreur");

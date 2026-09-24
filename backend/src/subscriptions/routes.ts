@@ -3,17 +3,9 @@ import { requireRole } from "../auth/roles";
 import { AdminRepository } from "../admin/repository";
 import { CategorySubscriptionRepository } from "./repository";
 import { listCategorySubscriptions, setCategorySubscription } from "./service";
+import { getAuthenticatedUser } from "../auth/request";
 
 type AsyncHandler = (req: Request, res: Response) => Promise<void>;
-
-const getRequestUserId = (req: Request) => {
-  const headerUserId = req.header("x-user-id");
-  if (req.user?.id) {
-    return req.user.id;
-  }
-
-  return typeof headerUserId === "string" && headerUserId.trim().length > 0 ? headerUserId.trim() : null;
-};
 
 const withErrorHandling = (handler: AsyncHandler) => async (req: Request, res: Response) => {
   try {
@@ -35,11 +27,7 @@ export const createSubscriptionsRouter = (
     "/categories",
     requireRole(["MODERATOR", "ADMIN"]),
     withErrorHandling(async (req, res) => {
-      const userId = getRequestUserId(req);
-      if (!userId) {
-        res.status(401).json({ message: "Authentication required" });
-        return;
-      }
+      const userId = getAuthenticatedUser(req).id;
 
       const subscriptions = await listCategorySubscriptions(subscriptionRepo, adminRepo, userId);
       res.json(subscriptions);
@@ -50,11 +38,7 @@ export const createSubscriptionsRouter = (
     "/categories/:categoryId",
     requireRole(["MODERATOR", "ADMIN"]),
     withErrorHandling(async (req, res) => {
-      const userId = getRequestUserId(req);
-      if (!userId) {
-        res.status(401).json({ message: "Authentication required" });
-        return;
-      }
+      const userId = getAuthenticatedUser(req).id;
 
       const result = await setCategorySubscription(subscriptionRepo, userId, req.params.categoryId, req.body?.subscribed);
       if (!result.ok) {

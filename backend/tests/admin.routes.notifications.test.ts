@@ -2,6 +2,8 @@ import express from "express";
 import request from "supertest";
 import { AdminRepository } from "../src/admin/repository";
 import { AuthRepository } from "../src/auth/repository";
+import { authenticateOptional } from "../src/auth/middleware";
+import { authHeader } from "./authTestUtils";
 
 jest.mock("../src/notifications/service", () => ({
   notifyUserInvited: jest.fn(async () => ({ ok: false, errors: ["boom"] }))
@@ -32,11 +34,12 @@ describe("admin routes invitation warnings", () => {
 
     const app = express();
     app.use(express.json());
+    app.use(authenticateOptional);
     app.use("/api/admin", createAdminRouter(repo, authRepo));
 
     const response = await request(app)
       .post("/api/admin/users")
-      .set("x-user-role", "ADMIN")
+      .set("Authorization", authHeader("ADMIN"))
       .send({ name: "Marie", email: "marie@example.com", role: "EDITOR" });
 
     expect(response.status).toBe(201);

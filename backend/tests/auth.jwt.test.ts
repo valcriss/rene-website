@@ -67,6 +67,15 @@ describe("auth jwt", () => {
     expect(verifyResult.ok).toBe(false);
   });
 
+  it("rejects token with an unknown role", () => {
+    const token = jwt.sign(
+      { sub: "user-1", email: "test@example.com", name: "Test", role: "SUPER_ADMIN" },
+      process.env.JWT_SECRET as string
+    );
+    const verifyResult = verifyUserToken(token);
+    expect(verifyResult.ok).toBe(false);
+  });
+
   it("rejects token with empty payload", () => {
     const token = jwt.sign({}, process.env.JWT_SECRET as string);
     const verifyResult = verifyUserToken(token);
