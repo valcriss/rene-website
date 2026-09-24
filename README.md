@@ -50,3 +50,6 @@ La politique CSP, les headers HTTP et le déploiement HTTPS sont décrits dans
 
 Le durcissement des conteneurs, la configuration du reverse proxy et la vérification
 des artefacts Photon sont documentés dans [docs/security-containers.md](docs/security-containers.md).
+
+Les scans CI/CD, les seuils bloquants et la procédure de triage sont décrits dans
+[docs/security-ci-triage.md](docs/security-ci-triage.md).
