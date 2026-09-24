@@ -38,6 +38,9 @@ export type EventPendingRevision = {
   title: string;
   content: string | null;
   image: string | null;
+  imageAlt?: string | null;
+  seoTitleOverride?: string | null;
+  seoDescriptionOverride?: string | null;
   createdByUserId?: string | null;
   categoryId: string | null;
   audienceId: string | null;
@@ -62,6 +65,9 @@ export type EventItem = {
   title: string;
   content: string | null;
   image: string | null;
+  imageAlt?: string | null;
+  seoTitleOverride?: string | null;
+  seoDescriptionOverride?: string | null;
   createdByUserId?: string | null;
   categoryId: string | null;
   audienceId: string | null;
@@ -90,6 +96,9 @@ export type CreateEventPayload = {
   title: string;
   content?: string | null;
   image?: string | null;
+  imageAlt?: string | null;
+  seoTitleOverride?: string | null;
+  seoDescriptionOverride?: string | null;
   categoryId?: string | null;
   audienceId?: string | null;
   occurrences: EventOccurrenceInput[];

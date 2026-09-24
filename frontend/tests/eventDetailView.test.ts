@@ -539,4 +539,55 @@ describe("EventDetailView", () => {
     expect(wrapper.find("a[download='evenement-occ-1.ics']").exists()).toBe(true);
     expect(wrapper.find("a[download='evenement-occ-2.ics']").exists()).toBe(true);
   });
+
+  it("uses the image alt text when available, falling back to the title otherwise", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const categoriesStore = useCategoriesStore();
+    categoriesStore.categories = [{ id: "music", name: "Musique", createdAt: "", updatedAt: "" }];
+
+    const baseEvent = {
+      id: "1",
+      title: "Concert",
+      content: "<p>Texte</p>",
+      image: "img",
+      categoryId: "music",
+      audienceId: null,
+      occurrences: [
+        {
+          id: "occ-1",
+          eventStartAt: "2026-01-15T20:00:00.000Z",
+          eventEndAt: "2026-01-15T22:00:00.000Z",
+          allDay: false,
+          venueName: "Salle",
+          address: "",
+          postalCode: "",
+          city: "Descartes",
+          latitude: 46.97,
+          longitude: 0.7
+        }
+      ],
+      organizerName: "Org",
+      status: "PUBLISHED" as const,
+      publishedAt: null,
+      publicationEndAt: "2026-01-15T22:00:00.000Z",
+      rejectionReason: null,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z"
+    };
+
+    const withAlt = mount(EventDetailView, {
+      props: { eventId: "1", event: { ...baseEvent, imageAlt: "Musiciens sur scène" } },
+      global: { plugins: [pinia], stubs: { EventMap: { template: "<div></div>" } } }
+    });
+    await withAlt.vm.$nextTick();
+    expect(withAlt.find("img").attributes("alt")).toBe("Musiciens sur scène");
+
+    const withoutAlt = mount(EventDetailView, {
+      props: { eventId: "1", event: baseEvent },
+      global: { plugins: [pinia], stubs: { EventMap: { template: "<div></div>" } } }
+    });
+    await withoutAlt.vm.$nextTick();
+    expect(withoutAlt.find("img").attributes("alt")).toBe("Concert");
+  });
 });

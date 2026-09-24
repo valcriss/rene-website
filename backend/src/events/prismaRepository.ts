@@ -52,6 +52,9 @@ type PrismaEvent = {
   title: string;
   content: string | null;
   image: string | null;
+  imageAlt: string | null;
+  seoTitleOverride: string | null;
+  seoDescriptionOverride: string | null;
   createdByUserId?: string | null;
   categoryId: string | null;
   audienceId: string | null;
@@ -82,6 +85,9 @@ type PrismaEventRevision = {
   title: string;
   content: string | null;
   image: string | null;
+  imageAlt: string | null;
+  seoTitleOverride: string | null;
+  seoDescriptionOverride: string | null;
   createdByUserId?: string | null;
   categoryId: string | null;
   audienceId: string | null;
@@ -138,6 +144,9 @@ const toRevision = (data: PrismaEventRevision): EventRevision => ({
   title: data.title,
   content: data.content,
   image: data.image,
+  imageAlt: data.imageAlt,
+  seoTitleOverride: data.seoTitleOverride,
+  seoDescriptionOverride: data.seoDescriptionOverride,
   createdByUserId: data.createdByUserId ?? null,
   categoryId: data.categoryId,
   audienceId: data.audienceId,
@@ -162,6 +171,9 @@ const toEvent = (data: PrismaEvent): Event => ({
   title: data.title,
   content: data.content,
   image: data.image,
+  imageAlt: data.imageAlt,
+  seoTitleOverride: data.seoTitleOverride,
+  seoDescriptionOverride: data.seoDescriptionOverride,
   createdByUserId: data.createdByUserId ?? null,
   categoryId: data.categoryId,
   audienceId: data.audienceId,
@@ -243,6 +255,9 @@ const eventFieldsData = (input: CreateEventInput) => ({
   title: input.title,
   content: input.content,
   image: input.image,
+  imageAlt: input.imageAlt ?? null,
+  seoTitleOverride: input.seoTitleOverride ?? null,
+  seoDescriptionOverride: input.seoDescriptionOverride ?? null,
   categoryId: input.categoryId,
   audienceId: input.audienceId,
   organizerName: input.organizerName,
@@ -437,6 +452,9 @@ export const createPrismaEventRepository = (): EventRepository => ({
             title: revision.title,
             content: revision.content,
             image: revision.image,
+            imageAlt: revision.imageAlt,
+            seoTitleOverride: revision.seoTitleOverride,
+            seoDescriptionOverride: revision.seoDescriptionOverride,
             categoryId: revision.categoryId,
             audienceId: revision.audienceId,
             organizerName: revision.organizerName,

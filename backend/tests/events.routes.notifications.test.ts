@@ -36,6 +36,7 @@ const baseEvent: Event = {
   title: "Concert",
   content: "Texte",
   image: "https://example.com/img.png",
+  imageAlt: "Musiciens sur scène",
   createdByUserId: "test-editor",
   categoryId: "music",
   audienceId: "all",

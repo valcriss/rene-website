@@ -36,6 +36,7 @@ const defaultEditorForm = (): CreateEventPayload => ({
   title: "",
   content: "",
   image: "",
+  imageAlt: "",
   categoryId: "",
   audienceId: "",
   occurrences: [defaultOccurrence()],
@@ -46,7 +47,9 @@ const defaultEditorForm = (): CreateEventPayload => ({
   ticketUrl: "",
   pricingInfo: "",
   websiteUrl: "",
-  socialLinks: []
+  socialLinks: [],
+  seoTitleOverride: "",
+  seoDescriptionOverride: ""
 });
 
 const trimText = (value?: string | null) => (value ?? "").trim();
@@ -175,6 +178,7 @@ export const useEditorStore = defineStore("editor", () => {
     editorForm.title = source.title;
     editorForm.content = source.content ?? "";
     editorForm.image = source.image ?? "";
+    editorForm.imageAlt = source.imageAlt ?? "";
     editorForm.categoryId = source.categoryId ?? "";
     editorForm.audienceId = source.audienceId ?? "";
 
@@ -208,6 +212,8 @@ export const useEditorStore = defineStore("editor", () => {
     editorForm.pricingInfo = source.pricingInfo ?? "";
     editorForm.websiteUrl = source.websiteUrl ?? "";
     editorForm.socialLinks = cloneSocialLinks(source.socialLinks);
+    editorForm.seoTitleOverride = source.seoTitleOverride ?? "";
+    editorForm.seoDescriptionOverride = source.seoDescriptionOverride ?? "";
   };
 
   const setImageFile = (file: File | null) => {
@@ -281,12 +287,15 @@ export const useEditorStore = defineStore("editor", () => {
         longitude: hasManualCoordinates(index) ? occurrence.longitude : undefined
       };
     }),
+    imageAlt: editorForm.imageAlt || undefined,
     organizerUrl: editorForm.organizerUrl || undefined,
     contactEmail: editorForm.contactEmail || undefined,
     contactPhone: editorForm.contactPhone || undefined,
     ticketUrl: editorForm.ticketUrl || undefined,
     pricingInfo: editorForm.pricingInfo || undefined,
     websiteUrl: editorForm.websiteUrl || undefined,
+    seoTitleOverride: editorForm.seoTitleOverride || undefined,
+    seoDescriptionOverride: editorForm.seoDescriptionOverride || undefined,
     socialLinks:
       editorForm.socialLinks
         ?.map((link) => ({ type: link.type, url: link.url.trim() }))
@@ -321,6 +330,7 @@ export const useEditorStore = defineStore("editor", () => {
       title: editorForm.title || "Prévisualisation",
       content: editorForm.content ?? null,
       image: (imageFile.value ? URL.createObjectURL(imageFile.value) : editorForm.image) ?? null,
+      imageAlt: editorForm.imageAlt ?? undefined,
       categoryId: editorForm.categoryId ?? null,
       audienceId: editorForm.audienceId ?? null,
       occurrences: previewOccurrences,
@@ -331,6 +341,8 @@ export const useEditorStore = defineStore("editor", () => {
       ticketUrl: editorForm.ticketUrl ?? undefined,
       pricingInfo: editorForm.pricingInfo ?? undefined,
       websiteUrl: editorForm.websiteUrl ?? undefined,
+      seoTitleOverride: editorForm.seoTitleOverride ?? undefined,
+      seoDescriptionOverride: editorForm.seoDescriptionOverride ?? undefined,
       socialLinks: cloneSocialLinks(editorForm.socialLinks),
       status: "DRAFT",
       publishedAt: null,

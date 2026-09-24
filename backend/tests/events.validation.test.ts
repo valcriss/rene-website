@@ -15,6 +15,7 @@ describe("validateCreateEvent", () => {
     title: "Concert",
     content: "Soirée jazz",
     image: "https://example.com/image.jpg",
+    imageAlt: "Musiciens sur scène",
     categoryId: "music",
     audienceId: "all",
     organizerName: "Association",
@@ -25,7 +26,9 @@ describe("validateCreateEvent", () => {
     pricingInfo: "<p>Plein tarif : 12 €</p>",
     websiteUrl: "https://example.com/site",
     socialLinks: [{ type: "FACEBOOK", url: "https://facebook.com/rene" }],
-    occurrences: [validOccurrence]
+    occurrences: [validOccurrence],
+    seoTitleOverride: "Concert de jazz à Descartes",
+    seoDescriptionOverride: "Une soirée jazz exceptionnelle au cœur de Descartes."
   };
 
   it("returns ok for valid payload", () => {
@@ -34,6 +37,25 @@ describe("validateCreateEvent", () => {
     if (result.ok) {
       expect(result.value.title).toBe("Concert");
       expect(result.value.occurrences).toHaveLength(1);
+      expect(result.value.imageAlt).toBe("Musiciens sur scène");
+      expect(result.value.seoTitleOverride).toBe("Concert de jazz à Descartes");
+      expect(result.value.seoDescriptionOverride).toBe("Une soirée jazz exceptionnelle au cœur de Descartes.");
+    }
+  });
+
+  it("normalizes blank imageAlt/seoTitleOverride/seoDescriptionOverride to null", () => {
+    const result = validateCreateEvent({
+      ...validPayload,
+      imageAlt: "   ",
+      seoTitleOverride: "",
+      seoDescriptionOverride: undefined
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.imageAlt).toBeNull();
+      expect(result.value.seoTitleOverride).toBeNull();
+      expect(result.value.seoDescriptionOverride).toBeNull();
     }
   });
 
@@ -74,6 +96,9 @@ describe("validateCreateEvent", () => {
       title: "a".repeat(201),
       content: "a".repeat(20_001),
       organizerUrl: `https://example.test/${"a".repeat(2_048)}`,
+      imageAlt: "a".repeat(201),
+      seoTitleOverride: "a".repeat(71),
+      seoDescriptionOverride: "a".repeat(161),
       socialLinks: Array.from({ length: 7 }, () => ({ type: "FACEBOOK", url: "https://facebook.com/rene" })),
       occurrences: Array.from({ length: 51 }, () => validOccurrence)
     });
@@ -84,6 +109,9 @@ describe("validateCreateEvent", () => {
         "Le titre ne peut pas dépasser 200 caractères.",
         "Le contenu ne peut pas dépasser 20000 caractères.",
         "Le site de l'organisateur ne peut pas dépasser 2048 caractères.",
+        "Le texte alternatif de l'image ne peut pas dépasser 200 caractères.",
+        "Le titre SEO personnalisé ne peut pas dépasser 70 caractères.",
+        "La description SEO personnalisée ne peut pas dépasser 160 caractères.",
         "Les réseaux sociaux ne peuvent pas dépasser 6 liens.",
         "Les occurrences ne peuvent pas dépasser 50 entrées."
       ]));
@@ -236,6 +264,9 @@ describe("validateCreateEvent", () => {
       title: "Brouillon",
       content: 1,
       image: 2,
+      imageAlt: 5,
+      seoTitleOverride: 6,
+      seoDescriptionOverride: 7,
       categoryId: 3,
       audienceId: 4,
       organizerName: 9
@@ -246,6 +277,9 @@ describe("validateCreateEvent", () => {
         expect.arrayContaining([
           "Le contenu doit être une chaîne.",
           "L'image doit être une chaîne.",
+          "Le texte alternatif de l'image doit être une chaîne.",
+          "Le titre SEO personnalisé doit être une chaîne.",
+          "La description SEO personnalisée doit être une chaîne.",
           "La catégorie doit être une chaîne.",
           "Le public concerné doit être une chaîne.",
           "L'organisateur doit être une chaîne."
@@ -487,6 +521,7 @@ describe("validateEventCompleteness", () => {
     title: "Concert",
     content: "Soirée jazz",
     image: "https://example.com/image.jpg",
+    imageAlt: "Musiciens sur scène lors du concert de jazz",
     categoryId: "music",
     audienceId: "all",
     organizerName: "Association",
@@ -548,5 +583,23 @@ describe("validateEventCompleteness", () => {
     });
 
     expect(errors).toEqual([]);
+  });
+
+  it("requires an image alt text when an image is provided", () => {
+    const errors = validateEventCompleteness({ ...completeEvent, imageAlt: null });
+
+    expect(errors).toContain("Le texte alternatif de l'image est requis.");
+  });
+
+  it("requires an image alt text when an image is provided, blank string counts as missing", () => {
+    const errors = validateEventCompleteness({ ...completeEvent, imageAlt: "   " });
+
+    expect(errors).toContain("Le texte alternatif de l'image est requis.");
+  });
+
+  it("does not require an image alt text when no image is provided", () => {
+    const errors = validateEventCompleteness({ ...completeEvent, image: null, imageAlt: null });
+
+    expect(errors).not.toContain("Le texte alternatif de l'image est requis.");
   });
 });

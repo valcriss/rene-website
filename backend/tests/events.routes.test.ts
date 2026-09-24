@@ -12,6 +12,7 @@ const validPayload = {
   title: "Concert",
   content: "Soirée jazz",
   image: "https://example.com/image.jpg",
+  imageAlt: "Musiciens sur scène",
   categoryId: "music",
   audienceId: "all",
   organizerName: "Association",

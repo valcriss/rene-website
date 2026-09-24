@@ -34,6 +34,7 @@ export type EventDraftInput = {
   title: string;
   content: string | null;
   image: string | null;
+  imageAlt?: string | null;
   categoryId: string | null;
   audienceId: string | null;
   occurrences: EventOccurrenceInput[];
@@ -46,6 +47,8 @@ export type EventDraftInput = {
   websiteUrl?: string;
   socialLinks?: SocialLink[];
   featured?: boolean;
+  seoTitleOverride?: string | null;
+  seoDescriptionOverride?: string | null;
 };
 
 export type CreateEventInput = EventDraftInput & {

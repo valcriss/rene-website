@@ -46,7 +46,7 @@
           <img
             class="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
             :src="getEventImage(currentCarouselEvent)"
-            :alt="currentCarouselEvent.title"
+            :alt="currentCarouselEvent.imageAlt || currentCarouselEvent.title"
             loading="eager"
             fetchpriority="high"
             decoding="async"
@@ -197,7 +197,7 @@
                     <img
                       class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
                       :src="getEventImage(eventItem)"
-                      :alt="eventItem.title"
+                      :alt="eventItem.imageAlt || eventItem.title"
                       loading="lazy"
                       decoding="async"
                       @error="markImageError(eventItem.id)"
