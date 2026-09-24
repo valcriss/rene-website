@@ -6,11 +6,13 @@ import ImageCropModal from "../src/components/form/ImageCropModal.vue";
 
 const destroyMock = vi.fn();
 const getCroppedCanvasMock = vi.fn();
+const zoomMock = vi.fn();
 
 vi.mock("cropperjs", () => ({
   default: class MockCropper {
     destroy = destroyMock;
     getCroppedCanvas = getCroppedCanvasMock;
+    zoom = zoomMock;
     constructor() {
       // no-op: the real constructor wires up DOM/canvas behavior we don't need in tests
     }
@@ -66,6 +68,18 @@ describe("ImageCropModal", () => {
 
     expect(emitted().cancel).toBeTruthy();
     expect(getCroppedCanvasMock).not.toHaveBeenCalled();
+  });
+
+  it("zooms in and out via the visible controls", async () => {
+    const file = new File(["source"], "photo.png", { type: "image/png" });
+    render(ImageCropModal, { props: { file } });
+    await screen.findByText("Recadrer l'image");
+
+    await fireEvent.click(screen.getByRole("button", { name: "Zoomer" }));
+    await fireEvent.click(screen.getByRole("button", { name: "Dézoomer" }));
+
+    expect(zoomMock).toHaveBeenNthCalledWith(1, 0.1);
+    expect(zoomMock).toHaveBeenNthCalledWith(2, -0.1);
   });
 
   it("destroys the cropper instance when the file is cleared", async () => {
