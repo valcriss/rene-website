@@ -89,4 +89,4 @@ Tests live in `frontend/tests/`, mirroring component/store names (e.g. `eventsSt
 
 ## Environment
 
-Copy `.env.example` to `.env` at repo root. Key vars: `DATABASE_URL` (Postgres), `JWT_SECRET`, `PHOTON_URL` (geocoding service), `UPLOAD_DIR`, `VITE_API_URL` (defaults to `/api`, proxied to the backend in dev). See [docker-compose.dev.yml](docker-compose.dev.yml) for the local Postgres + Photon stack.
+Copy `.env.example` to `.env` at repo root. Key vars: `DATABASE_URL` (Postgres), `JWT_SECRET`, `CRON_SECRET` (shared secret for the `/api/moderation-reminders/check` endpoint, called by an external cron), `PHOTON_URL` (geocoding service), `UPLOAD_DIR`, `VITE_API_URL` (defaults to `/api`, proxied to the backend in dev). See [docker-compose.dev.yml](docker-compose.dev.yml) for the local Postgres + Photon stack.

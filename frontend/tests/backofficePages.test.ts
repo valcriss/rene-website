@@ -102,6 +102,33 @@ describe("BackofficeLayout", () => {
 
     expect(pushSpy).toHaveBeenCalledWith("/login");
   });
+
+  it("shows the profile nav link for moderators and navigates to it", async () => {
+    const { router, pinia } = await setup("/backoffice/profile", "MODERATOR");
+    const pushSpy = vi.spyOn(router, "push");
+
+    render(BackofficeLayout, {
+      global: {
+        plugins: [pinia, router]
+      }
+    });
+
+    expect(screen.getAllByText("Mon profil").length).toBeGreaterThan(0);
+    await fireEvent.click(screen.getAllByRole("link", { name: /Mon profil/ })[0]);
+    expect(pushSpy).toHaveBeenCalledWith("/backoffice/profile");
+  });
+
+  it("hides the profile nav link for roles that cannot moderate", async () => {
+    const { router, pinia } = await setup("/backoffice/events", "EDITOR");
+
+    render(BackofficeLayout, {
+      global: {
+        plugins: [pinia, router]
+      }
+    });
+
+    expect(screen.queryByRole("link", { name: /Mon profil/ })).not.toBeInTheDocument();
+  });
 });
 
 describe("BackofficeEventsPage", () => {

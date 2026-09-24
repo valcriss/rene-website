@@ -57,6 +57,15 @@
                 <span class="block font-semibold">{{ t("backoffice.nav.administration") }}</span>
                 <span class="mt-1 block text-xs opacity-80">{{ t("backoffice.nav.administrationLead") }}</span>
               </RouterLink>
+              <RouterLink
+                v-if="canModerate"
+                to="/backoffice/profile"
+                class="rounded-2xl border px-4 py-3 text-sm transition"
+                :class="primaryNavClasses(isProfileRoute)"
+              >
+                <span class="block font-semibold">{{ t("backoffice.nav.profile") }}</span>
+                <span class="mt-1 block text-xs opacity-80">{{ t("backoffice.nav.profileLead") }}</span>
+              </RouterLink>
             </nav>
 
             <div class="mt-5 flex flex-wrap gap-3">
@@ -167,6 +176,7 @@ const accountLabel = computed(() => authStore.userName || t("common.mySpace"));
 const isEventsRoute = computed(() => route.path.startsWith("/backoffice/events"));
 const isModerationRoute = computed(() => route.path.startsWith("/backoffice/moderation"));
 const isAdminRoute = computed(() => route.path.startsWith("/backoffice/admin"));
+const isProfileRoute = computed(() => route.path.startsWith("/backoffice/profile"));
 const isAdminUsersRoute = computed(() => route.path.endsWith("/admin/users"));
 const isAdminCategoriesRoute = computed(() => route.path.endsWith("/admin/categories"));
 const isAdminAudiencesRoute = computed(() => route.path.endsWith("/admin/audiences"));
@@ -176,6 +186,7 @@ const sectionEyebrow = computed(() => {
   if (isEventsRoute.value) return t("backoffice.nav.events");
   if (isModerationRoute.value) return t("backoffice.nav.moderation");
   if (isAdminRoute.value) return t("backoffice.nav.administration");
+  if (isProfileRoute.value) return t("backoffice.nav.profile");
   return t("backoffice.tagline");
 });
 
@@ -189,6 +200,7 @@ const sectionTitle = computed(() => {
   if (isAdminAudiencesRoute.value) return t("admin.audiencesTitle");
   if (isAdminSettingsRoute.value) return t("admin.settingsTitle");
   if (isAdminRoute.value) return t("admin.title");
+  if (isProfileRoute.value) return t("profile.title");
   return t("backoffice.tagline");
 });
 
@@ -201,6 +213,7 @@ const sectionLead = computed(() => {
   if (isAdminCategoriesRoute.value) return t("admin.categoriesLead");
   if (isAdminAudiencesRoute.value) return t("admin.audiencesLead");
   if (isAdminSettingsRoute.value) return t("admin.settingsLead");
+  if (isProfileRoute.value) return t("profile.lead");
   return t("backoffice.lead");
 });
 
@@ -208,6 +221,7 @@ const sectionDescription = computed(() => {
   if (isEventsRoute.value) return t("backoffice.nav.events");
   if (isModerationRoute.value) return t("backoffice.nav.moderation");
   if (isAdminRoute.value) return t("backoffice.nav.administration");
+  if (isProfileRoute.value) return t("backoffice.nav.profile");
   return t("backoffice.tagline");
 });
 

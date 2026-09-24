@@ -44,6 +44,13 @@ export const buildDeletedBody = (event: Event) =>
   `Votre événement a été supprimé.\n\nTitre : ${event.title}\n` +
   `Dates et lieux :\n${formatOccurrences(event)}\n`;
 
+export const buildModerationReminderSubject = (event: Event) => `Relance modération : ${event.title}`;
+
+export const buildModerationReminderBody = (event: Event) =>
+  `Un événement est en attente de modération depuis plus de 3 jours.\n\nTitre : ${event.title}\n` +
+  `Dates et lieux :\n${formatOccurrences(event)}\n\n` +
+  `Connectez-vous au backoffice pour le traiter.`;
+
 export const buildPasswordResetSubject = () => "Réinitialisation de votre mot de passe";
 
 export const buildPasswordResetBody = (resetUrl: string, ttlMinutes: number) =>

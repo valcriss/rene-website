@@ -25,6 +25,7 @@ describe("router", () => {
         "/backoffice/admin/users",
         "/backoffice/admin/categories",
         "/backoffice/admin/settings",
+        "/backoffice/profile",
         "/event/:id"
       ])
     );

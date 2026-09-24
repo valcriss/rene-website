@@ -1,6 +1,7 @@
 import { Request, Response, Router } from "express";
 import { requireRole } from "../auth/roles";
 import { AuthRepository } from "../auth/repository";
+import { CategorySubscriptionRepository } from "../subscriptions/repository";
 import { EventRepository } from "./repository";
 import { archiveEvent, createEvent, deleteEvent, getEvent, listEvents, publishEvent, rejectEvent, submitEvent, unarchiveEvent, updateEvent, updateEventFeatured } from "./service";
 import {
@@ -52,7 +53,11 @@ const toRevisionSnapshot = (event: Event): Event => {
   };
 };
 
-export const createEventRouter = (repo: EventRepository, authRepo: AuthRepository) => {
+export const createEventRouter = (
+  repo: EventRepository,
+  authRepo: AuthRepository,
+  subscriptionRepo?: CategorySubscriptionRepository
+) => {
   const router = Router();
 
   router.get("/events", withErrorHandling(async (_req, res) => {
@@ -104,8 +109,8 @@ export const createEventRouter = (repo: EventRepository, authRepo: AuthRepositor
     const wasRejected = current?.status === "REJECTED" || current?.pendingRevision?.status === "REJECTED";
     const notificationEvent = current?.status === "PUBLISHED" ? toRevisionSnapshot(result.value) : result.value;
     const notification = wasRejected
-      ? await notifyEventResubmitted(notificationEvent, authRepo)
-      : await notifyEventSubmitted(notificationEvent, authRepo);
+      ? await notifyEventResubmitted(notificationEvent, authRepo, subscriptionRepo)
+      : await notifyEventSubmitted(notificationEvent, authRepo, subscriptionRepo);
     if (!notification.ok) {
       // eslint-disable-next-line no-console
       console.warn("Notifications submit failed", notification.errors);
