@@ -21,7 +21,39 @@ describe("geocoding routes", () => {
     const response = await request(app).get("/api/geocoding");
 
     expect(response.status).toBe(400);
-    expect(response.body.errors).toEqual(["La ville est requise."]);
+    expect(response.body.errors).toEqual(["La ville est requise et doit contenir au plus 160 caractères."]);
+    expect(geocodeMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects oversized geocoding fields before calling Photon", async () => {
+    const app = express();
+    app.use("/api", createGeocodingRouter());
+
+    const response = await request(app).get(`/api/geocoding?city=${"a".repeat(161)}`);
+
+    expect(response.status).toBe(400);
+    expect(geocodeMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects an oversized optional geocoding field", async () => {
+    const app = express();
+    app.use("/api", createGeocodingRouter());
+
+    const response = await request(app).get(`/api/geocoding?city=Descartes&address=${"a".repeat(161)}`);
+
+    expect(response.status).toBe(400);
+    expect(response.body.errors).toEqual(["Les champs de géocodage doivent contenir au plus 160 caractères."]);
+  });
+
+  it("returns a retryable error when its distributed quota is exhausted", async () => {
+    const app = express();
+    const rateLimitRepository = { consumeRateLimit: async () => ({ allowed: false, retryAfterSeconds: 42 }) };
+    app.use("/api", createGeocodingRouter(rateLimitRepository));
+
+    const response = await request(app).get("/api/geocoding?city=Descartes");
+
+    expect(response.status).toBe(429);
+    expect(response.headers["retry-after"]).toBe("42");
     expect(geocodeMock).not.toHaveBeenCalled();
   });
 

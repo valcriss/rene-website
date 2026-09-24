@@ -68,6 +68,40 @@ describe("validateCreateEvent", () => {
     }
   });
 
+  it("bounds event collections, text fields and URLs", () => {
+    const result = validateCreateEvent({
+      ...validPayload,
+      title: "a".repeat(201),
+      content: "a".repeat(20_001),
+      organizerUrl: `https://example.test/${"a".repeat(2_048)}`,
+      socialLinks: Array.from({ length: 7 }, () => ({ type: "FACEBOOK", url: "https://facebook.com/rene" })),
+      occurrences: Array.from({ length: 51 }, () => validOccurrence)
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toEqual(expect.arrayContaining([
+        "Le titre ne peut pas dépasser 200 caractères.",
+        "Le contenu ne peut pas dépasser 20000 caractères.",
+        "Le site de l'organisateur ne peut pas dépasser 2048 caractères.",
+        "Les réseaux sociaux ne peuvent pas dépasser 6 liens.",
+        "Les occurrences ne peuvent pas dépasser 50 entrées."
+      ]));
+    }
+  });
+
+  it("bounds an individual social URL", () => {
+    const result = validateCreateEvent({
+      ...validPayload,
+      socialLinks: [{ type: "FACEBOOK", url: `https://example.test/${"a".repeat(2_048)}` }]
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContain("L'URL du réseau social #1 ne peut pas dépasser 2048 caractères.");
+    }
+  });
+
   it("accepts citywide occurrences without venue and address", () => {
     const result = validateCreateEvent({
       ...validPayload,

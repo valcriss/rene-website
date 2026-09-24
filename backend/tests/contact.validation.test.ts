@@ -1,5 +1,5 @@
 import { validateContactMessage } from "../src/contact/validation";
-import { resolveClientKey } from "../src/contact/routes";
+import { resolveClientKey } from "../src/security/rateLimiter";
 
 describe("validateContactMessage", () => {
   it("accepts a valid message", () => {

@@ -24,6 +24,18 @@ const asNumber = (value: unknown) => (typeof value === "number" ? value : Number
 const socialLinkTypes = new Set<SocialLinkType>(["FACEBOOK", "INSTAGRAM", "YOUTUBE", "LINKEDIN", "X", "TIKTOK"]);
 
 const isRecord = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === "object";
+const maximumOccurrences = 50;
+const maximumSocialLinks = 6;
+const maximumUrlLength = 2_048;
+const maximumTitleLength = 200;
+const maximumContentLength = 20_000;
+const maximumShortTextLength = 500;
+
+const validateMaximumLength = (value: unknown, maximum: number, label: string, errors: string[]) => {
+  if (typeof value === "string" && value.length > maximum) {
+    errors.push(`${label} ne peut pas dépasser ${maximum} caractères.`);
+  }
+};
 
 const normalizeSocialLinks = (value: unknown): { links?: SocialLink[]; errors: string[] } => {
   if (value === undefined || value === null) {
@@ -32,6 +44,10 @@ const normalizeSocialLinks = (value: unknown): { links?: SocialLink[]; errors: s
 
   if (!Array.isArray(value)) {
     return { errors: ["Les réseaux sociaux doivent être une liste."] };
+  }
+
+  if (value.length > maximumSocialLinks) {
+    return { errors: [`Les réseaux sociaux ne peuvent pas dépasser ${maximumSocialLinks} liens.`] };
   }
 
   const errors: string[] = [];
@@ -59,6 +75,10 @@ const normalizeSocialLinks = (value: unknown): { links?: SocialLink[]; errors: s
     const url = rawUrl.trim();
     if (url.length === 0) {
       errors.push(`L'URL du réseau social #${index + 1} est requise.`);
+      return;
+    }
+    if (url.length > maximumUrlLength) {
+      errors.push(`L'URL du réseau social #${index + 1} ne peut pas dépasser ${maximumUrlLength} caractères.`);
       return;
     }
 
@@ -176,6 +196,10 @@ const normalizeOccurrences = (value: unknown): { occurrences: EventOccurrenceInp
     return { occurrences: [], errors: ["Les occurrences doivent être une liste."] };
   }
 
+  if (value.length > maximumOccurrences) {
+    return { occurrences: [], errors: [`Les occurrences ne peuvent pas dépasser ${maximumOccurrences} entrées.`] };
+  }
+
   const errors: string[] = [];
   const occurrences: EventOccurrenceInput[] = [];
 
@@ -211,6 +235,23 @@ export const validateCreateEvent = (input: unknown): ValidationResult => {
   if (!isOptionalString(data.ticketUrl)) errors.push("Le lien de billetterie doit être une chaîne.");
   if (!isOptionalString(data.pricingInfo)) errors.push("Les informations tarifaires doivent être une chaîne.");
   if (!isOptionalString(data.websiteUrl)) errors.push("Le site web doit être une chaîne.");
+
+  validateMaximumLength(data.title, maximumTitleLength, "Le titre", errors);
+  validateMaximumLength(data.content, maximumContentLength, "Le contenu", errors);
+  validateMaximumLength(data.pricingInfo, maximumContentLength, "Les informations tarifaires", errors);
+  ([
+    [data.image, "L'image"],
+    [data.categoryId, "La catégorie"],
+    [data.audienceId, "Le public concerné"],
+    [data.organizerName, "L'organisateur"],
+    [data.contactEmail, "L'email de contact"],
+    [data.contactPhone, "Le téléphone de contact"]
+  ] as Array<[unknown, string]>).forEach(([value, label]) => validateMaximumLength(value, maximumShortTextLength, label, errors));
+  ([
+    [data.organizerUrl, "Le site de l'organisateur"],
+    [data.ticketUrl, "Le lien de billetterie"],
+    [data.websiteUrl, "Le site web"]
+  ] as Array<[unknown, string]>).forEach(([value, label]) => validateMaximumLength(value, maximumUrlLength, label, errors));
 
   const socialLinksResult = normalizeSocialLinks(data.socialLinks);
   errors.push(...socialLinksResult.errors);

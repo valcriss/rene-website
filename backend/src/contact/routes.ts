@@ -1,6 +1,7 @@
 import { Request, Response, Router } from "express";
 import { AdminRepository } from "../admin/repository";
-import { createRateLimiter } from "./rateLimiter";
+import { AuthRepository } from "../auth/repository";
+import { createRequestRateLimiter, enforceRequestRateLimit } from "../security/rateLimiter";
 import { submitContactMessage } from "./service";
 
 type AsyncHandler = (req: Request, res: Response) => Promise<void>;
@@ -15,23 +16,28 @@ const withErrorHandling = (handler: AsyncHandler) => async (req: Request, res: R
   }
 };
 
-const statusForCode = (code: "validation" | "rate_limited" | "notification") => {
-  if (code === "rate_limited") return 429;
+const statusForCode = (code: "validation" | "notification") => {
   if (code === "notification") return 502;
   return 400;
 };
 
-export const resolveClientKey = (req: Pick<Request, "ip">): string => req.ip ?? "unknown";
+const contactRateLimitPolicy = {
+  action: "contact",
+  ip: { max: 5, windowMs: 15 * 60 * 1000 }
+};
 
-export const createContactRouter = (adminRepo: AdminRepository) => {
+export const createContactRouter = (
+  adminRepo: AdminRepository,
+  rateLimitRepository?: Pick<AuthRepository, "consumeRateLimit">
+) => {
   const router = Router();
-  const limiter = createRateLimiter({ max: 5, windowMs: 15 * 60 * 1000 });
+  const rateLimiter = createRequestRateLimiter(rateLimitRepository);
 
   router.post(
     "/contact",
     withErrorHandling(async (req, res) => {
-      const clientKey = resolveClientKey(req);
-      const result = await submitContactMessage(adminRepo, req.body, limiter, clientKey);
+      if (!(await enforceRequestRateLimit(rateLimiter, req, res, contactRateLimitPolicy))) return;
+      const result = await submitContactMessage(adminRepo, req.body);
       if (!result.ok) {
         res.status(statusForCode(result.code)).json({ errors: result.errors });
         return;

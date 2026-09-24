@@ -30,6 +30,12 @@ const getPhotonBaseUrl = () => {
   return value && value.length > 0 ? value.replace(/\/$/, "") : "http://localhost:2322";
 };
 
+export const getPhotonTimeoutMs = () => {
+  const configured = Number(process.env.PHOTON_TIMEOUT_MS);
+  if (!Number.isFinite(configured)) return 3_000;
+  return Math.min(10_000, Math.max(500, Math.floor(configured)));
+};
+
 const isNonEmptyString = (value: unknown) => typeof value === "string" && value.trim().length > 0;
 
 const buildPhotonQueryFromParts = (parts: Array<string | null | undefined>) =>
@@ -76,7 +82,15 @@ export const buildPhotonQuery = (input: GeocodeInput) =>
 export const geocodeAddress = async (query: string): Promise<{ latitude: number; longitude: number } | null> => {
   const baseUrl = getPhotonBaseUrl();
   const url = `${baseUrl}/api?q=${encodeURIComponent(query)}&limit=1`;
-  const response = await fetch(url);
+  let response: globalThis.Response;
+  try {
+    response = await fetch(url, { signal: AbortSignal.timeout(getPhotonTimeoutMs()) });
+  } catch (error) {
+    if (error instanceof Error && error.name === "TimeoutError") {
+      throw new Error("Photon request timed out");
+    }
+    throw error;
+  }
   if (!response.ok) {
     throw new Error(`Photon request failed with status ${response.status}`);
   }
