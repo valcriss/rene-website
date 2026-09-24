@@ -5,6 +5,7 @@ import { createEventRouter } from "../src/events/routes";
 import { EventRepository } from "../src/events/repository";
 import { AuthRepository } from "../src/auth/repository";
 import { signUserToken } from "../src/auth/jwt";
+import { authHeader } from "./authTestUtils";
 
 const validPayload = {
   title: "Concert",
@@ -111,7 +112,7 @@ describe("events routes", () => {
     const app = createApp();
     const createResponse = await request(app)
       .post("/api/events")
-      .set("x-user-role", "EDITOR")
+      .set("Authorization", authHeader("EDITOR"))
       .send(validPayload);
 
     expect(createResponse.status).toBe(201);
@@ -140,7 +141,6 @@ describe("events routes", () => {
     const createResponse = await request(app)
       .post("/api/events")
       .set("Authorization", `Bearer ${tokenResult.value}`)
-      .set("x-user-role", "EDITOR")
       .send(validPayload);
 
     expect(createResponse.status).toBe(201);
@@ -161,19 +161,17 @@ describe("events routes", () => {
     const createResponse = await request(app)
       .post("/api/events")
       .set("Authorization", `Bearer ${tokenResult.value}`)
-      .set("x-user-role", "EDITOR")
       .send(validPayload);
 
     const deleteResponse = await request(app)
       .delete(`/api/events/${createResponse.body.id}`)
-      .set("Authorization", `Bearer ${tokenResult.value}`)
-      .set("x-user-role", "EDITOR");
+      .set("Authorization", `Bearer ${tokenResult.value}`);
 
     expect(deleteResponse.status).toBe(200);
     expect(deleteResponse.body).toEqual({ id: createResponse.body.id });
   });
 
-  it("stores creator from x-user-id header", async () => {
+  it("rejects spoofed identity headers", async () => {
     const app = createApp();
     const createResponse = await request(app)
       .post("/api/events")
@@ -181,21 +179,21 @@ describe("events routes", () => {
       .set("x-user-id", "header-user")
       .send(validPayload);
 
-    expect(createResponse.status).toBe(201);
-    expect(createResponse.body.createdByUserId).toBe("header-user");
+    expect(createResponse.status).toBe(401);
+    expect(createResponse.body).toEqual({ message: "Authentication required" });
   });
 
   it("updates event", async () => {
     const app = createApp();
     const createResponse = await request(app)
       .post("/api/events")
-      .set("x-user-role", "EDITOR")
+      .set("Authorization", authHeader("EDITOR"))
       .send(validPayload);
 
     const updatePayload = { ...validPayload, title: "Concert mis à jour" };
     const updateResponse = await request(app)
       .put(`/api/events/${createResponse.body.id}`)
-      .set("x-user-role", "EDITOR")
+      .set("Authorization", authHeader("EDITOR"))
       .send(updatePayload);
 
     expect(updateResponse.status).toBe(200);
@@ -206,7 +204,7 @@ describe("events routes", () => {
     const app = createApp();
     const response = await request(app)
       .put("/api/events/missing")
-      .set("x-user-role", "EDITOR")
+      .set("Authorization", authHeader("EDITOR"))
       .send(validPayload);
 
     expect(response.status).toBe(404);
@@ -216,12 +214,12 @@ describe("events routes", () => {
     const app = createApp();
     const createResponse = await request(app)
       .post("/api/events")
-      .set("x-user-role", "EDITOR")
+      .set("Authorization", authHeader("EDITOR"))
       .send(validPayload);
 
     const response = await request(app)
       .put(`/api/events/${createResponse.body.id}`)
-      .set("x-user-role", "EDITOR")
+      .set("Authorization", authHeader("EDITOR"))
       .send({});
 
     expect(response.status).toBe(400);
@@ -231,37 +229,37 @@ describe("events routes", () => {
     const app = createApp();
     const createResponse = await request(app)
       .post("/api/events")
-      .set("x-user-role", "EDITOR")
+      .set("Authorization", authHeader("EDITOR"))
       .send(validPayload);
     const id = createResponse.body.id;
 
     const submitResponse = await request(app)
       .post(`/api/events/${id}/submit`)
-      .set("x-user-role", "EDITOR");
+      .set("Authorization", authHeader("EDITOR"));
     expect(submitResponse.status).toBe(200);
     expect(submitResponse.body.status).toBe("PENDING");
 
     const publishResponse = await request(app)
       .post(`/api/events/${id}/publish`)
-      .set("x-user-role", "MODERATOR");
+      .set("Authorization", authHeader("MODERATOR"));
     expect(publishResponse.status).toBe(200);
     expect(publishResponse.body.status).toBe("PUBLISHED");
     expect(publishResponse.body.featured).toBe(false);
 
     const createRejectedCandidateResponse = await request(app)
       .post("/api/events")
-      .set("x-user-role", "EDITOR")
+      .set("Authorization", authHeader("EDITOR"))
       .send({ ...validPayload, title: "Concert à refuser" });
     const rejectedCandidateId = createRejectedCandidateResponse.body.id;
 
     const submitRejectedCandidateResponse = await request(app)
       .post(`/api/events/${rejectedCandidateId}/submit`)
-      .set("x-user-role", "EDITOR");
+      .set("Authorization", authHeader("EDITOR"));
     expect(submitRejectedCandidateResponse.status).toBe(200);
 
     const rejectResponse = await request(app)
       .post(`/api/events/${rejectedCandidateId}/reject`)
-      .set("x-user-role", "MODERATOR")
+      .set("Authorization", authHeader("MODERATOR"))
       .send({ rejectionReason: "Motif" });
     expect(rejectResponse.status).toBe(200);
     expect(rejectResponse.body.status).toBe("REJECTED");
@@ -271,21 +269,21 @@ describe("events routes", () => {
     const app = createApp();
     const createResponse = await request(app)
       .post("/api/events")
-      .set("x-user-role", "EDITOR")
+      .set("Authorization", authHeader("EDITOR"))
       .send(validPayload);
     const id = createResponse.body.id;
 
     await request(app)
       .post(`/api/events/${id}/submit`)
-      .set("x-user-role", "EDITOR");
+      .set("Authorization", authHeader("EDITOR"));
 
     await request(app)
       .post(`/api/events/${id}/publish`)
-      .set("x-user-role", "MODERATOR");
+      .set("Authorization", authHeader("MODERATOR"));
 
     const updateResponse = await request(app)
       .put(`/api/events/${id}`)
-      .set("x-user-role", "EDITOR")
+      .set("Authorization", authHeader("EDITOR"))
       .send({ ...validPayload, title: "Concert révisé" });
 
     expect(updateResponse.status).toBe(200);
@@ -295,7 +293,7 @@ describe("events routes", () => {
 
     const submitResponse = await request(app)
       .post(`/api/events/${id}/submit`)
-      .set("x-user-role", "EDITOR");
+      .set("Authorization", authHeader("EDITOR"));
 
     expect(submitResponse.status).toBe(200);
     expect(submitResponse.body.pendingRevision.status).toBe("PENDING");
@@ -305,14 +303,12 @@ describe("events routes", () => {
     const app = createApp();
     const createResponse = await request(app)
       .post("/api/events")
-      .set("x-user-role", "EDITOR")
-      .set("x-user-id", "editor-1")
+      .set("Authorization", authHeader("EDITOR", "editor-1"))
       .send(validPayload);
 
     const deleteResponse = await request(app)
       .delete(`/api/events/${createResponse.body.id}`)
-      .set("x-user-role", "EDITOR")
-      .set("x-user-id", "editor-1");
+      .set("Authorization", authHeader("EDITOR", "editor-1"));
 
     expect(deleteResponse.status).toBe(200);
     expect(deleteResponse.body).toEqual({ id: createResponse.body.id });
@@ -322,24 +318,21 @@ describe("events routes", () => {
     const app = createApp();
     const createResponse = await request(app)
       .post("/api/events")
-      .set("x-user-role", "EDITOR")
-      .set("x-user-id", "editor-1")
+      .set("Authorization", authHeader("EDITOR", "editor-1"))
       .send(validPayload);
     const id = createResponse.body.id;
 
     await request(app)
       .post(`/api/events/${id}/submit`)
-      .set("x-user-role", "EDITOR")
-      .set("x-user-id", "editor-1");
+      .set("Authorization", authHeader("EDITOR", "editor-1"));
 
     await request(app)
       .post(`/api/events/${id}/publish`)
-      .set("x-user-role", "MODERATOR");
+      .set("Authorization", authHeader("MODERATOR"));
 
     const deleteResponse = await request(app)
       .delete(`/api/events/${id}`)
-      .set("x-user-role", "EDITOR")
-      .set("x-user-id", "editor-1");
+      .set("Authorization", authHeader("EDITOR", "editor-1"));
 
     expect(deleteResponse.status).toBe(403);
     expect(deleteResponse.body.errors).toContain("Suppression non autorisée.");
@@ -349,7 +342,7 @@ describe("events routes", () => {
     const app = createApp();
     const response = await request(app)
       .delete("/api/events/missing")
-      .set("x-user-role", "EDITOR");
+      .set("Authorization", authHeader("EDITOR"));
 
     expect(response.status).toBe(404);
     expect(response.body.errors).toContain("Événement introuvable.");
@@ -359,10 +352,10 @@ describe("events routes", () => {
     const app = createApp();
     const submitResponse = await request(app)
       .post("/api/events/missing/submit")
-      .set("x-user-role", "EDITOR");
+      .set("Authorization", authHeader("EDITOR"));
     const publishResponse = await request(app)
       .post("/api/events/missing/publish")
-      .set("x-user-role", "MODERATOR");
+      .set("Authorization", authHeader("MODERATOR"));
 
     expect(submitResponse.status).toBe(404);
     expect(publishResponse.status).toBe(404);
@@ -372,17 +365,17 @@ describe("events routes", () => {
     const app = createApp();
     const createResponse = await request(app)
       .post("/api/events")
-      .set("x-user-role", "EDITOR")
+      .set("Authorization", authHeader("EDITOR"))
       .send(validPayload);
     const id = createResponse.body.id;
 
     await request(app)
       .post(`/api/events/${id}/submit`)
-      .set("x-user-role", "EDITOR");
+      .set("Authorization", authHeader("EDITOR"));
 
     const publishResponse = await request(app)
       .post(`/api/events/${id}/publish`)
-      .set("x-user-role", "MODERATOR")
+      .set("Authorization", authHeader("MODERATOR"))
       .send({ featured: true });
 
     expect(publishResponse.status).toBe(200);
@@ -390,7 +383,7 @@ describe("events routes", () => {
 
     const toggleResponse = await request(app)
       .patch(`/api/events/${id}/featured`)
-      .set("x-user-role", "ADMIN")
+      .set("Authorization", authHeader("ADMIN"))
       .send({ featured: false });
 
     expect(toggleResponse.status).toBe(200);
@@ -401,24 +394,24 @@ describe("events routes", () => {
     const app = createApp();
     const createResponse = await request(app)
       .post("/api/events")
-      .set("x-user-role", "EDITOR")
+      .set("Authorization", authHeader("EDITOR"))
       .send(validPayload);
     const id = createResponse.body.id;
 
     await request(app)
       .post(`/api/events/${id}/submit`)
-      .set("x-user-role", "EDITOR");
+      .set("Authorization", authHeader("EDITOR"));
 
     const publishResponse = await request(app)
       .post(`/api/events/${id}/publish`)
-      .set("x-user-role", "MODERATOR")
+      .set("Authorization", authHeader("MODERATOR"))
       .send({ featured: "yes" });
 
     expect(publishResponse.status).toBe(400);
 
     const patchResponse = await request(app)
       .patch(`/api/events/${id}/featured`)
-      .set("x-user-role", "ADMIN")
+      .set("Authorization", authHeader("ADMIN"))
       .send({ featured: "yes" });
 
     expect(patchResponse.status).toBe(400);
@@ -428,7 +421,7 @@ describe("events routes", () => {
     const app = createApp();
     const response = await request(app)
       .patch("/api/events/missing/featured")
-      .set("x-user-role", "ADMIN")
+      .set("Authorization", authHeader("ADMIN"))
       .send({ featured: true });
 
     expect(response.status).toBe(404);
@@ -438,23 +431,23 @@ describe("events routes", () => {
     const app = createApp();
     const createResponse = await request(app)
       .post("/api/events")
-      .set("x-user-role", "EDITOR")
+      .set("Authorization", authHeader("EDITOR"))
       .send(validPayload);
     const id = createResponse.body.id;
 
-    await request(app).post(`/api/events/${id}/submit`).set("x-user-role", "EDITOR");
-    await request(app).post(`/api/events/${id}/publish`).set("x-user-role", "MODERATOR").send({});
+    await request(app).post(`/api/events/${id}/submit`).set("Authorization", authHeader("EDITOR"));
+    await request(app).post(`/api/events/${id}/publish`).set("Authorization", authHeader("MODERATOR")).send({});
 
     const archiveResponse = await request(app)
       .post(`/api/events/${id}/archive`)
-      .set("x-user-role", "MODERATOR");
+      .set("Authorization", authHeader("MODERATOR"));
 
     expect(archiveResponse.status).toBe(200);
     expect(typeof archiveResponse.body.archivedAt).toBe("string");
 
     const unarchiveResponse = await request(app)
       .post(`/api/events/${id}/unarchive`)
-      .set("x-user-role", "ADMIN");
+      .set("Authorization", authHeader("ADMIN"));
 
     expect(unarchiveResponse.status).toBe(200);
     expect(unarchiveResponse.body.archivedAt).toBeNull();
@@ -464,13 +457,13 @@ describe("events routes", () => {
     const app = createApp();
     const createResponse = await request(app)
       .post("/api/events")
-      .set("x-user-role", "EDITOR")
+      .set("Authorization", authHeader("EDITOR"))
       .send(validPayload);
     const id = createResponse.body.id;
 
     const response = await request(app)
       .post(`/api/events/${id}/archive`)
-      .set("x-user-role", "MODERATOR");
+      .set("Authorization", authHeader("MODERATOR"));
 
     expect(response.status).toBe(400);
   });
@@ -479,10 +472,10 @@ describe("events routes", () => {
     const app = createApp();
     const archiveResponse = await request(app)
       .post("/api/events/missing/archive")
-      .set("x-user-role", "MODERATOR");
+      .set("Authorization", authHeader("MODERATOR"));
     const unarchiveResponse = await request(app)
       .post("/api/events/missing/unarchive")
-      .set("x-user-role", "MODERATOR");
+      .set("Authorization", authHeader("MODERATOR"));
 
     expect(archiveResponse.status).toBe(404);
     expect(unarchiveResponse.status).toBe(404);
@@ -492,16 +485,16 @@ describe("events routes", () => {
     const app = createApp();
     const createResponse = await request(app)
       .post("/api/events")
-      .set("x-user-role", "EDITOR")
+      .set("Authorization", authHeader("EDITOR"))
       .send(validPayload);
     const id = createResponse.body.id;
 
     const archiveResponse = await request(app)
       .post(`/api/events/${id}/archive`)
-      .set("x-user-role", "EDITOR");
+      .set("Authorization", authHeader("EDITOR"));
     const unarchiveResponse = await request(app)
       .post(`/api/events/${id}/unarchive`)
-      .set("x-user-role", "EDITOR");
+      .set("Authorization", authHeader("EDITOR"));
 
     expect(archiveResponse.status).toBe(403);
     expect(unarchiveResponse.status).toBe(403);
@@ -511,11 +504,11 @@ describe("events routes", () => {
     const app = createApp();
     const createResponse = await request(app)
       .post("/api/events")
-      .set("x-user-role", "EDITOR")
+      .set("Authorization", authHeader("EDITOR"))
       .send(validPayload);
     const response = await request(app)
       .post(`/api/events/${createResponse.body.id}/reject`)
-      .set("x-user-role", "MODERATOR")
+      .set("Authorization", authHeader("MODERATOR"))
       .send({});
 
     expect(response.status).toBe(400);
@@ -525,7 +518,7 @@ describe("events routes", () => {
     const app = createApp();
     const response = await request(app)
       .post("/api/events/missing/reject")
-      .set("x-user-role", "MODERATOR")
+      .set("Authorization", authHeader("MODERATOR"))
       .send({ rejectionReason: "Motif" });
 
     expect(response.status).toBe(404);
@@ -543,12 +536,12 @@ describe("events routes", () => {
     const app = createApp();
     const createResponse = await request(app)
       .post("/api/events")
-      .set("x-user-role", "EDITOR")
+      .set("Authorization", authHeader("EDITOR"))
       .send(validPayload);
 
     const publishResponse = await request(app)
       .post(`/api/events/${createResponse.body.id}/publish`)
-      .set("x-user-role", "EDITOR");
+      .set("Authorization", authHeader("EDITOR"));
 
     expect(publishResponse.status).toBe(403);
     expect(publishResponse.body).toEqual({ message: "Forbidden" });
@@ -558,7 +551,7 @@ describe("events routes", () => {
     const app = createApp();
     const response = await request(app)
       .post("/api/events")
-      .set("x-user-role", "EDITOR")
+      .set("Authorization", authHeader("EDITOR"))
       .send({});
 
     expect(response.status).toBe(400);

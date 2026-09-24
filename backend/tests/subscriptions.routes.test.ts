@@ -5,6 +5,7 @@ import { CategorySubscriptionRepository } from "../src/subscriptions/repository"
 import { AdminRepository } from "../src/admin/repository";
 import { authenticateOptional } from "../src/auth/middleware";
 import { signUserToken } from "../src/auth/jwt";
+import { authHeader } from "./authTestUtils";
 
 const buildAdminRepo = (): AdminRepository =>
   ({
@@ -32,8 +33,7 @@ describe("subscriptions routes", () => {
 
     const response = await request(app)
       .get("/api/subscriptions/categories")
-      .set("x-user-role", "MODERATOR")
-      .set("x-user-id", "user-1");
+      .set("Authorization", authHeader("MODERATOR", "user-1"));
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual([
@@ -42,7 +42,7 @@ describe("subscriptions routes", () => {
     ]);
   });
 
-  it("resolves the user id from a valid JWT rather than the x-user-id header", async () => {
+  it("uses the valid JWT identity and ignores spoofed identity headers", async () => {
     process.env.JWT_SECRET = "test-secret";
     const tokenResult = signUserToken({ id: "jwt-user", name: "User", email: "user@test", role: "MODERATOR" });
     if (!tokenResult.ok) throw new Error("Token generation failed");
@@ -56,21 +56,24 @@ describe("subscriptions routes", () => {
     const response = await request(app)
       .get("/api/subscriptions/categories")
       .set("Authorization", `Bearer ${tokenResult.value}`)
-      .set("x-user-role", "MODERATOR")
+      .set("x-user-role", "ADMIN")
       .set("x-user-id", "header-user");
 
     expect(response.status).toBe(200);
     expect(subscriptionRepo.listUnsubscribedCategoryIds).toHaveBeenCalledWith("jwt-user");
   });
 
-  it("rejects listing without a resolvable user id", async () => {
+  it("rejects listing with only spoofed identity headers", async () => {
     const subscriptionRepo: CategorySubscriptionRepository = {
       listUnsubscribedCategoryIds: async () => [],
       setSubscription: jest.fn(async () => undefined)
     };
     const app = buildApp(subscriptionRepo);
 
-    const response = await request(app).get("/api/subscriptions/categories").set("x-user-role", "MODERATOR");
+    const response = await request(app)
+      .get("/api/subscriptions/categories")
+      .set("x-user-role", "MODERATOR")
+      .set("x-user-id", "user-1");
 
     expect(response.status).toBe(401);
   });
@@ -84,8 +87,7 @@ describe("subscriptions routes", () => {
 
     const response = await request(app)
       .get("/api/subscriptions/categories")
-      .set("x-user-role", "EDITOR")
-      .set("x-user-id", "user-1");
+      .set("Authorization", authHeader("EDITOR", "user-1"));
 
     expect(response.status).toBe(403);
   });
@@ -100,15 +102,14 @@ describe("subscriptions routes", () => {
 
     const response = await request(app)
       .put("/api/subscriptions/categories/music")
-      .set("x-user-role", "ADMIN")
-      .set("x-user-id", "user-1")
+      .set("Authorization", authHeader("ADMIN", "user-1"))
       .send({ subscribed: false });
 
     expect(response.status).toBe(200);
     expect(setSubscription).toHaveBeenCalledWith("user-1", "music", false);
   });
 
-  it("rejects updating without a resolvable user id", async () => {
+  it("rejects updating with only spoofed identity headers", async () => {
     const subscriptionRepo: CategorySubscriptionRepository = {
       listUnsubscribedCategoryIds: async () => [],
       setSubscription: jest.fn(async () => undefined)
@@ -118,6 +119,7 @@ describe("subscriptions routes", () => {
     const response = await request(app)
       .put("/api/subscriptions/categories/music")
       .set("x-user-role", "ADMIN")
+      .set("x-user-id", "user-1")
       .send({ subscribed: false });
 
     expect(response.status).toBe(401);
@@ -132,8 +134,7 @@ describe("subscriptions routes", () => {
 
     const response = await request(app)
       .put("/api/subscriptions/categories/music")
-      .set("x-user-role", "ADMIN")
-      .set("x-user-id", "user-1")
+      .set("Authorization", authHeader("ADMIN", "user-1"))
       .send({ subscribed: "nope" });
 
     expect(response.status).toBe(400);
@@ -150,8 +151,7 @@ describe("subscriptions routes", () => {
 
     const response = await request(app)
       .get("/api/subscriptions/categories")
-      .set("x-user-role", "ADMIN")
-      .set("x-user-id", "user-1");
+      .set("Authorization", authHeader("ADMIN", "user-1"));
 
     expect(response.status).toBe(500);
   });

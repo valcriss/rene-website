@@ -10,9 +10,10 @@ describe("requireRole", () => {
     return res;
   };
 
-  const createReq = (role?: string) => ({
-    header: jest.fn(() => role)
-  }) as unknown as Request;
+  const createReq = (role?: "EDITOR" | "MODERATOR" | "ADMIN") => ({
+    headers: {},
+    user: role ? { id: "user-1", name: "User", email: "user@example.com", role } : undefined
+  }) as Request;
 
   it("returns 401 when missing role", () => {
     const res = createRes();
@@ -25,11 +26,13 @@ describe("requireRole", () => {
     expect(next).not.toHaveBeenCalled();
   });
 
-  it("returns 401 when role is invalid", () => {
+  it("ignores a spoofed role header", () => {
     const res = createRes();
     const next = jest.fn() as NextFunction;
+    const req = createReq();
+    req.headers["x-user-role"] = "ADMIN";
 
-    requireRole(["EDITOR"])(createReq("INVALID"), res, next);
+    requireRole(["EDITOR"])(req, res, next);
 
     expect(res.status).toHaveBeenCalledWith(401);
     expect(res.json).toHaveBeenCalledWith({ message: "Authentication required" });

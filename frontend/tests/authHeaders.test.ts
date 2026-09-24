@@ -7,7 +7,7 @@ describe("authHeaders", () => {
     setSessionExpiredHandler(() => {});
   });
 
-  it("builds headers from role and stored session", () => {
+  it("builds headers exclusively from the stored token", () => {
     window.localStorage.setItem("rene-auth-token", "token-1");
     window.localStorage.setItem("rene-auth-user-id", "user-1");
 
@@ -15,9 +15,7 @@ describe("authHeaders", () => {
 
     expect(headers).toEqual({
       "Content-Type": "application/json",
-      "x-user-role": "ADMIN",
-      Authorization: "Bearer token-1",
-      "x-user-id": "user-1"
+      Authorization: "Bearer token-1"
     });
   });
 
@@ -30,7 +28,7 @@ describe("authHeaders", () => {
   it("skips the Content-Type header when asked to", () => {
     const headers = buildAuthHeaders("EDITOR", false);
 
-    expect(headers).toEqual({ "x-user-role": "EDITOR" });
+    expect(headers).toEqual({});
   });
 
   it("invokes the registered handler and never settles", async () => {

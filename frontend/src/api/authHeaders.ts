@@ -18,25 +18,16 @@ export const handleSessionExpired = <T>(): Promise<T> => {
   return new Promise<T>(() => {});
 };
 
-export const buildAuthHeaders = (role?: string, includeJson = true) => {
+export const buildAuthHeaders = (_role?: string, includeJson = true) => {
   const headers: Record<string, string> = {};
 
   if (includeJson) {
     headers["Content-Type"] = "application/json";
   }
 
-  if (role) {
-    headers["x-user-role"] = role;
-  }
-
   const token = window.localStorage.getItem(TOKEN_STORAGE_KEY);
   if (token) {
     headers.Authorization = `Bearer ${token}`;
-  }
-
-  const userId = window.localStorage.getItem(USER_ID_STORAGE_KEY);
-  if (userId) {
-    headers["x-user-id"] = userId;
   }
 
   return headers;

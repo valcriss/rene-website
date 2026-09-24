@@ -4,6 +4,8 @@ import { createEventRouter } from "../src/events/routes";
 import { EventRepository } from "../src/events/repository";
 import { AuthRepository } from "../src/auth/repository";
 import { Event } from "../src/events/types";
+import { authenticateOptional } from "../src/auth/middleware";
+import { authHeader } from "./authTestUtils";
 
 jest.mock("../src/notifications/service", () => ({
   notifyEventSubmitted: jest.fn(async () => ({ ok: false, errors: ["boom"] })),
@@ -123,11 +125,12 @@ describe("events routes notification warnings", () => {
     };
     const app = express();
     app.use(express.json());
+    app.use(authenticateOptional);
     app.use("/api", createEventRouter(buildRepo(publishedEvent), authRepo));
 
     const response = await request(app)
       .put("/api/events/1")
-      .set("x-user-role", "EDITOR")
+      .set("Authorization", authHeader("EDITOR"))
       .send(baseEvent);
 
     expect(response.status).toBe(200);
@@ -139,11 +142,12 @@ describe("events routes notification warnings", () => {
     const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => undefined);
     const app = express();
     app.use(express.json());
+    app.use(authenticateOptional);
     app.use("/api", createEventRouter(buildRepo(baseEvent), authRepo));
 
     const response = await request(app)
       .post("/api/events/1/submit")
-      .set("x-user-role", "EDITOR");
+      .set("Authorization", authHeader("EDITOR"));
 
     expect(response.status).toBe(200);
     expect(warnSpy).toHaveBeenCalled();
@@ -154,11 +158,12 @@ describe("events routes notification warnings", () => {
     const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => undefined);
     const app = express();
     app.use(express.json());
+    app.use(authenticateOptional);
     app.use("/api", createEventRouter(buildRepo({ ...baseEvent, status: "REJECTED" }), authRepo));
 
     const response = await request(app)
       .post("/api/events/1/submit")
-      .set("x-user-role", "EDITOR");
+      .set("Authorization", authHeader("EDITOR"));
 
     expect(response.status).toBe(200);
     expect(warnSpy).toHaveBeenCalled();
@@ -169,11 +174,12 @@ describe("events routes notification warnings", () => {
     const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => undefined);
     const app = express();
     app.use(express.json());
+    app.use(authenticateOptional);
     app.use("/api", createEventRouter(buildRepo(baseEvent), authRepo));
 
     const response = await request(app)
       .post("/api/events/1/publish")
-      .set("x-user-role", "MODERATOR");
+      .set("Authorization", authHeader("MODERATOR"));
 
     expect(response.status).toBe(200);
     expect(warnSpy).toHaveBeenCalled();
@@ -184,11 +190,12 @@ describe("events routes notification warnings", () => {
     const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => undefined);
     const app = express();
     app.use(express.json());
+    app.use(authenticateOptional);
     app.use("/api", createEventRouter(buildRepo(baseEvent), authRepo));
 
     const response = await request(app)
       .post("/api/events/1/reject")
-      .set("x-user-role", "MODERATOR")
+      .set("Authorization", authHeader("MODERATOR"))
       .send({ rejectionReason: "Motif" });
 
     expect(response.status).toBe(200);
@@ -200,11 +207,12 @@ describe("events routes notification warnings", () => {
     const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => undefined);
     const app = express();
     app.use(express.json());
+    app.use(authenticateOptional);
     app.use("/api", createEventRouter(buildRepo(baseEvent), authRepo));
 
     const response = await request(app)
       .delete("/api/events/1")
-      .set("x-user-role", "MODERATOR");
+      .set("Authorization", authHeader("MODERATOR"));
 
     expect(response.status).toBe(200);
     expect(warnSpy).toHaveBeenCalled();
@@ -230,11 +238,12 @@ describe("events routes notification warnings", () => {
     };
     const app = express();
     app.use(express.json());
+    app.use(authenticateOptional);
     app.use("/api", createEventRouter(buildRepo(publishedEvent), authRepo));
 
     const response = await request(app)
       .post("/api/events/1/reject")
-      .set("x-user-role", "MODERATOR")
+      .set("Authorization", authHeader("MODERATOR"))
       .send({ rejectionReason: "Motif" });
 
     expect(response.status).toBe(200);

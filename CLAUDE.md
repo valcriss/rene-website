@@ -68,7 +68,7 @@ Each data-backed module follows the same repository pattern — when adding a mo
 
 Tests live in `backend/tests/`, mirroring `src/` module names (e.g. `events.service.test.ts`, `events.validation.test.ts`), not colocated with source.
 
-Auth: JWT-based (`auth/jwt.ts`), roles are `EDITOR | MODERATOR | ADMIN` (`auth/roles.ts`). `requireRole([...])` middleware checks `req.user?.role` (set by `authenticateOptional` from the JWT) with a fallback to an `x-user-role` header — the header path exists for testing/local convenience, real authorization always goes through the JWT-derived role.
+Auth: JWT-based (`auth/jwt.ts`), roles are `EDITOR | MODERATOR | ADMIN` (`auth/roles.ts`). `requireRole([...])` checks only `req.user?.role`, populated by `authenticateOptional` after cryptographic JWT validation. Client-provided identity or role headers must never be trusted.
 
 Prisma schema/migrations: `backend/prisma/schema.prisma`, `backend/prisma/migrations/`. Seed script (`backend/prisma/seed.ts`) creates dev accounts documented in [README.md](README.md).
 

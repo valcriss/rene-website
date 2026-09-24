@@ -1,5 +1,6 @@
 import jwt, { SignOptions } from "jsonwebtoken";
 import { AuthUser } from "./types";
+import { isUserRole } from "./roles";
 
 export type JwtResult<T> =
   | { ok: true; value: T }
@@ -51,9 +52,9 @@ export const verifyUserToken = (token: string): JwtResult<AuthUser> => {
     const id = typeof payload.sub === "string" ? payload.sub : null;
     const email = typeof payload.email === "string" ? payload.email : null;
     const name = typeof payload.name === "string" ? payload.name : null;
-    const role = typeof payload.role === "string" ? payload.role : null;
+    const role = payload.role;
 
-    if (!id || !email || !name || !role) {
+    if (!id || !email || !name || !isUserRole(role)) {
       return { ok: false, errors: ["Token invalide"] };
     }
 
@@ -63,7 +64,7 @@ export const verifyUserToken = (token: string): JwtResult<AuthUser> => {
         id,
         email,
         name,
-        role: role as AuthUser["role"]
+        role
       }
     };
   } catch {
