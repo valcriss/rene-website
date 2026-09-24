@@ -1,4 +1,4 @@
-FROM node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1 AS builder
+FROM node:25-alpine@sha256:bdf2cca6fe3dabd014ea60163eca3f0f7015fbd5c7ee1b0e9ccb4ced6eb02ef4 AS builder
 WORKDIR /app
 
 COPY package.json package-lock.json ./
@@ -14,7 +14,7 @@ RUN npx prisma generate --schema backend/prisma/schema.prisma
 RUN npm run build -w backend
 RUN npm run build -w frontend
 
-FROM node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1 AS production-dependencies
+FROM node:25-alpine@sha256:bdf2cca6fe3dabd014ea60163eca3f0f7015fbd5c7ee1b0e9ccb4ced6eb02ef4 AS production-dependencies
 WORKDIR /app
 
 COPY package.json package-lock.json ./
@@ -27,7 +27,7 @@ RUN npm ci --omit=dev --omit=peer --workspace backend --include-workspace-root=f
 	&& rm -rf /app/node_modules/typescript \
 	&& npm cache clean --force
 
-FROM node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1 AS runtime
+FROM node:25-alpine@sha256:bdf2cca6fe3dabd014ea60163eca3f0f7015fbd5c7ee1b0e9ccb4ced6eb02ef4 AS runtime
 WORKDIR /app
 
 ENV NODE_ENV=production
