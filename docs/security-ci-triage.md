@@ -4,6 +4,8 @@ Chaque pull request exécute une installation déterministe (`npm ci`), le scan 
 
 La revue de dépendances bloque toute vulnérabilité `high` ou `critical`, quel que soit le scope. Trivy bloque aussi ces deux sévérités dans le dépôt et l’image. L’image de release reçoit un SBOM et une provenance BuildKit attachés à son image GHCR.
 
+L’action GitHub Dependency Review exige que le **Dependency graph** soit activé dans les réglages « Advanced Security » du dépôt. Tant que ce réglage GitHub externe est désactivé, elle émet un avertissement et le `npm audit --audit-level=high` déterministe reste le contrôle bloquant de remplacement. L’activer remet immédiatement en service la revue GitHub native avec le même seuil.
+
 ## Triage et délais
 
 | Sévérité | Délai de prise en charge | Délai de correction cible |

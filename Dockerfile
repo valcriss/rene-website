@@ -55,6 +55,8 @@ RUN addgroup -S -g 10001 rene \
 WORKDIR /app/backend
 USER 10001:10001
 EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:3000/api/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"
 
 ENTRYPOINT ["backend-entrypoint.sh"]
 CMD ["node", "dist/index.js"]

@@ -19,10 +19,19 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4.9.0
+      - id: github-dependency-review
+        continue-on-error: true
+        uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4.9.0
         with:
           fail-on-severity: high
           fail-on-scopes: runtime,development
+      - name: Enforce deterministic dependency audit
+        run: |
+          npm ci --ignore-scripts
+          npm audit --audit-level=high
+      - name: Report dependency graph configuration
+        if: steps.github-dependency-review.outcome == 'failure'
+        run: echo "::warning::GitHub Dependency Review needs the repository dependency graph. npm audit remains blocking until it is enabled."
 
   filesystem-scan:
     runs-on: ubuntu-latest
@@ -40,9 +49,8 @@ jobs:
           format: sarif
           output: trivy-filesystem.sarif
           scanners: vuln,secret,misconfig
-          severity: HIGH,CRITICAL
           ignore-unfixed: false
-          exit-code: "1"
+          exit-code: "0"
       - uses: github/codeql-action/upload-sarif@88585263c0627ee42c0e1c5143a112c8d6f4aa18 # v4.38.2
         if: always() && hashFiles('trivy-filesystem.sarif') != ''
         with:
@@ -54,6 +62,16 @@ jobs:
           path: trivy-filesystem.sarif
           if-no-files-found: error
           retention-days: 14
+      - name: Block high and critical filesystem findings
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: table
+          scanners: vuln,secret,misconfig
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: "1"
 
   codeql:
     runs-on: ubuntu-latest
