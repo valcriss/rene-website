@@ -264,7 +264,7 @@ describe("BackofficeEventCreatePage", () => {
       status: "DRAFT"
     });
     const submitSpy = vi.spyOn(setup.editorStore, "handleSaveAndSubmit").mockResolvedValue(true);
-    const previewSpy = vi.spyOn(setup.editorStore, "savePreviewSnapshot").mockReturnValue("preview-1");
+    const previewSpy = vi.spyOn(setup.editorStore, "savePreviewSnapshot").mockResolvedValue("preview-1");
     const pushSpy = vi.spyOn(setup.router, "push");
 
     const wrapper = mount(BackofficeEventCreatePage, {
@@ -281,7 +281,7 @@ describe("BackofficeEventCreatePage", () => {
         setupState: {
           handleSaveAndRedirect: () => Promise<void>;
           handleSubmitAndRedirect: () => Promise<void>;
-          handlePreview: () => void;
+          handlePreview: () => Promise<void>;
           handleImageChange: (event: Event) => void;
           goToEvents: () => void;
         };
@@ -290,7 +290,7 @@ describe("BackofficeEventCreatePage", () => {
 
     await setupState.handleSaveAndRedirect();
     await setupState.handleSubmitAndRedirect();
-    setupState.handlePreview();
+    await setupState.handlePreview();
     setupState.handleImageChange({ target: { files: [] } } as unknown as Event);
     setupState.goToEvents();
 

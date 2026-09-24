@@ -382,10 +382,12 @@
           <div class="flex flex-wrap items-center gap-3">
             <button
               type="button"
-              class="rounded-full border border-slate-700 px-5 py-2.5 text-sm font-medium text-white transition hover:border-slate-500 hover:bg-white/5"
+              class="inline-flex items-center gap-2 rounded-full border border-slate-700 px-5 py-2.5 text-sm font-medium text-white transition hover:border-slate-500 hover:bg-white/5"
+              :disabled="isBuildingPreview"
               @click="handlePreview"
             >
-              {{ t("editor.previewArticle") }}
+              <LoadingSpinner v-if="isBuildingPreview" size="sm" />
+              <span>{{ t("editor.previewArticle") }}</span>
             </button>
             <button
               type="button"
@@ -667,11 +669,21 @@ const handlePublishAndRedirect = async () => {
   }
 };
 
-const handlePreview = () => {
-  const token = savePreviewSnapshot();
-  router.push({
-    name: "backoffice-events-preview",
-    query: { preview: token }
-  });
+const isBuildingPreview = ref(false);
+
+const handlePreview = async () => {
+  if (isBuildingPreview.value) {
+    return;
+  }
+  isBuildingPreview.value = true;
+  try {
+    const token = await savePreviewSnapshot();
+    router.push({
+      name: "backoffice-events-preview",
+      query: { preview: token }
+    });
+  } finally {
+    isBuildingPreview.value = false;
+  }
 };
 </script>

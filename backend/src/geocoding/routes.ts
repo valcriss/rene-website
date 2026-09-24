@@ -22,23 +22,17 @@ export const createGeocodingRouter = () => {
     "/geocoding",
     withErrorHandling(async (req, res) => {
       const { address, postalCode, city, venueName } = req.query;
-      const errors: string[] = [];
 
-      if (!isNonEmptyString(address)) errors.push("L'adresse est requise.");
-      if (!isNonEmptyString(postalCode)) errors.push("Le code postal est requis.");
-      if (!isNonEmptyString(city)) errors.push("La ville est requise.");
-      if (!isNonEmptyString(venueName)) errors.push("Le lieu est requis.");
-
-      if (errors.length > 0) {
-        res.status(400).json({ errors });
+      if (!isNonEmptyString(city)) {
+        res.status(400).json({ errors: ["La ville est requise."] });
         return;
       }
 
       const result = await geocodeEventLocation({
-        address: address as string,
-        postalCode: postalCode as string,
+        address: isNonEmptyString(address) ? (address as string) : null,
+        postalCode: isNonEmptyString(postalCode) ? (postalCode as string) : null,
         city: city as string,
-        venueName: venueName as string
+        venueName: isNonEmptyString(venueName) ? (venueName as string) : null
       });
 
       if (!result) {

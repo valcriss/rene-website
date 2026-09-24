@@ -14,18 +14,19 @@ describe("geocoding routes", () => {
     geocodeMock.mockReset();
   });
 
-  it("returns 400 when required params are missing", async () => {
+  it("returns 400 when the city is missing", async () => {
     const app = express();
     app.use("/api", createGeocodingRouter());
 
     const response = await request(app).get("/api/geocoding");
 
     expect(response.status).toBe(400);
-    expect(response.body.errors).toContain("L'adresse est requise.");
+    expect(response.body.errors).toEqual(["La ville est requise."]);
+    expect(geocodeMock).not.toHaveBeenCalled();
   });
 
   it("returns coordinates when geocoding succeeds", async () => {
-    geocodeMock.mockResolvedValue({ latitude: 46.97, longitude: 0.7 });
+    geocodeMock.mockResolvedValue({ latitude: 46.97, longitude: 0.7, geolocationPrecision: "EXACT" });
     const app = express();
     app.use("/api", createGeocodingRouter());
 
@@ -34,7 +35,29 @@ describe("geocoding routes", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({ latitude: 46.97, longitude: 0.7 });
+    expect(response.body).toEqual({ latitude: 46.97, longitude: 0.7, geolocationPrecision: "EXACT" });
+    expect(geocodeMock).toHaveBeenCalledWith({
+      address: "1 rue",
+      postalCode: "37160",
+      city: "Descartes",
+      venueName: "Salle"
+    });
+  });
+
+  it("geocodes with only a city when address, postal code and venue are omitted", async () => {
+    geocodeMock.mockResolvedValue({ latitude: 46.97, longitude: 0.7, geolocationPrecision: "APPROXIMATE" });
+    const app = express();
+    app.use("/api", createGeocodingRouter());
+
+    const response = await request(app).get("/api/geocoding?city=Descartes");
+
+    expect(response.status).toBe(200);
+    expect(geocodeMock).toHaveBeenCalledWith({
+      address: null,
+      postalCode: null,
+      city: "Descartes",
+      venueName: null
+    });
   });
 
   it("returns 404 when address is not found", async () => {
