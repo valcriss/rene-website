@@ -70,6 +70,18 @@ export const getEventLocationSummary = (occurrences: EventOccurrence[], fallback
   return label;
 };
 
+const buildSiteKey = (occurrence: Pick<EventOccurrence, "address" | "postalCode" | "city">) =>
+  [occurrence.address, occurrence.postalCode, occurrence.city]
+    .map((part) => part?.trim().toLowerCase() ?? "")
+    .join("|");
+
+export const isMultisiteEvent = (occurrences: Pick<EventOccurrence, "address" | "postalCode" | "city">[]): boolean => {
+  const distinctSites = new Set(
+    occurrences.map(buildSiteKey).filter((key) => key.replace(/\|/g, "").length > 0)
+  );
+  return distinctSites.size > 1;
+};
+
 export const formatEventDateBadge = (occurrences: EventOccurrence[]): string => {
   const { primary, additionalCount } = getEventDateSummary(occurrences);
   if (!primary) {
