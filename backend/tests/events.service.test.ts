@@ -18,7 +18,12 @@ import {
 } from "../src/events/service";
 import { EventRepository } from "../src/events/repository";
 import { Event, EventOccurrence, EventOccurrenceInput } from "../src/events/types";
-import { deleteUploadIfLocal } from "../src/uploads/storage";
+import {
+  claimLocalUploads,
+  deleteLocalUploads,
+  deleteUnreferencedLocalUploads,
+  releaseClaimedUploads
+} from "../src/uploads/storage";
 
 const toStoredOccurrences = (occurrences: EventOccurrenceInput[]): EventOccurrence[] =>
   occurrences.map((occurrence, index) => ({
@@ -29,7 +34,10 @@ const toStoredOccurrences = (occurrences: EventOccurrenceInput[]): EventOccurren
   }));
 
 jest.mock("../src/uploads/storage", () => ({
-  deleteUploadIfLocal: jest.fn()
+  claimLocalUploads: jest.fn(async () => []),
+  deleteLocalUploads: jest.fn(),
+  deleteUnreferencedLocalUploads: jest.fn(),
+  releaseClaimedUploads: jest.fn(async () => undefined)
 }));
 
 const adminActor: EventActor = { id: "admin-1", role: "ADMIN" };
@@ -427,7 +435,10 @@ describe("event services", () => {
 
     await updateEvent(repo, "id", baseEvent);
 
-    expect(deleteUploadIfLocal).toHaveBeenCalledWith(baseEvent.image);
+    expect(deleteUnreferencedLocalUploads).toHaveBeenCalledWith(
+      [baseEvent.image, baseEvent.content],
+      ["/uploads/new.png", baseEvent.content]
+    );
   });
 
   it("updateEvent returns validation errors", async () => {
@@ -924,6 +935,10 @@ describe("event services", () => {
   });
 
   it("createEvent returns repo error", async () => {
+    const claimMock = jest.mocked(claimLocalUploads);
+    const releaseMock = jest.mocked(releaseClaimedUploads);
+    claimMock.mockResolvedValueOnce(["upload.webp"]);
+    releaseMock.mockClear();
     const repo = createRepo(baseEvent, {
       list: async () => [],
       create: async () => {
@@ -935,6 +950,8 @@ describe("event services", () => {
     if (!result.ok) {
       expect(result.errors).toContain("boom");
     }
+    expect(claimMock).toHaveBeenCalledWith([baseEvent.image, baseEvent.content]);
+    expect(releaseMock).toHaveBeenCalledWith(["upload.webp"]);
   });
 
   it("createEvent returns unknown error when non-error thrown", async () => {
@@ -989,7 +1006,12 @@ describe("event services", () => {
     const repo = createRepo({ ...baseEvent, createdByUserId: "owner-1" });
     const result = await deleteEvent(repo, "id", { role: "EDITOR", id: "owner-1" });
     expect(result.ok).toBe(true);
-    expect(deleteUploadIfLocal).toHaveBeenCalledWith(baseEvent.image);
+    expect(deleteLocalUploads).toHaveBeenCalledWith([
+      baseEvent.image,
+      baseEvent.content,
+      undefined,
+      undefined
+    ]);
   });
 
   it("deleteEvent forbids editors from removing published events", async () => {
@@ -1147,10 +1169,13 @@ describe("event services", () => {
 
     await updateEvent(repo, "id", baseEvent);
 
-    expect(deleteUploadIfLocal).toHaveBeenCalledWith("/uploads/old-revision.png");
+    expect(deleteUnreferencedLocalUploads).toHaveBeenCalledWith(
+      ["/uploads/old-revision.png", baseEvent.content],
+      ["/uploads/new-revision.png", baseEvent.content]
+    );
   });
 
-  it("keeps pending revision image when it is unchanged on published update", async () => {
+  it("preserves referenced pending revision assets on published update", async () => {
     const publishedEvent: Event = {
       ...baseEvent,
       status: "PUBLISHED",
@@ -1178,7 +1203,10 @@ describe("event services", () => {
 
     await updateEvent(repo, "id", baseEvent);
 
-    expect(deleteUploadIfLocal).not.toHaveBeenCalledWith("/uploads/same-revision.png");
+    expect(deleteUnreferencedLocalUploads).toHaveBeenCalledWith(
+      ["/uploads/same-revision.png", baseEvent.content],
+      ["/uploads/same-revision.png", baseEvent.content]
+    );
   });
 
   it("submits a published draft revision", async () => {
@@ -1301,7 +1329,10 @@ describe("event services", () => {
     const result = await publishEvent(repo, "id");
 
     expect(result.ok).toBe(true);
-    expect(deleteUploadIfLocal).toHaveBeenCalledWith("/uploads/original.png");
+    expect(deleteUnreferencedLocalUploads).toHaveBeenCalledWith(
+      ["/uploads/original.png", baseEvent.content],
+      ["/uploads/revision.png", baseEvent.content]
+    );
   });
 
   it("returns errors when published publish revision is missing", async () => {
