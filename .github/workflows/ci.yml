@@ -32,6 +32,13 @@ jobs:
       - run: npm run build
       - run: npm run check:bundle-size -w frontend
       - run: docker build --tag rene-website:ci .
+      - name: Verify rootless immutable runtime
+        run: |
+          docker run --rm --read-only \
+            --tmpfs /tmp:rw,noexec,nosuid,size=64m,mode=1777 \
+            --tmpfs /app/uploads:rw,nosuid,size=64m,mode=1777 \
+            --entrypoint sh rene-website:ci -ec \
+            'test "$(id -u)" = "10001"; touch /tmp/allowed; touch /app/uploads/allowed; ! touch /app/outside-allowed'
       - uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
         with:
           image-ref: rene-website:ci

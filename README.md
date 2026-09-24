@@ -47,3 +47,6 @@ reverse proxy sont décrits dans [docs/security-resource-limits.md](docs/securit
 
 La politique CSP, les headers HTTP et le déploiement HTTPS sont décrits dans
 [docs/security-http-headers.md](docs/security-http-headers.md).
+
+Le durcissement des conteneurs, la configuration du reverse proxy et la vérification
+des artefacts Photon sont documentés dans [docs/security-containers.md](docs/security-containers.md).
