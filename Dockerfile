@@ -1,4 +1,4 @@
-FROM node:24-alpine AS builder
+FROM node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1 AS builder
 WORKDIR /app
 
 COPY package.json package-lock.json ./
@@ -14,7 +14,7 @@ RUN npx prisma generate --schema backend/prisma/schema.prisma
 RUN npm run build -w backend
 RUN npm run build -w frontend
 
-FROM node:24-alpine AS production-dependencies
+FROM node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1 AS production-dependencies
 WORKDIR /app
 
 COPY package.json package-lock.json ./
@@ -27,7 +27,7 @@ RUN npm ci --omit=dev --omit=peer --workspace backend --include-workspace-root=f
 	&& rm -rf /app/node_modules/typescript \
 	&& npm cache clean --force
 
-FROM node:24-alpine AS runtime
+FROM node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1 AS runtime
 WORKDIR /app
 
 ENV NODE_ENV=production
@@ -43,13 +43,17 @@ COPY --from=builder /app/frontend/dist ./frontend/dist
 COPY communes.csv ./communes.csv
 COPY docker/backend-entrypoint.sh /usr/local/bin/backend-entrypoint.sh
 
-RUN sed -i 's/\r$//' /usr/local/bin/backend-entrypoint.sh \
+RUN addgroup -S -g 10001 rene \
+	&& adduser -S -D -H -u 10001 -G rene rene \
+	&& sed -i 's/\r$//' /usr/local/bin/backend-entrypoint.sh \
 	&& chmod +x /usr/local/bin/backend-entrypoint.sh \
 	&& rm -rf /usr/local/lib/node_modules/npm \
 	&& rm -f /usr/local/bin/npm /usr/local/bin/npx \
-	&& mkdir -p /app/uploads
+	&& mkdir -p /app/uploads /tmp \
+	&& chown -R rene:rene /app /tmp
 
 WORKDIR /app/backend
+USER 10001:10001
 EXPOSE 3000
 
 ENTRYPOINT ["backend-entrypoint.sh"]

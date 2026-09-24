@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:16
+    image: postgres:16@sha256:a3b7f434b2dc57ce85a67e171163eb8ab1a1ebcb39d27484661f26b1dfbe30d6
     environment:
       POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
@@ -10,10 +10,14 @@ services:
     volumes:
       - db-data:/var/lib/postgresql/data
   photon-init:
-    image: debian:bookworm-slim
+    image: debian:bookworm-slim@sha256:3783cc01769c7b2b1b83a5c5ad96c815348e28ed7da68e2e3687004faa906251
     container_name: photon-init
     volumes:
       - ./photon:/photon
+    configs:
+      - source: photon-init-script
+        target: /usr/local/bin/photon-init.sh
+        mode: 0555
     env_file:
       - .env
     command:
@@ -26,52 +30,11 @@ services:
         apt-get install -y --no-install-recommends ca-certificates curl bzip2 tar
         rm -rf /var/lib/apt/lists/*
 
-        mkdir -p /photon/bin /photon/data
-
-        JAR_OPENSEARCH="/photon/bin/photon-opensearch-${PHOTON_VERSION}.jar"
-        JAR_STANDARD="/photon/bin/photon-${PHOTON_VERSION}.jar"
-        JAR="/photon/bin/photon.jar"
-        if curl -fsI "https://github.com/komoot/photon/releases/download/${PHOTON_VERSION}/photon-opensearch-${PHOTON_VERSION}.jar" >/dev/null; then
-          JAR_VERSIONED="$$JAR_OPENSEARCH"
-          JAR_FLAVOR="opensearch"
-          JAR_URL="https://github.com/komoot/photon/releases/download/${PHOTON_VERSION}/photon-opensearch-${PHOTON_VERSION}.jar"
-        else
-          JAR_VERSIONED="$$JAR_STANDARD"
-          JAR_FLAVOR="standard"
-          JAR_URL="https://github.com/komoot/photon/releases/download/${PHOTON_VERSION}/photon-${PHOTON_VERSION}.jar"
-        fi
-
-        if [ ! -f "$$JAR_VERSIONED" ]; then
-          echo "Downloading Photon jar ${PHOTON_VERSION}..."
-          curl -fL -o "$$JAR_VERSIONED" "$$JAR_URL"
-        else
-          echo "Jar already present: $$JAR_VERSIONED"
-        fi
-        ln -sf "$$JAR_VERSIONED" "$$JAR"
-
-        DB_MARKER="/photon/data/.photon-db-source"
-        EXPECTED_DB_SOURCE="${PHOTON_VERSION}:$$JAR_FLAVOR:${PHOTON_DB_URL}"
-
-        # Photon attend un index OpenSearch sous /photon/data/photon_data/...
-        if [ -d "/photon/data/photon_data/node_1/data/nodes/0/indices" ] && \
-          [ -f "$$DB_MARKER" ] && \
-          [ "$$(cat "$$DB_MARKER")" = "$$EXPECTED_DB_SOURCE" ] && \
-          find "/photon/data/photon_data/node_1/data/nodes/0/indices" -mindepth 1 -print -quit | grep -q .; then
-          echo "Photon index already present, skipping DB download."
-        else
-          echo "Photon index missing, incomplete, or built for another runtime. Resetting local data."
-          rm -rf /photon/data/photon_data
-          rm -f "$$DB_MARKER"
-          echo "Downloading & extracting Photon DB dump..."
-          curl -fL "${PHOTON_DB_URL}" | bzip2 -cd | tar -x -C /photon/data
-          printf '%s' "$$EXPECTED_DB_SOURCE" > "$$DB_MARKER"
-        fi
-
-        echo "Init done."
+        exec /usr/local/bin/photon-init.sh
     restart: "no"
 
   photon:
-    image: eclipse-temurin:21-jre
+    image: eclipse-temurin:21-jre@sha256:49e21e16e3c86eb7816a44a67549910ed090fbeb40c29c525d58bf5e02e91b0f
     container_name: photon
     depends_on:
       photon-init:
@@ -82,6 +45,7 @@ services:
       - "${PHOTON_PORT}:2322"
     volumes:
       - ./photon:/photon
+    user: "65532:65532"
     command:
       - bash
       - -lc
@@ -95,3 +59,7 @@ services:
 
 volumes:
   db-data:
+
+configs:
+  photon-init-script:
+    file: ./docker/photon-init.sh
