@@ -25,7 +25,8 @@ const JS_BUDGETS_KB = {
   "Header-": 4,
   "HomePage-": 12,
   "EventDetailView-": 28,
-  "EventDetailPage-": 3
+  "EventDetailPage-": 3,
+  "AgendaLandingPage-": 4
 };
 
 const CSS_BUDGET_KB = 20;

@@ -21,12 +21,8 @@ import {
 } from "../utils/occurrences";
 import { buildEventMapPins } from "../utils/mapPins";
 import { isEventArchived } from "../utils/eventArchive";
+import { formatDateInput, getWeekendRange, pad } from "../utils/dateRangePresets";
 import { useAuthStore } from "./auth";
-
-const pad = (value: number) => value.toString().padStart(2, "0");
-
-const formatDateInput = (date: Date) =>
-  `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 
 const defaultFilters = (): EventFilters => ({
   search: "",
@@ -333,11 +329,7 @@ export const useEventsStore = defineStore("events", () => {
 
   const getPresetRange = (preset: string, now: Date) => {
     if (preset === "weekend") {
-      const day = now.getDay();
-      const daysUntilSaturday = day === 6 ? 0 : (6 - day + 7) % 7;
-      const saturday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysUntilSaturday);
-      const sunday = new Date(saturday.getFullYear(), saturday.getMonth(), saturday.getDate() + 1);
-      return { start: formatDateInput(saturday), end: formatDateInput(sunday) };
+      return getWeekendRange(now);
     }
     if (preset === "week") {
       const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
