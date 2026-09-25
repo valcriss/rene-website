@@ -11,10 +11,10 @@ Photon s’exécute sous l’UID/GID `65532`. Son initialisation valide les chec
 Les quatre variables suivantes sont obligatoires pour chaque mise à jour de Photon :
 
 ```dotenv
-PHOTON_JAR_URL=https://github.com/komoot/photon/releases/download/0.7.4/photon-opensearch-0.7.4.jar
-PHOTON_JAR_SHA256=b55848b59dc8940bdc64f7d8e421359e986fa4b63276180922fd75d5c0ca758f
-PHOTON_DB_URL=https://…/photon-db-fr-250720.tar.bz2
-PHOTON_DB_SHA256=<digest de 64 caractères vérifié hors bande>
+PHOTON_JAR_URL=https://github.com/komoot/photon/releases/download/1.3.0/photon-1.3.0.jar
+PHOTON_JAR_SHA256=a89707c0045e4807b2a1180e132e68e108d998709f48b6c94b98a6e281f571a5
+PHOTON_DB_URL=https://…/photon-db-france-monacco-release-260920.tar.bz2
+PHOTON_DB_SHA256=2671c99fc14dd9b3ce9d7b2c4bdfcc3972e249045b399f4d717563c1692e9cfc
 ```
 
 La valeur du dump doit provenir d’une source de confiance indépendante du téléchargement lui-même. Si le fournisseur ne publie pas de digest, l’exploitant doit l’obtenir dans son processus de validation interne avant de le placer dans le secret ou l’environnement de déploiement. Une valeur manquante ou incorrecte arrête `photon-init` sans modifier l’index actif.
