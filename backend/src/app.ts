@@ -27,7 +27,7 @@ import { createRequestRateLimiter, enforceRequestRateLimit } from "./security/ra
 import { enforceHttps, preventPrivateCaching, securityHeaders } from "./security/headers";
 import { requestLogging } from "./security/logging";
 
-const apiMutationPolicy = {
+export const apiMutationPolicy = {
   action: "api-mutation",
   ip: { max: 120, windowMs: 15 * 60 * 1000 },
   actor: { max: 240, windowMs: 15 * 60 * 1000 }

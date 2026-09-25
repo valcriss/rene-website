@@ -1,12 +1,13 @@
 import express from "express";
 import request from "supertest";
-import { createApp } from "../src/app";
+import { createApp, apiMutationPolicy } from "../src/app";
 import { createEventRouter } from "../src/events/routes";
 import { EventRepository } from "../src/events/repository";
 import { createInMemoryEventRepository } from "../src/events/inMemoryRepository";
 import { AuthRepository } from "../src/auth/repository";
 import { signUserToken } from "../src/auth/jwt";
 import { authenticateOptional } from "../src/auth/middleware";
+import { createRequestRateLimiter, enforceRequestRateLimit } from "../src/security/rateLimiter";
 import { authHeader } from "./authTestUtils";
 
 const validPayload = {
@@ -408,9 +409,17 @@ describe("events routes", () => {
     };
     const getUserByIdSpy = jest.fn(async () => null);
     const localAuthRepo: AuthRepository = { ...authRepo, getUserById: getUserByIdSpy };
+    const requestRateLimiter = createRequestRateLimiter(localAuthRepo);
     const app = express();
     app.use(express.json());
     app.use(authenticateOptional);
+    app.use("/api", async (req, res, next) => {
+      if (["GET", "HEAD", "OPTIONS"].includes(req.method)) {
+        next();
+        return;
+      }
+      if (await enforceRequestRateLimit(requestRateLimiter, req, res, apiMutationPolicy)) next();
+    });
     app.use("/api", createEventRouter(repo, localAuthRepo));
 
     const createResponse = await request(app)
