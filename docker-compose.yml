@@ -23,8 +23,10 @@ services:
       SMTP_TIMEOUT_MS: ${SMTP_TIMEOUT_MS:-10000}
       CSP_REPORT_ONLY: ${CSP_REPORT_ONLY:-false}
       FORCE_HTTPS: ${FORCE_HTTPS:-false}
-    ports:
-      - "127.0.0.1:3000:3000"
+      PUBLIC_APP_URL: ${PUBLIC_APP_URL:-https://r3ne.art}
+    networks:
+      - default
+      - shared_network
     depends_on:
       db:
         condition: service_healthy
@@ -157,6 +159,11 @@ services:
     mem_limit: 2g
     cpus: 2.0
     pids_limit: 512
+
+networks:
+  default:
+  shared_network:
+    external: true
 
 volumes:
   db-data:
