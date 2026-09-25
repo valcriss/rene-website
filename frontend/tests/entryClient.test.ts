@@ -77,4 +77,29 @@ describe("entry-client", () => {
     expect(piniaMock.state.value).toEqual({});
     expect(mountMock).toHaveBeenCalledWith("#app");
   });
+
+  it("applies a saved locale preference only after mounting, so it never feeds hydration", async () => {
+    window.localStorage.setItem("rene-website-locale", "en");
+
+    await import("../src/entry-client");
+    await flush();
+
+    const { getCurrentLocale, setLocale } = await import("../src/i18n");
+
+    expect(mountMock).toHaveBeenCalledWith("#app");
+    expect(getCurrentLocale()).toBe("en");
+
+    setLocale("fr");
+    window.localStorage.removeItem("rene-website-locale");
+  });
+
+  it("leaves the locale untouched after mounting when nothing was saved", async () => {
+    await import("../src/entry-client");
+    await flush();
+
+    const { getCurrentLocale } = await import("../src/i18n");
+
+    expect(mountMock).toHaveBeenCalledWith("#app");
+    expect(getCurrentLocale()).toBe("fr");
+  });
 });

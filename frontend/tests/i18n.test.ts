@@ -3,7 +3,15 @@ import { nextTick } from "vue";
 import { createPinia, setActivePinia } from "pinia";
 import { mount } from "@vue/test-utils";
 import Header from "../src/components/navigation/Header.vue";
-import { i18n, installI18n, resolveInitialLocale, setLocale, getCurrentLocale, getCurrentLocaleTag } from "../src/i18n";
+import {
+  i18n,
+  installI18n,
+  resolveInitialLocale,
+  getSavedLocale,
+  setLocale,
+  getCurrentLocale,
+  getCurrentLocaleTag
+} from "../src/i18n";
 
 describe("i18n", () => {
   beforeEach(() => {
@@ -11,18 +19,29 @@ describe("i18n", () => {
     setLocale("fr");
   });
 
-  it("resolves the explicitly saved locale when one was chosen", () => {
+  it("always resolves the initial locale to French, even when a preference was saved, so the client's first render matches SSR", () => {
     window.localStorage.setItem("rene-website-locale", "en");
-    expect(resolveInitialLocale()).toBe("en");
-  });
+    expect(resolveInitialLocale()).toBe("fr");
 
-  it("defaults to French deterministically when no locale was explicitly saved, regardless of browser language (issue #57)", () => {
     window.localStorage.removeItem("rene-website-locale");
     Object.defineProperty(window.navigator, "language", { value: "en-US", configurable: true });
     expect(resolveInitialLocale()).toBe("fr");
 
     Object.defineProperty(window.navigator, "language", { value: "es-ES", configurable: true });
     expect(resolveInitialLocale()).toBe("fr");
+  });
+
+  it("exposes the explicitly saved locale via getSavedLocale, ignoring browser language (issue #57)", () => {
+    expect(getSavedLocale()).toBeNull();
+
+    Object.defineProperty(window.navigator, "language", { value: "en-US", configurable: true });
+    expect(getSavedLocale()).toBeNull();
+
+    window.localStorage.setItem("rene-website-locale", "en");
+    expect(getSavedLocale()).toBe("en");
+
+    window.localStorage.setItem("rene-website-locale", "es");
+    expect(getSavedLocale()).toBeNull();
   });
 
   it("installs and persists locale changes", async () => {
@@ -59,6 +78,8 @@ describe("i18n", () => {
 
     Reflect.deleteProperty(globalThis, "window");
     Reflect.deleteProperty(globalThis, "document");
+
+    expect(getSavedLocale()).toBeNull();
 
     const use = vi.fn();
     expect(() => installI18n({ use } as never)).not.toThrow();

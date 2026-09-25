@@ -27,15 +27,20 @@ const normalizeLocale = (value?: string | null): AppLocale | null => {
 // a crawler's, which never carries our localStorage key — must render the same deterministic
 // French version every time; only an explicit, previously saved choice from the language
 // switcher may change that.
-export const resolveInitialLocale = (): AppLocale => {
-  if (typeof window !== "undefined") {
-    const savedLocale = normalizeLocale(window.localStorage.getItem(STORAGE_KEY));
-    if (savedLocale) {
-      return savedLocale;
-    }
+//
+// That saved choice must NOT feed the initial `locale` below: the server never sees
+// localStorage and always renders French, so if the client's very first render (the one
+// hydration diffs against) already used a saved "en" preference, Vue logs "Hydration
+// completed but contains mismatches." Instead this always resolves to French, matching SSR;
+// entry-client.ts applies `getSavedLocale()` afterwards, once hydration has completed.
+export const resolveInitialLocale = (): AppLocale => DEFAULT_LOCALE;
+
+export const getSavedLocale = (): AppLocale | null => {
+  if (typeof window === "undefined") {
+    return null;
   }
 
-  return DEFAULT_LOCALE;
+  return normalizeLocale(window.localStorage.getItem(STORAGE_KEY));
 };
 
 export const i18n = createI18n({
