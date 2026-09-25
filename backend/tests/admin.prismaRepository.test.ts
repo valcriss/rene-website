@@ -184,7 +184,8 @@ describe("createPrismaAdminRepository", () => {
         email: "alice@test",
         role: "EDITOR",
         passwordHash: "",
-        emailVerifiedAt: null
+        emailVerifiedAt: null,
+        accountStatus: "INVITED"
       }
     });
     expect(created.email).toBe("alice@test");
@@ -202,9 +203,13 @@ describe("createPrismaAdminRepository", () => {
     });
 
     const repo = createPrismaAdminRepository();
-    const updated = await repo.updateUser("user-3", { name: "Alice2", email: "a2@test", role: "ADMIN" });
+    const updated = await repo.updateUser("user-3", { name: "Alice2", email: "a2@test", role: "ADMIN", accountStatus: "SUSPENDED" });
 
     expect(updated?.name).toBe("Alice2");
+    expect(prismaMocks.userUpdate).toHaveBeenCalledWith({
+      where: { id: "user-3" },
+      data: { name: "Alice2", email: "a2@test", role: "ADMIN", accountStatus: "SUSPENDED" }
+    });
   });
 
   it("returns null when updating missing user", async () => {

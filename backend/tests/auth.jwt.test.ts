@@ -24,7 +24,7 @@ describe("auth jwt", () => {
     expect(verifyResult.ok).toBe(true);
     if (!verifyResult.ok) return;
 
-    expect(verifyResult.value).toEqual(user);
+    expect(verifyResult.value).toEqual(expect.objectContaining({ ...user, authenticatedAt: expect.any(Date) }));
   });
 
   it("signs and verifies server-session claims", () => {
@@ -33,7 +33,7 @@ describe("auth jwt", () => {
     if (!tokenResult.ok) return;
     expect(verifyUserToken(tokenResult.value)).toEqual({
       ok: true,
-      value: { ...user, sessionId: "session-1", sessionVersion: 3 }
+      value: expect.objectContaining({ ...user, sessionId: "session-1", sessionVersion: 3, authenticatedAt: expect.any(Date) })
     });
   });
 
@@ -46,6 +46,16 @@ describe("auth jwt", () => {
   it("returns error on invalid token", () => {
     const verifyResult = verifyUserToken("invalid.token.value");
     expect(verifyResult.ok).toBe(false);
+  });
+
+  it("verifies a token without an issued-at timestamp", () => {
+    const token = jwt.sign(
+      { sub: user.id, email: user.email, name: user.name, role: user.role },
+      "test-secret",
+      { ...validOptions, noTimestamp: true }
+    );
+
+    expect(verifyUserToken(token)).toEqual({ ok: true, value: user });
   });
 
   it("returns error when secret is missing", () => {
@@ -122,7 +132,7 @@ describe("auth jwt", () => {
     );
     expect(verifyUserToken(token)).toEqual({
       ok: true,
-      value: { ...user, sessionId: "session", sessionVersion: undefined }
+      value: expect.objectContaining({ ...user, sessionId: "session", sessionVersion: undefined, authenticatedAt: expect.any(Date) })
     });
   });
 });

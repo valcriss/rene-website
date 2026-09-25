@@ -57,7 +57,7 @@ describe("admin service", () => {
   });
 
   it("validates user input", async () => {
-    const result = await createAdminUser(baseRepo, { name: "", email: "", role: "BAD" });
+    const result = await createAdminUser(baseRepo, { name: "", email: "", role: "BAD", accountStatus: "UNKNOWN" });
     expect(result.ok).toBe(false);
   });
 
@@ -65,7 +65,8 @@ describe("admin service", () => {
     const result = await createAdminUser(baseRepo, {
       name: "  John  ",
       email: "  john@test  ",
-      role: "ADMIN"
+      role: "ADMIN",
+      accountStatus: "ACTIVE"
     });
 
     expect(result).toEqual({
@@ -75,6 +76,7 @@ describe("admin service", () => {
         name: "John",
         email: "john@test",
         role: "ADMIN",
+        accountStatus: "ACTIVE",
         createdAt: "",
         updatedAt: ""
       }
@@ -93,6 +95,52 @@ describe("admin service", () => {
   it("returns not found on delete user", async () => {
     const result = await deleteAdminUser(baseRepo, "missing");
     expect(result.ok).toBe(false);
+  });
+
+  it("prevents deletion or demotion of the last administrator", async () => {
+    const admin = { id: "admin", name: "Admin", email: "admin@test", role: "ADMIN" as const, createdAt: "", updatedAt: "" };
+    const repo: AdminRepository = { ...baseRepo, listUsers: async () => [admin] };
+
+    await expect(deleteAdminUser(repo, admin.id)).resolves.toEqual({
+      ok: false,
+      errors: ["Le dernier administrateur ne peut pas être supprimé."]
+    });
+    await expect(updateAdminUser(repo, admin.id, { name: "Admin", email: "admin@test", role: "EDITOR" })).resolves.toEqual({
+      ok: false,
+      errors: ["Le dernier administrateur ne peut pas être rétrogradé."]
+    });
+  });
+
+  it("prevents suspension of the last active administrator", async () => {
+    const admin = {
+      id: "admin", name: "Admin", email: "admin@test", role: "ADMIN" as const,
+      accountStatus: "ACTIVE" as const, createdAt: "", updatedAt: ""
+    };
+    const repo: AdminRepository = { ...baseRepo, listUsers: async () => [admin] };
+
+    await expect(updateAdminUser(repo, admin.id, {
+      name: admin.name, email: admin.email, role: "ADMIN", accountStatus: "SUSPENDED"
+    })).resolves.toEqual({
+      ok: false,
+      errors: ["Le dernier administrateur ne peut pas être rétrogradé."]
+    });
+  });
+
+  it("allows an administrator change when another administrator remains", async () => {
+    const users = [
+      { id: "admin-1", name: "Admin 1", email: "a1@test", role: "ADMIN" as const, createdAt: "", updatedAt: "" },
+      { id: "admin-2", name: "Admin 2", email: "a2@test", role: "ADMIN" as const, createdAt: "", updatedAt: "" }
+    ];
+    const repo: AdminRepository = {
+      ...baseRepo,
+      listUsers: async () => users,
+      updateUser: async (_id, input) => ({ ...users[0], ...input })
+    };
+
+    await expect(updateAdminUser(repo, "admin-1", { name: "Admin 1", email: "a1@test", role: "EDITOR" })).resolves.toEqual({
+      ok: true,
+      value: { id: "admin-1", name: "Admin 1", email: "a1@test", role: "EDITOR", createdAt: "", updatedAt: "" }
+    });
   });
 
   it("returns errors when create category throws", async () => {

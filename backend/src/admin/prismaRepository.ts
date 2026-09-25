@@ -16,6 +16,7 @@ type PrismaUser = {
   email: string;
   role: "EDITOR" | "MODERATOR" | "ADMIN";
   passwordHash: string;
+  accountStatus: "INVITED" | "ACTIVE" | "SUSPENDED";
   createdAt: Date;
   updatedAt: Date;
 };
@@ -84,6 +85,7 @@ const toAdminUser = (data: PrismaUser): AdminUser => ({
   name: data.name,
   email: data.email,
   role: data.role,
+  accountStatus: data.accountStatus,
   createdAt: data.createdAt.toISOString(),
   updatedAt: data.updatedAt.toISOString()
 });
@@ -129,7 +131,8 @@ export const createPrismaAdminRepository = (): AdminRepository => {
           email: input.email,
           role: input.role,
           passwordHash: "",
-          emailVerifiedAt: null
+          emailVerifiedAt: null,
+          accountStatus: "INVITED"
         }
       });
       return toAdminUser(created);
@@ -141,7 +144,8 @@ export const createPrismaAdminRepository = (): AdminRepository => {
           data: {
             name: input.name,
             email: input.email,
-            role: input.role
+            role: input.role,
+            ...(input.accountStatus === undefined ? {} : { accountStatus: input.accountStatus })
           }
         });
         return toAdminUser(updated);

@@ -1,5 +1,6 @@
 import { prisma } from "../prisma/client";
 import { UserRole } from "./roles";
+import { AccountStatus } from "./types";
 import { AuthRepository } from "./repository";
 import {
   AuthSession,
@@ -17,6 +18,7 @@ type PrismaUser = {
   passwordHash: string;
   sessionVersion: number;
   emailVerifiedAt?: Date | null;
+  accountStatus?: AccountStatus;
 };
 
 type PrismaPasswordResetToken = {
@@ -99,7 +101,8 @@ const toAuthUserWithPassword = (user: PrismaUser): AuthUserWithPassword => ({
   role: user.role,
   passwordHash: user.passwordHash,
   ...(user.sessionVersion === undefined ? {} : { sessionVersion: user.sessionVersion }),
-  ...(user.emailVerifiedAt === undefined ? {} : { emailVerifiedAt: user.emailVerifiedAt })
+  ...(user.emailVerifiedAt === undefined ? {} : { emailVerifiedAt: user.emailVerifiedAt }),
+  accountStatus: user.accountStatus ?? "ACTIVE"
 });
 
 const toAuthUser = (user: PrismaUser): AuthUser => ({
@@ -108,7 +111,8 @@ const toAuthUser = (user: PrismaUser): AuthUser => ({
   email: user.email,
   role: user.role,
   ...(user.sessionVersion === undefined ? {} : { sessionVersion: user.sessionVersion }),
-  ...(user.emailVerifiedAt === undefined ? {} : { emailVerifiedAt: user.emailVerifiedAt })
+  ...(user.emailVerifiedAt === undefined ? {} : { emailVerifiedAt: user.emailVerifiedAt }),
+  accountStatus: user.accountStatus ?? "ACTIVE"
 });
 
 const isUniqueConstraintError = (error: unknown) =>
@@ -146,7 +150,7 @@ export const createPrismaAuthRepository = (): AuthRepository => ({
   createUnverifiedEditorUser: async ({ name, email, passwordHash }) => {
     try {
       const user = await prisma.user.create({
-        data: { name, email, role: "EDITOR", passwordHash, emailVerifiedAt: null }
+        data: { name, email, role: "EDITOR", passwordHash, emailVerifiedAt: null, accountStatus: "INVITED" }
       });
       return toAuthUser(user as PrismaUser);
     } catch (error) {
@@ -199,7 +203,7 @@ export const createPrismaAuthRepository = (): AuthRepository => ({
     await prisma.emailVerificationToken.deleteMany({ where: { userId } });
   },
   markEmailVerified: async (userId) => {
-    await prisma.user.update({ where: { id: userId }, data: { emailVerifiedAt: new Date() } });
+    await prisma.user.update({ where: { id: userId }, data: { emailVerifiedAt: new Date(), accountStatus: "ACTIVE" } });
   },
   createSession: async (input) => {
     await prisma.authSession.create({ data: input });

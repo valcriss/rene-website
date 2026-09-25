@@ -44,6 +44,7 @@ export const createInMemoryAuthRepository = (): AuthRepository => {
     passwordHash: string;
     sessionVersion: number;
     emailVerifiedAt: Date | null;
+    accountStatus: "INVITED" | "ACTIVE" | "SUSPENDED";
   }>();
   const passwordResetTokens = new Map<string, AuthPasswordResetToken & { tokenHash: string }>();
   const emailVerificationTokens = new Map<string, AuthEmailVerificationToken & { tokenHash: string }>();
@@ -75,7 +76,8 @@ export const createInMemoryAuthRepository = (): AuthRepository => {
         role: "EDITOR" as const,
         passwordHash,
         sessionVersion: 0,
-        emailVerifiedAt: new Date()
+        emailVerifiedAt: new Date(),
+        accountStatus: "ACTIVE" as const
       };
 
       users.set(email, user);
@@ -96,10 +98,11 @@ export const createInMemoryAuthRepository = (): AuthRepository => {
         role: "EDITOR" as const,
         passwordHash,
         sessionVersion: 0,
-        emailVerifiedAt: null
+        emailVerifiedAt: null,
+        accountStatus: "INVITED" as const
       };
       users.set(email, user);
-      return { id: user.id, name: user.name, email: user.email, role: user.role, emailVerifiedAt: null };
+      return { id: user.id, name: user.name, email: user.email, role: user.role, emailVerifiedAt: null, accountStatus: "INVITED" };
     },
     updatePasswordHash: async (userId, passwordHash) => {
       for (const [email, user] of users.entries()) {
@@ -154,7 +157,7 @@ export const createInMemoryAuthRepository = (): AuthRepository => {
     },
     markEmailVerified: async (userId) => {
       for (const [email, user] of users) {
-        if (user.id === userId) users.set(email, { ...user, emailVerifiedAt: new Date() });
+        if (user.id === userId) users.set(email, { ...user, emailVerifiedAt: new Date(), accountStatus: "ACTIVE" });
       }
     },
     createSession: async (input) => {
