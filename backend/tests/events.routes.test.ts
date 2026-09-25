@@ -3,6 +3,7 @@ import request from "supertest";
 import { createApp } from "../src/app";
 import { createEventRouter } from "../src/events/routes";
 import { EventRepository } from "../src/events/repository";
+import { createInMemoryEventRepository } from "../src/events/inMemoryRepository";
 import { AuthRepository } from "../src/auth/repository";
 import { signUserToken } from "../src/auth/jwt";
 import { authenticateOptional } from "../src/auth/middleware";
@@ -390,6 +391,44 @@ describe("events routes", () => {
 
     expect(deleteResponse.status).toBe(200);
     expect(deleteResponse.body).toEqual({ id: createResponse.body.id });
+  });
+
+  it("skips the deletion notification when the event has already vanished by the time it is looked up", async () => {
+    const inMemory = createInMemoryEventRepository();
+    let forceNextGetByIdNull = false;
+    const repo: EventRepository = {
+      ...inMemory,
+      getById: async (id) => {
+        if (forceNextGetByIdNull) {
+          forceNextGetByIdNull = false;
+          return null;
+        }
+        return inMemory.getById(id);
+      }
+    };
+    const getUserByIdSpy = jest.fn(async () => null);
+    const localAuthRepo: AuthRepository = { ...authRepo, getUserById: getUserByIdSpy };
+    const app = express();
+    app.use(express.json());
+    app.use(authenticateOptional);
+    app.use("/api", createEventRouter(repo, localAuthRepo));
+
+    const createResponse = await request(app)
+      .post("/api/events")
+      .set("Authorization", authHeader("ADMIN"))
+      .send(validPayload);
+
+    forceNextGetByIdNull = true;
+    const deleteResponse = await request(app)
+      .delete(`/api/events/${createResponse.body.id}`)
+      .set("Authorization", authHeader("ADMIN"));
+
+    expect(deleteResponse.status).toBe(200);
+    expect(deleteResponse.body).toEqual({ id: createResponse.body.id });
+    // The route's own pre-fetch (used only to decide whether to send a deletion notification) saw
+    // the event as already gone, so the notification lookup must never have been attempted even
+    // though the delete itself, backed by a fresh lookup, still succeeded.
+    expect(getUserByIdSpy).not.toHaveBeenCalled();
   });
 
   it("forbids editors from deleting published events", async () => {

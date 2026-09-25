@@ -14,9 +14,7 @@ export const createEventRepository = (): EventRepository => {
     console.info("DATABASE_URL is set, using Prisma event repository");
     return createPrismaEventRepository();
   }
-  if (process.env.NODE_ENV !== "test") {
-    // eslint-disable-next-line no-console
-    console.warn("DATABASE_URL is not set, using in-memory event repository");
-  }
+  // eslint-disable-next-line no-console
+  console.warn("DATABASE_URL is not set, using in-memory event repository");
   return createInMemoryEventRepository();
 };

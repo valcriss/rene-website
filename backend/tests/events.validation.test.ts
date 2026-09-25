@@ -447,6 +447,18 @@ describe("validateCreateEvent", () => {
     }
   });
 
+  it("rejects an unrecognized social link type even with a valid URL", () => {
+    const result = validateCreateEvent({
+      ...validPayload,
+      socialLinks: [{ type: "MYSPACE", url: "https://myspace.com/rene" }]
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContain("Le type du réseau social #1 est invalide.");
+    }
+  });
+
   it("rejects duplicate social link types", () => {
     const result = validateCreateEvent({
       ...validPayload,

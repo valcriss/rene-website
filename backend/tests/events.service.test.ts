@@ -617,6 +617,27 @@ describe("event services", () => {
     }
   });
 
+  it("publishEvent keeps an already-assigned slug instead of generating a new one", async () => {
+    const findBySlug = jest.fn(async () => null);
+    const repo = createRepo(baseEvent, {
+      list: async () => [],
+      updateStatus: async () => ({
+        ...baseEvent,
+        status: "PUBLISHED",
+        featured: true,
+        publishedAt: "2026-01-01T00:00:00.000Z",
+        slug: "concert-descartes-2026"
+      }),
+      findBySlug
+    });
+    const result = await publishEvent(repo, "id", true);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.slug).toBe("concert-descartes-2026");
+    }
+    expect(findBySlug).not.toHaveBeenCalled();
+  });
+
   it("publishEvent rejects invalid featured flag", async () => {
     const repo = createRepo(baseEvent);
     const result = await publishEvent(repo, "id", "yes");
@@ -679,6 +700,22 @@ describe("event services", () => {
     if (!result.ok) {
       expect(result.status).toBe(404);
     }
+  });
+
+  it("updateEventSlug skips the uniqueness check when the slug is unchanged", async () => {
+    const findBySlug = jest.fn(async () => null);
+    const repo = createRepo(
+      { ...baseEvent, status: "PUBLISHED", slug: "concert-descartes-2026" },
+      {
+        findBySlug,
+        setSlug: async (_id, slug) => ({ ...baseEvent, status: "PUBLISHED", slug })
+      }
+    );
+
+    const result = await updateEventSlug(repo, "id", "concert-descartes-2026", adminActor);
+
+    expect(result.ok).toBe(true);
+    expect(findBySlug).not.toHaveBeenCalled();
   });
 
   it("rejects invalid featured value when updating featured state", async () => {

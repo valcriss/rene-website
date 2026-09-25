@@ -14,9 +14,7 @@ export const createCommuneRepository = (): CommuneRepository => {
     console.info("DATABASE_URL is set, using Prisma commune repository");
     return createPrismaCommuneRepository();
   }
-  if (process.env.NODE_ENV !== "test") {
-    // eslint-disable-next-line no-console
-    console.warn("DATABASE_URL is not set, using in-memory commune repository");
-  }
+  // eslint-disable-next-line no-console
+  console.warn("DATABASE_URL is not set, using in-memory commune repository");
   return createInMemoryCommuneRepository();
 };

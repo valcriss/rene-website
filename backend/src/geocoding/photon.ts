@@ -87,7 +87,7 @@ export const geocodeAddress = async (query: string): Promise<{ latitude: number;
     response = await fetch(url, { signal: AbortSignal.timeout(getPhotonTimeoutMs()) });
   } catch (error) {
     if (error instanceof Error && error.name === "TimeoutError") {
-      throw new Error("Photon request timed out");
+      throw new Error("Photon request timed out", { cause: error });
     }
     throw error;
   }
