@@ -20,6 +20,12 @@ enum EventRevisionStatus {
   REJECTED
 }
 
+enum AccountStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+}
+
 enum GeolocationPrecision {
   EXACT
   APPROXIMATE
@@ -234,6 +240,7 @@ model User {
   email           String    @unique
   role            UserRole
   passwordHash    String
+  accountStatus   AccountStatus @default(ACTIVE)
   sessionVersion  Int       @default(0)
   emailVerifiedAt DateTime? @default(now())
   createdAt       DateTime  @default(now())

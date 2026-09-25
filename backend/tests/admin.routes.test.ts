@@ -1,4 +1,5 @@
 import express from "express";
+import jwt from "jsonwebtoken";
 import request from "supertest";
 import { createApp } from "../src/app";
 import { createAdminRouter } from "../src/admin/routes";
@@ -35,6 +36,35 @@ describe("admin routes", () => {
 
     expect(response.status).toBe(403);
     expect(response.body).toEqual({ message: "Forbidden" });
+  });
+
+  it("requires a recent authentication for privileged account mutations", async () => {
+    const token = jwt.sign(
+      { sub: "test-admin", email: "admin@example.test", name: "Admin", role: "ADMIN", iat: Math.floor(Date.now() / 1000) - 16 * 60 },
+      "test-secret",
+      { issuer: "rene-website", audience: "rene-website-web", algorithm: "HS256" }
+    );
+    const response = await request(createApp())
+      .delete("/api/admin/users/missing")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({ message: "Une authentification récente est requise pour cette action." });
+  });
+
+  it("requires a recent authentication for privileged account updates", async () => {
+    const token = jwt.sign(
+      { sub: "test-admin", email: "admin@example.test", name: "Admin", role: "ADMIN", iat: Math.floor(Date.now() / 1000) - 16 * 60 },
+      "test-secret",
+      { issuer: "rene-website", audience: "rene-website-web", algorithm: "HS256" }
+    );
+    const response = await request(createApp())
+      .put("/api/admin/users/missing")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "Autre administrateur", email: "other-admin@example.test", role: "ADMIN" });
+
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({ message: "Une authentification récente est requise pour cette action." });
   });
 
   it("lists users and categories", async () => {
@@ -108,6 +138,20 @@ describe("admin routes", () => {
 
     expect(updateResponse.status).toBe(404);
     expect(deleteResponse.status).toBe(404);
+  });
+
+  it("rejects deletion of the last active administrator", async () => {
+    const app = createApp();
+    const usersResponse = await request(app)
+      .get("/api/admin/users")
+      .set("Authorization", authHeader("ADMIN"));
+
+    const response = await request(app)
+      .delete(`/api/admin/users/${usersResponse.body[0].id}`)
+      .set("Authorization", authHeader("ADMIN"));
+
+    expect(response.status).toBe(400);
+    expect(response.body.errors).toEqual(["Le dernier administrateur ne peut pas être supprimé."]);
   });
 
   it("returns 400 for invalid user payload", async () => {

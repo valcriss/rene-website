@@ -10,6 +10,7 @@ import {
   UpdateAdminSettingsInput
 } from "./types";
 import { UserRole } from "../auth/roles";
+import { AccountStatus } from "../auth/types";
 import { normalizeEmail } from "../auth/email";
 
 type ServiceResult<T> =
@@ -26,6 +27,12 @@ const parseRole = (value: unknown): UserRole | null => {
   return null;
 };
 
+const parseAccountStatus = (value: unknown): AccountStatus | undefined | null => {
+  if (value === undefined) return undefined;
+  if (value === "INVITED" || value === "ACTIVE" || value === "SUSPENDED") return value;
+  return null;
+};
+
 const validateUserInput = (input: unknown): ServiceResult<CreateAdminUserInput> => {
   const data = input as Partial<CreateAdminUserInput>;
   const errors: string[] = [];
@@ -35,6 +42,8 @@ const validateUserInput = (input: unknown): ServiceResult<CreateAdminUserInput> 
   if (!email) errors.push("email is invalid");
   const role = parseRole(data.role);
   if (!role) errors.push("role is invalid");
+  const accountStatus = parseAccountStatus(data.accountStatus);
+  if (accountStatus === null) errors.push("accountStatus is invalid");
 
   if (errors.length > 0) {
     return { ok: false, errors };
@@ -46,9 +55,25 @@ const validateUserInput = (input: unknown): ServiceResult<CreateAdminUserInput> 
     value: {
       name: data.name!.trim(),
       email: email!,
-      role: safeRole
+      role: safeRole,
+      ...(accountStatus === undefined ? {} : { accountStatus: accountStatus as AccountStatus })
     }
   };
+};
+
+const wouldRemoveLastAdmin = async (
+  repo: AdminRepository,
+  id: string,
+  nextRole?: UserRole,
+  nextAccountStatus?: AccountStatus
+) => {
+  const users = await repo.listUsers();
+  const target = users.find((user) => user.id === id);
+  const removesAdmin = nextRole !== "ADMIN" || (nextAccountStatus !== undefined && nextAccountStatus !== "ACTIVE");
+  const activeAdmins = users.filter(
+    (user) => user.role === "ADMIN" && user.accountStatus !== "INVITED" && user.accountStatus !== "SUSPENDED"
+  );
+  return target?.role === "ADMIN" && removesAdmin && activeAdmins.length <= 1;
 };
 
 const validateCategoryInput = (input: unknown): ServiceResult<CreateAdminCategoryInput> => {
@@ -99,6 +124,9 @@ export const updateAdminUser = async (
 ): Promise<ServiceResult<AdminUser>> => {
   const validation = validateUserInput(input);
   if (!validation.ok) return validation;
+  if (await wouldRemoveLastAdmin(repo, id, validation.value.role, validation.value.accountStatus)) {
+    return { ok: false, errors: ["Le dernier administrateur ne peut pas être rétrogradé."] };
+  }
   const updated = await repo.updateUser(id, validation.value);
   if (!updated) return { ok: false, errors: ["User not found"] };
   return { ok: true, value: updated };
@@ -108,6 +136,9 @@ export const deleteAdminUser = async (
   repo: AdminRepository,
   id: string
 ): Promise<ServiceResult<null>> => {
+  if (await wouldRemoveLastAdmin(repo, id)) {
+    return { ok: false, errors: ["Le dernier administrateur ne peut pas être supprimé."] };
+  }
   const deleted = await repo.deleteUser(id);
   if (!deleted) return { ok: false, errors: ["User not found"] };
   return { ok: true, value: null };

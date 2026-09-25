@@ -28,7 +28,7 @@ export const createInMemoryAdminRepository = (): AdminRepository => {
   const seedUser = (input: CreateAdminUserInput) => {
     const id = randomUUID();
     const timestamp = now();
-    users.set(id, { id, ...input, createdAt: timestamp, updatedAt: timestamp });
+    users.set(id, { id, ...input, accountStatus: input.accountStatus ?? "ACTIVE", createdAt: timestamp, updatedAt: timestamp });
   };
   const seedCategory = (input: CreateAdminCategoryInput) => {
     const id = slugifyCategoryId(input.name) || randomUUID();
@@ -53,14 +53,14 @@ export const createInMemoryAdminRepository = (): AdminRepository => {
     createUser: async (input) => {
       const id = randomUUID();
       const timestamp = now();
-      const user: AdminUser = { id, ...input, createdAt: timestamp, updatedAt: timestamp };
+      const user: AdminUser = { id, ...input, accountStatus: "INVITED", createdAt: timestamp, updatedAt: timestamp };
       users.set(id, user);
       return user;
     },
     updateUser: async (id, input) => {
       const existing = users.get(id);
       if (!existing) return null;
-      const updated: AdminUser = { ...existing, ...input, updatedAt: now() };
+      const updated: AdminUser = { ...existing, ...input, accountStatus: input.accountStatus ?? existing.accountStatus, updatedAt: now() };
       users.set(id, updated);
       return updated;
     },

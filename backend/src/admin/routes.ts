@@ -35,6 +35,13 @@ const auditAdmin = (
   metadata?: Record<string, string | number | boolean>
 ) => auditLogger.record({ requestId: res.locals.requestId, actorId: req.user?.id, action, target, outcome: "success", metadata });
 
+const requiresRecentAuthentication = (req: Request, res: Response) => {
+  const maximumAgeMs = 15 * 60 * 1000;
+  if (req.user?.authenticatedAt && Date.now() - req.user.authenticatedAt.getTime() <= maximumAgeMs) return false;
+  res.status(401).json({ message: "Une authentification récente est requise pour cette action." });
+  return true;
+};
+
 const sendUserInvitation = async (authRepo: AuthRepository, user: { id: string; name: string; email: string }) => {
   const token = generatePasswordResetToken();
   const tokenHash = hashPasswordResetToken(token);
@@ -76,6 +83,7 @@ export const createAdminRouter = (repo: AdminRepository, authRepo: AuthRepositor
   });
 
   router.put("/users/:id", async (req, res) => {
+    if (requiresRecentAuthentication(req, res)) return;
     const result = await updateAdminUser(repo, req.params.id, req.body);
     if (!result.ok) {
       const status = result.errors.includes("User not found") ? 404 : 400;
@@ -88,9 +96,11 @@ export const createAdminRouter = (repo: AdminRepository, authRepo: AuthRepositor
   });
 
   router.delete("/users/:id", async (req, res) => {
+    if (requiresRecentAuthentication(req, res)) return;
     const result = await deleteAdminUser(repo, req.params.id);
     if (!result.ok) {
-      res.status(404).json({ errors: result.errors });
+      const status = result.errors.includes("User not found") ? 404 : 400;
+      res.status(status).json({ errors: result.errors });
       return;
     }
     await auditAdmin(req, res, "admin.user.delete", `user:${req.params.id}`);

@@ -1,3 +1,4 @@
+import { AccountStatus } from "../auth/types";
 import { UserRole } from "../auth/roles";
 
 export type AdminUser = {
@@ -5,6 +6,7 @@ export type AdminUser = {
   name: string;
   email: string;
   role: UserRole;
+  accountStatus?: AccountStatus;
   createdAt: string;
   updatedAt: string;
 };
@@ -35,6 +37,7 @@ export type CreateAdminUserInput = {
   name: string;
   email: string;
   role: UserRole;
+  accountStatus?: AccountStatus;
 };
 
 export type UpdateAdminUserInput = CreateAdminUserInput;

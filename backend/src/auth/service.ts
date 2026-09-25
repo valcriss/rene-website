@@ -36,6 +36,7 @@ const genericCredentialsError = "Identifiants invalides.";
 const genericSignupMessage = "Si cette adresse peut être utilisée, un lien d’activation a été envoyé.";
 const genericResetMessage = "Si un compte existe avec cet email, un lien de réinitialisation a été envoyé.";
 const minimumSensitiveResponseMs = 100;
+const isActiveAccount = (user: AuthUser) => user.accountStatus === undefined || user.accountStatus === "ACTIVE";
 
 const waitForMinimumDuration = async (startedAt: number) => {
   const remaining = minimumSensitiveResponseMs - (Date.now() - startedAt);
@@ -66,7 +67,7 @@ export const login = async (repo: AuthRepository, input: unknown): Promise<Login
 
   const user = await repo.getUserByEmail(email!);
   const passwordIsValid = await verifyPassword(password, user?.passwordHash ?? "");
-  if (!user || !passwordIsValid || user.emailVerifiedAt === null) {
+  if (!user || !passwordIsValid || user.emailVerifiedAt === null || !isActiveAccount(user)) {
     return { ok: false, errors: [genericCredentialsError] };
   }
 
@@ -83,7 +84,8 @@ export const login = async (repo: AuthRepository, input: unknown): Promise<Login
     email: user.email,
     role: user.role,
     sessionVersion: user.sessionVersion,
-    emailVerifiedAt: user.emailVerifiedAt
+    emailVerifiedAt: user.emailVerifiedAt,
+    accountStatus: user.accountStatus
   });
 };
 

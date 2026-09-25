@@ -1,5 +1,7 @@
 import { UserRole } from "./roles";
 
+export type AccountStatus = "INVITED" | "ACTIVE" | "SUSPENDED";
+
 export type AuthUser = {
   id: string;
   name: string;
@@ -7,6 +9,8 @@ export type AuthUser = {
   role: UserRole;
   sessionVersion?: number;
   emailVerifiedAt?: Date | null;
+  accountStatus?: AccountStatus;
+  authenticatedAt?: Date;
 };
 
 export type AuthenticatedActor = Pick<AuthUser, "id" | "role">;
