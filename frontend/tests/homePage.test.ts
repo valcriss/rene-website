@@ -209,4 +209,53 @@ describe("HomePage", () => {
     expect(wrapper.get("[data-testid='event-card-with-alt'] img").attributes("alt")).toBe("Public au concert");
     expect(wrapper.get("[data-testid='event-card-without-alt'] img").attributes("alt")).toBe("Festival");
   });
+
+  it("links to the weekend, city and category agenda landing pages for currently active facets", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const eventsStore = useEventsStore();
+    const categoriesStore = useCategoriesStore();
+    eventsStore.isLoading = false;
+    eventsStore.error = null;
+    eventsStore.events = [
+      buildEvent({ id: "1", categoryId: "music" }),
+      buildEvent({ id: "2", categoryId: "theatre", occurrences: [buildOccurrence({ city: "Tours" })] }),
+      buildEvent({ id: "3", status: "DRAFT", categoryId: "cinema", occurrences: [buildOccurrence({ city: "Paris" })] })
+    ];
+    categoriesStore.categories = [
+      { id: "music", name: "Musique", createdAt: "", updatedAt: "" },
+      { id: "theatre", name: "Théâtre", createdAt: "", updatedAt: "" },
+      { id: "cinema", name: "Cinéma", createdAt: "", updatedAt: "" }
+    ];
+    categoriesStore.hasLoaded = true;
+
+    const router = createTestRouter("/");
+    await router.isReady();
+
+    const wrapper = mount(HomePage, {
+      global: {
+        plugins: [pinia, router],
+        stubs: {
+          HomeFilters: { template: "<div></div>" },
+          HomeSearch: { template: "<div></div>" },
+          HomeTitle: { template: "<div></div>" },
+          EventMap: { template: "<div></div>" },
+          NavigationHeader: { template: "<div></div>" }
+        }
+      }
+    });
+
+    const links = wrapper.get("[data-testid='agenda-mesh-links']");
+    const hrefs = links.findAll("a").map((link) => link.attributes("href"));
+
+    expect(hrefs).toContain("/agenda/ce-week-end");
+    expect(hrefs).toContain("/agenda/ville/descartes");
+    expect(hrefs).toContain("/agenda/ville/tours");
+    expect(hrefs).toContain("/agenda/categorie/music");
+    expect(hrefs).toContain("/agenda/categorie/theatre");
+    // Category/city belonging only to a draft event are not currently active.
+    expect(hrefs).not.toContain("/agenda/ville/paris");
+    expect(hrefs).not.toContain("/agenda/categorie/cinema");
+    expect(links.text()).toContain("Théâtre");
+  });
 });

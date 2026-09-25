@@ -151,10 +151,10 @@ describe("createPrismaAuthRepository", () => {
   it("maps session and email-verification status when present", async () => {
     const verifiedAt = new Date("2026-09-24T10:00:00.000Z");
     prismaMocks.userFindUnique.mockResolvedValue({
-      id: "verified", name: "Verified", email: "verified@test", role: "EDITOR", passwordHash: "hash", sessionVersion: 4, emailVerifiedAt: verifiedAt
+      id: "verified", name: "Verified", email: "verified@test", role: "EDITOR", passwordHash: "hash", sessionVersion: 4, emailVerifiedAt: verifiedAt, accountStatus: "ACTIVE"
     });
     await expect(createPrismaAuthRepository().getUserByEmail("verified@test"))
-      .resolves.toMatchObject({ sessionVersion: 4, emailVerifiedAt: verifiedAt });
+      .resolves.toMatchObject({ sessionVersion: 4, emailVerifiedAt: verifiedAt, accountStatus: "ACTIVE" });
   });
 
   it("gets user by id", async () => {
@@ -231,7 +231,8 @@ describe("createPrismaAuthRepository", () => {
       id: "created-user",
       name: "Writer",
       email: "writer@example.com",
-      role: "EDITOR"
+      role: "EDITOR",
+      accountStatus: "ACTIVE"
     });
   });
 
@@ -251,12 +252,12 @@ describe("createPrismaAuthRepository", () => {
   it("creates an unverified editor and handles its unique and unexpected failures", async () => {
     const repo = createPrismaAuthRepository();
     prismaMocks.userCreate.mockResolvedValueOnce({
-      id: "pending-user", name: "Pending", email: "pending@test", role: "EDITOR", passwordHash: "hash", sessionVersion: 0, emailVerifiedAt: null
+      id: "pending-user", name: "Pending", email: "pending@test", role: "EDITOR", passwordHash: "hash", sessionVersion: 0, emailVerifiedAt: null, accountStatus: "INVITED"
     });
     await expect(repo.createUnverifiedEditorUser!({ name: "Pending", email: "pending@test", passwordHash: "hash" }))
-      .resolves.toMatchObject({ id: "pending-user", emailVerifiedAt: null });
+      .resolves.toMatchObject({ id: "pending-user", emailVerifiedAt: null, accountStatus: "INVITED" });
     expect(prismaMocks.userCreate).toHaveBeenLastCalledWith({
-      data: { name: "Pending", email: "pending@test", role: "EDITOR", passwordHash: "hash", emailVerifiedAt: null }
+      data: { name: "Pending", email: "pending@test", role: "EDITOR", passwordHash: "hash", emailVerifiedAt: null, accountStatus: "INVITED" }
     });
 
     prismaMocks.userCreate.mockRejectedValueOnce({ code: "P2002" });
@@ -407,7 +408,7 @@ describe("createPrismaAuthRepository", () => {
     prismaMocks.emailVerificationTokenFindUnique.mockResolvedValueOnce(null);
     await expect(repo.getEmailVerificationTokenByHash!("missing")).resolves.toBeNull();
     await repo.markEmailVerified!("user-1");
-    expect(prismaMocks.userUpdate).toHaveBeenCalledWith({ where: { id: "user-1" }, data: { emailVerifiedAt: expect.any(Date) } });
+    expect(prismaMocks.userUpdate).toHaveBeenCalledWith({ where: { id: "user-1" }, data: { emailVerifiedAt: expect.any(Date), accountStatus: "ACTIVE" } });
   });
 
   it("serializes persistent rate-limit decisions and tolerates a missing key on clear", async () => {

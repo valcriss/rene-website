@@ -65,6 +65,7 @@ export const verifyUserToken = (token: string): JwtResult<VerifiedUserToken> => 
     const role = payload.role;
     const sessionId = typeof payload.sid === "string" ? payload.sid : undefined;
     const sessionVersion = typeof payload.sv === "number" ? payload.sv : undefined;
+    const authenticatedAt = typeof payload.iat === "number" ? new Date(payload.iat * 1000) : undefined;
 
     if (!id || !email || !name || !isUserRole(role)) {
       return { ok: false, errors: ["Token invalide"] };
@@ -77,6 +78,7 @@ export const verifyUserToken = (token: string): JwtResult<VerifiedUserToken> => 
         email,
         name,
         role,
+        ...(authenticatedAt ? { authenticatedAt } : {}),
         ...(sessionId ? { sessionId, sessionVersion } : {})
       }
     };

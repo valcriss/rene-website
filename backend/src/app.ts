@@ -25,6 +25,7 @@ import { createUploadedAssetRouter, createUploadRouter } from "./uploads/routes"
 import { registerStatic } from "./static";
 import { createRequestRateLimiter, enforceRequestRateLimit } from "./security/rateLimiter";
 import { enforceHttps, preventPrivateCaching, securityHeaders } from "./security/headers";
+import { requestLogging } from "./security/logging";
 
 const apiMutationPolicy = {
   action: "api-mutation",
@@ -61,15 +62,7 @@ export const createApp = () => {
     if (await enforceRequestRateLimit(requestRateLimiter, req, res, apiMutationPolicy)) next();
   });
 
-  app.use((req, res, next) => {
-    const start = Date.now();
-    res.on("finish", () => {
-      const duration = Date.now() - start;
-      // eslint-disable-next-line no-console
-      console.log(`[API] ${req.method} ${req.originalUrl} ${res.statusCode} ${duration}ms`);
-    });
-    next();
-  });
+  app.use(requestLogging);
 
   const eventRepository = createEventRepository();
   const categorySubscriptionRepository = createCategorySubscriptionRepository();

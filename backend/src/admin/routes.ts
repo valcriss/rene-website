@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Request, Response, Router } from "express";
 import { requireRole } from "../auth/roles";
 import { AuthRepository } from "../auth/repository";
 import {
@@ -25,6 +25,22 @@ import {
   updateAdminSettings,
   updateAdminUser
 } from "./service";
+import { auditLogger } from "../security/audit";
+
+const auditAdmin = (
+  req: Request,
+  res: Response,
+  action: string,
+  target: string,
+  metadata?: Record<string, string | number | boolean>
+) => auditLogger.record({ requestId: res.locals.requestId, actorId: req.user?.id, action, target, outcome: "success", metadata });
+
+const requiresRecentAuthentication = (req: Request, res: Response) => {
+  const maximumAgeMs = 15 * 60 * 1000;
+  if (req.user?.authenticatedAt && Date.now() - req.user.authenticatedAt.getTime() <= maximumAgeMs) return false;
+  res.status(401).json({ message: "Une authentification récente est requise pour cette action." });
+  return true;
+};
 
 const sendUserInvitation = async (authRepo: AuthRepository, user: { id: string; name: string; email: string }) => {
   const token = generatePasswordResetToken();
@@ -41,7 +57,7 @@ const sendUserInvitation = async (authRepo: AuthRepository, user: { id: string; 
   );
   if (!notification.ok) {
     // eslint-disable-next-line no-console
-    console.warn("Notifications invite failed", notification.errors);
+    console.warn(JSON.stringify({ event: "user_invitation_notification_failed" }));
   }
 };
 
@@ -62,10 +78,12 @@ export const createAdminRouter = (repo: AdminRepository, authRepo: AuthRepositor
       return;
     }
     await sendUserInvitation(authRepo, result.value);
+    await auditAdmin(req, res, "admin.user.create", `user:${result.value.id}`);
     res.status(201).json(result.value);
   });
 
   router.put("/users/:id", async (req, res) => {
+    if (requiresRecentAuthentication(req, res)) return;
     const result = await updateAdminUser(repo, req.params.id, req.body);
     if (!result.ok) {
       const status = result.errors.includes("User not found") ? 404 : 400;
@@ -73,15 +91,19 @@ export const createAdminRouter = (repo: AdminRepository, authRepo: AuthRepositor
       return;
     }
     await authRepo.invalidateUserSessions?.(req.params.id);
+    await auditAdmin(req, res, "admin.user.role.update", `user:${req.params.id}`, { role: req.body.role });
     res.json(result.value);
   });
 
   router.delete("/users/:id", async (req, res) => {
+    if (requiresRecentAuthentication(req, res)) return;
     const result = await deleteAdminUser(repo, req.params.id);
     if (!result.ok) {
-      res.status(404).json({ errors: result.errors });
+      const status = result.errors.includes("User not found") ? 404 : 400;
+      res.status(status).json({ errors: result.errors });
       return;
     }
+    await auditAdmin(req, res, "admin.user.delete", `user:${req.params.id}`);
     res.status(204).send();
   });
 
@@ -96,6 +118,7 @@ export const createAdminRouter = (repo: AdminRepository, authRepo: AuthRepositor
       res.status(400).json({ errors: result.errors });
       return;
     }
+    await auditAdmin(req, res, "admin.category.create", `category:${result.value.id}`);
     res.status(201).json(result.value);
   });
 
@@ -106,6 +129,7 @@ export const createAdminRouter = (repo: AdminRepository, authRepo: AuthRepositor
       res.status(status).json({ errors: result.errors });
       return;
     }
+    await auditAdmin(req, res, "admin.category.update", `category:${req.params.id}`);
     res.json(result.value);
   });
 
@@ -116,6 +140,7 @@ export const createAdminRouter = (repo: AdminRepository, authRepo: AuthRepositor
       res.status(status).json({ errors: result.errors });
       return;
     }
+    await auditAdmin(req, res, "admin.category.delete", `category:${req.params.id}`);
     res.status(204).send();
   });
 
@@ -130,6 +155,7 @@ export const createAdminRouter = (repo: AdminRepository, authRepo: AuthRepositor
       res.status(400).json({ errors: result.errors });
       return;
     }
+    await auditAdmin(req, res, "admin.audience.create", `audience:${result.value.id}`);
     res.status(201).json(result.value);
   });
 
@@ -140,6 +166,7 @@ export const createAdminRouter = (repo: AdminRepository, authRepo: AuthRepositor
       res.status(status).json({ errors: result.errors });
       return;
     }
+    await auditAdmin(req, res, "admin.audience.update", `audience:${req.params.id}`);
     res.json(result.value);
   });
 
@@ -150,6 +177,7 @@ export const createAdminRouter = (repo: AdminRepository, authRepo: AuthRepositor
       res.status(status).json({ errors: result.errors });
       return;
     }
+    await auditAdmin(req, res, "admin.audience.delete", `audience:${req.params.id}`);
     res.status(204).send();
   });
 
@@ -164,6 +192,7 @@ export const createAdminRouter = (repo: AdminRepository, authRepo: AuthRepositor
       res.status(400).json({ errors: result.errors });
       return;
     }
+    await auditAdmin(req, res, "admin.settings.update", "site:default");
     res.json(result.value);
   });
 

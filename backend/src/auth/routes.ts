@@ -5,6 +5,7 @@ import { checkAuthThrottle, clearLoginThrottle } from "./rateLimiter";
 import { login, requestPasswordReset, resetPassword, signup, verifyEmail } from "./service";
 import { clearSessionCookies, setSessionCookies } from "./cookies";
 import { createSession, parseCookies, REFRESH_COOKIE, refreshSession, revokeSession } from "./session";
+import { auditLogger } from "../security/audit";
 
 const publicUser = (user: { id: string; name: string; email: string; role: string }) => ({
   id: user.id,
@@ -33,10 +34,12 @@ export const createAuthRouter = (repo: AuthRepository) => {
     if (await rejectThrottledRequest(req, res, "login", normalizeEmail(req.body?.email) ?? undefined)) return;
     const result = await login(repo, req.body);
     if (!result.ok) {
+      await auditLogger.record({ requestId: res.locals.requestId, action: "auth.login", outcome: "failure" });
       const status = result.errors.includes("Identifiants invalides.") ? 401 : 400;
       res.status(status).json({ errors: result.errors });
       return;
     }
+    await auditLogger.record({ requestId: res.locals.requestId, actorId: result.value.user.id, action: "auth.login", target: `user:${result.value.user.id}`, outcome: "success" });
     await clearLoginThrottle(repo, result.value.user.email);
     const session = await createSession(repo, result.value.user);
     if (!session.ok) {

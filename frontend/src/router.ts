@@ -9,6 +9,7 @@ const VerifyEmailPage = () => import("./pages/VerifyEmailPage.vue");
 const ContactPage = () => import("./pages/ContactPage.vue");
 const LegalNoticePage = () => import("./pages/LegalNoticePage.vue");
 const EventDetailPage = () => import("./pages/EventDetailPage.vue");
+const AgendaLandingPage = () => import("./pages/AgendaLandingPage.vue");
 const BackofficeLayout = () => import("./pages/backoffice/BackofficeLayout.vue");
 const BackofficeEventsPage = () => import("./pages/backoffice/BackofficeEventsPage.vue");
 const BackofficeEventCreatePage = () => import("./pages/backoffice/BackofficeEventCreatePage.vue");
@@ -54,6 +55,9 @@ const routes = [
     ]
   },
   { path: "/evenements/:slug", name: "event-detail", component: EventDetailPage },
+  { path: "/agenda/ce-week-end", name: "agenda-weekend", component: AgendaLandingPage },
+  { path: "/agenda/ville/:slug", name: "agenda-city", component: AgendaLandingPage },
+  { path: "/agenda/categorie/:slug", name: "agenda-category", component: AgendaLandingPage },
   { path: "/:pathMatch(.*)*", name: "not-found", component: NotFoundPage }
 ];
 

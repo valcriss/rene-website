@@ -43,7 +43,7 @@ export const createInMemoryEventRepository = (): EventRepository => {
     };
   };
 
-  const mergePublishedRevision = (event: Event, publishedAt: string): Event => {
+  const mergePublishedRevision = (event: Event, publishedAt: string, publishedByUserId?: string): Event => {
     const revision = event.pendingRevision!;
 
     return {
@@ -54,8 +54,11 @@ export const createInMemoryEventRepository = (): EventRepository => {
       status: "PUBLISHED",
       featured: false,
       publishedAt,
+      publishedByUserId: publishedByUserId ?? null,
       publicationEndAt: computePublicationEndAt(revision.occurrences).toISOString(),
       rejectionReason: null,
+      rejectedByUserId: null,
+      rejectedAt: null,
       pendingRevision: null,
       createdAt: event.createdAt,
       updatedAt: new Date().toISOString()
@@ -104,8 +107,11 @@ export const createInMemoryEventRepository = (): EventRepository => {
         featured: false,
         status: "DRAFT",
         publishedAt: null,
+        publishedByUserId: null,
         publicationEndAt: computePublicationEndAt(input.occurrences).toISOString(),
         rejectionReason: null,
+        rejectedByUserId: null,
+        rejectedAt: null,
         archivedAt: null,
         pendingRevision: null,
         createdAt: now,
@@ -185,13 +191,13 @@ export const createInMemoryEventRepository = (): EventRepository => {
       events.set(id, updated);
       return updated;
     },
-    publishPendingRevision: async (id, publishedAt) => {
+    publishPendingRevision: async (id, publishedAt, publishedByUserId) => {
       const existing = events.get(id);
       if (!existing?.pendingRevision || existing.pendingRevision.status !== "PENDING") {
         return null;
       }
 
-      const updated = mergePublishedRevision(existing, publishedAt);
+      const updated = mergePublishedRevision(existing, publishedAt, publishedByUserId);
       events.set(id, updated);
       return updated;
     },
@@ -245,7 +251,10 @@ export const createInMemoryEventRepository = (): EventRepository => {
         status,
         featured: data.featured ?? existing.featured,
         publishedAt: data.publishedAt,
+        publishedByUserId: data.publishedByUserId ?? null,
         rejectionReason: data.rejectionReason,
+        rejectedByUserId: data.rejectedByUserId ?? null,
+        rejectedAt: data.rejectedAt ?? null,
         publicationEndAt: data.publicationEndAt,
         pendingRevision: existing.pendingRevision,
         updatedAt: new Date().toISOString()

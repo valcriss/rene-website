@@ -48,6 +48,7 @@ type SessionResult =
   | { ok: false; code: "invalid" | "reused" | "expired" | "configuration" };
 
 const userSessionVersion = (user: AuthUser) => user.sessionVersion ?? 0;
+const isActiveAccount = (user: AuthUser) => user.accountStatus === undefined || user.accountStatus === "ACTIVE";
 
 const buildSession = (
   user: AuthUser,
@@ -78,7 +79,7 @@ export const createSession = async (
   user: AuthUser,
   now = new Date()
 ): Promise<SessionResult> => {
-  if (user.emailVerifiedAt === null) return { ok: false, code: "invalid" };
+  if (user.emailVerifiedAt === null || !isActiveAccount(user)) return { ok: false, code: "invalid" };
   const refreshToken = generateRefreshToken();
   const session = buildSession(user, refreshToken, now);
   const signed = signAccessToken(user, session.id);
@@ -111,7 +112,7 @@ export const refreshSession = async (
   }
 
   const user = await repo.getUserById(current.userId);
-  if (!user || user.emailVerifiedAt === null || userSessionVersion(user) !== current.sessionVersion) {
+  if (!user || user.emailVerifiedAt === null || !isActiveAccount(user) || userSessionVersion(user) !== current.sessionVersion) {
     await repo.revokeSessionFamily!(current.familyId);
     return { ok: false, code: "invalid" };
   }

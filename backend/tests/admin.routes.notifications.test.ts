@@ -50,7 +50,7 @@ describe("admin routes invitation warnings", () => {
       expect.any(String),
       expect.any(Number)
     );
-    expect(warnSpy).toHaveBeenCalledWith("Notifications invite failed", ["boom"]);
+    expect(warnSpy).toHaveBeenCalledWith(JSON.stringify({ event: "user_invitation_notification_failed" }));
 
     warnSpy.mockRestore();
   });

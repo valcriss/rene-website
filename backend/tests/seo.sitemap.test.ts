@@ -96,4 +96,48 @@ describe("buildSitemapXml", () => {
     expect(xml).toContain("https://rene.example.org?a=1&amp;b=2/");
     expect(xml).not.toContain("a=1&b=2");
   });
+
+  it("always lists the evergreen weekend agenda page", async () => {
+    const xml = await buildSitemapXml(buildRepo([]), "https://rene.example.org");
+
+    expect(xml).toContain("<loc>https://rene.example.org/agenda/ce-week-end</loc>");
+  });
+
+  it("lists a city and category page once they have a currently active event", async () => {
+    const events: Event[] = [
+      {
+        ...baseEvent,
+        occurrences: [
+          {
+            id: "occ-1",
+            venueName: null,
+            address: null,
+            postalCode: null,
+            city: "Descartes",
+            latitude: null,
+            longitude: null,
+            eventStartAt: "2026-01-15T20:00:00.000Z",
+            eventEndAt: "2026-01-15T22:00:00.000Z",
+            allDay: false,
+            createdAt: "2026-01-01T00:00:00.000Z",
+            updatedAt: "2026-01-01T00:00:00.000Z"
+          }
+        ]
+      }
+    ];
+
+    const xml = await buildSitemapXml(buildRepo(events), "https://rene.example.org");
+
+    expect(xml).toContain("<loc>https://rene.example.org/agenda/ville/descartes</loc>");
+    expect(xml).toContain("<loc>https://rene.example.org/agenda/categorie/music</loc>");
+  });
+
+  it("excludes a city/category page once it no longer has any active event (durably empty)", async () => {
+    const events: Event[] = [{ ...baseEvent, status: "DRAFT" }];
+
+    const xml = await buildSitemapXml(buildRepo(events), "https://rene.example.org");
+
+    expect(xml).not.toContain("/agenda/ville/");
+    expect(xml).not.toContain("/agenda/categorie/");
+  });
 });

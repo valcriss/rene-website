@@ -262,6 +262,23 @@
         </div>
       </div>
     </div>
+
+    <div v-if="agendaMeshLinks.length > 0" class="mx-auto mt-10 max-w-[1500px] px-4 sm:px-6 lg:px-8 xl:px-10">
+      <div class="rounded-[2rem] border border-sky-100 bg-white/80 p-6 shadow-[0_20px_60px_-48px_rgba(30,41,59,0.2)]">
+        <p class="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700/70">{{ t("home.exploreAgendaEyebrow") }}</p>
+        <h2 class="font-display mt-2 text-xl font-semibold tracking-tight text-slate-950">{{ t("home.exploreAgendaTitle") }}</h2>
+        <ul class="mt-4 flex flex-wrap gap-2" data-testid="agenda-mesh-links">
+          <li v-for="link in agendaMeshLinks" :key="link.to">
+            <RouterLink
+              :to="link.to"
+              class="inline-flex items-center rounded-full border border-sky-200 bg-sky-50/70 px-4 py-2 text-sm font-medium text-sky-900 transition hover:bg-sky-100"
+            >
+              {{ link.label }}
+            </RouterLink>
+          </li>
+        </ul>
+      </div>
+    </div>
   </section>
 </template>
 
@@ -287,6 +304,7 @@ import { usePageSeo } from "../composables/usePageSeo";
 import { useWebsiteStructuredData } from "../composables/useStructuredData";
 import { buildPlainTextDescription } from "../utils/seo";
 import { getEventDetailPath } from "../utils/eventLinks";
+import { getActiveCategoryIds, getActiveCityFacets } from "../utils/agendaFacets";
 
 type CategoryTheme = {
   backgroundColor: string;
@@ -329,6 +347,20 @@ useWebsiteStructuredData(() => t("navigation.title"));
 const categoryNames = computed(() =>
   new Map(categories.value.map((category) => [category.id, category.name]))
 );
+
+// Internal links to the local SEO landing pages (issue #56) — the sitemap lists the same set of
+// currently active facets, this is the "maillage depuis l'accueil" a crawler follows to reach them.
+const agendaMeshLinks = computed(() => {
+  const cityLinks = getActiveCityFacets(eventsStore.events).map((facet) => ({
+    to: `/agenda/ville/${facet.slug}`,
+    label: facet.name
+  }));
+  const categoryLinks = getActiveCategoryIds(eventsStore.events).map((categoryId) => ({
+    to: `/agenda/categorie/${categoryId}`,
+    label: categoryNames.value.get(categoryId) ?? categoryId
+  }));
+  return [{ to: "/agenda/ce-week-end", label: t("agenda.weekend.title") }, ...cityLinks, ...categoryLinks];
+});
 
 const now = () => Date.now();
 const isStillActive = (event: EventItem) => new Date(event.publicationEndAt ?? "").getTime() > now();

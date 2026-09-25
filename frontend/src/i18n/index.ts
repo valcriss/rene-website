@@ -22,16 +22,16 @@ const normalizeLocale = (value?: string | null): AppLocale | null => {
   return isSupportedLocale(language) ? language : null;
 };
 
+// Deliberately ignores navigator.language (issue #57): the public site is indexed in French
+// only, with English treated as a non-indexable interface preference. A fresh visit — including
+// a crawler's, which never carries our localStorage key — must render the same deterministic
+// French version every time; only an explicit, previously saved choice from the language
+// switcher may change that.
 export const resolveInitialLocale = (): AppLocale => {
   if (typeof window !== "undefined") {
     const savedLocale = normalizeLocale(window.localStorage.getItem(STORAGE_KEY));
     if (savedLocale) {
       return savedLocale;
-    }
-
-    const browserLocale = normalizeLocale(window.navigator.language);
-    if (browserLocale) {
-      return browserLocale;
     }
   }
 

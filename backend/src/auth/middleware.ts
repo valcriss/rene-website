@@ -48,6 +48,8 @@ export const createAuthenticationMiddleware = (repo: AuthRepository) =>
       session.expiresAt.getTime() <= Date.now() ||
       !user ||
       user.emailVerifiedAt === null ||
+      user.accountStatus === "INVITED" ||
+      user.accountStatus === "SUSPENDED" ||
       session.userId !== user.id ||
       session.sessionVersion !== currentVersion ||
       verified.value.sessionVersion !== currentVersion
@@ -56,7 +58,7 @@ export const createAuthenticationMiddleware = (repo: AuthRepository) =>
       return;
     }
 
-    req.user = { id: user.id, name: user.name, email: user.email, role: user.role };
+    req.user = { id: user.id, name: user.name, email: user.email, role: user.role, authenticatedAt: verified.value.authenticatedAt };
     next();
   };
 

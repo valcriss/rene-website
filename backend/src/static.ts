@@ -2,15 +2,19 @@ import path from "node:path";
 import express from "express";
 import { EventRepository } from "./events/repository";
 import { getPublicEventPageStatus, getPublicEventPageStatusBySlug } from "./events/service";
+import { getAgendaCategoryPageStatus, getAgendaCityPageStatus } from "./seo/agenda";
 import { createSsrRenderer, SsrRenderer } from "./ssr";
 
 // Top-level SPA routes that exist regardless of any dynamic data — kept in sync with
-// frontend/src/router.ts. A path outside this list (and outside /evenements/:slug) is a genuine
-// unknown URL and must get a real 404, not a soft one.
+// frontend/src/router.ts. A path outside this list (and outside /evenements/:slug and the
+// /agenda/* dynamic patterns below) is a genuine unknown URL and must get a real 404, not a soft
+// one. /agenda/ce-week-end is always relevant (it's evergreen — see docs/seo-local-pages.md), so
+// it's listed here rather than resolved dynamically like the city/category pages.
 const KNOWN_STATIC_ROUTES = new Set([
   "/",
   "/contact",
-  "/mentions-legales"
+  "/mentions-legales",
+  "/agenda/ce-week-end"
 ]);
 
 // Authentication and backoffice routes must never be indexed by search engines, and have no
@@ -23,6 +27,10 @@ const isBackofficeRoute = (pathname: string) => pathname === "/backoffice" || pa
 const EVENT_DETAIL_PATTERN = /^\/event\/([^/]+)$/;
 // Canonical, human-readable detail URL (issue #50).
 const EVENT_SLUG_PATTERN = /^\/evenements\/([^/]+)$/;
+// Local SEO landing pages (issue #56) — see docs/seo-local-pages.md for the known-vs-active-vs-
+// unknown status rules these patterns resolve against.
+const AGENDA_CITY_PATTERN = /^\/agenda\/ville\/([^/]+)$/;
+const AGENDA_CATEGORY_PATTERN = /^\/agenda\/categorie\/([^/]+)$/;
 
 const sendNoindexIndex = (res: express.Response, indexPath: string, status = 200) => {
   res.status(status).set("X-Robots-Tag", "noindex").sendFile(indexPath);
@@ -120,6 +128,48 @@ export const registerStatic = (app: express.Express, eventRepository: EventRepos
         ]);
         const { html } = await renderer.render(req.originalUrl);
         res.status(status).type("html").send(html);
+      })();
+      return;
+    }
+
+    const cityMatch = pathname.match(AGENDA_CITY_PATTERN);
+    if (cityMatch) {
+      void (async () => {
+        const [{ status, isEmpty }, renderer] = await Promise.all([
+          getAgendaCityPageStatus(eventRepository, cityMatch[1]),
+          getRenderer()
+        ]);
+        if (status === 404) {
+          res.status(404).sendFile(indexPath);
+          return;
+        }
+        const { html } = await renderer.render(req.originalUrl);
+        const response = res.status(status).type("html");
+        if (isEmpty) {
+          response.set("X-Robots-Tag", "noindex");
+        }
+        response.send(html);
+      })();
+      return;
+    }
+
+    const categoryMatch = pathname.match(AGENDA_CATEGORY_PATTERN);
+    if (categoryMatch) {
+      void (async () => {
+        const [{ status, isEmpty }, renderer] = await Promise.all([
+          getAgendaCategoryPageStatus(eventRepository, categoryMatch[1]),
+          getRenderer()
+        ]);
+        if (status === 404) {
+          res.status(404).sendFile(indexPath);
+          return;
+        }
+        const { html } = await renderer.render(req.originalUrl);
+        const response = res.status(status).type("html");
+        if (isEmpty) {
+          response.set("X-Robots-Tag", "noindex");
+        }
+        response.send(html);
       })();
       return;
     }

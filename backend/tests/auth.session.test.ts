@@ -132,6 +132,14 @@ describe("auth sessions", () => {
     expect(await createSession(repo, user)).toEqual({ ok: false, code: "invalid" });
   });
 
+  it("rejects sessions for suspended accounts", async () => {
+    const repo = createInMemoryAuthRepository();
+    const user = await createUser(repo);
+    const suspended = { ...user, accountStatus: "SUSPENDED" as const };
+
+    expect(await createSession(repo, suspended)).toEqual({ ok: false, code: "invalid" });
+  });
+
   it("handles rotation without a previous record and invalidates only matching active sessions", async () => {
     const repo = createInMemoryAuthRepository();
     const user = await createUser(repo);

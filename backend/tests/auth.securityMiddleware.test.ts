@@ -119,6 +119,8 @@ describe("cookie authentication middleware", () => {
     ["revoked session", { ...session, revokedAt: new Date() }, user],
     ["expired session", { ...session, expiresAt: new Date(0) }, user],
     ["deleted user", session, null],
+    ["invited user", session, { ...user, accountStatus: "INVITED" as const }],
+    ["suspended user", session, { ...user, accountStatus: "SUSPENDED" as const }],
     ["wrong user", { ...session, userId: "other" }, user],
     ["changed session version", { ...session, sessionVersion: 1 }, user]
   ])("rejects a %s immediately", async (_label, storedSession, storedUser) => {

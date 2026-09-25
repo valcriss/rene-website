@@ -229,6 +229,9 @@ describe("createPrismaEventRepository", () => {
       categoryId: "art",
       organizerName: "Musee",
       publishedAt: new Date("2026-02-01T09:00:00.000Z"),
+      publishedByUserId: "moderator-1",
+      rejectedByUserId: "moderator-0",
+      rejectedAt: new Date("2026-02-01T08:00:00.000Z"),
       occurrences: [{ ...baseOccurrence, address: "Rue", city: "Tours", postalCode: "37000", latitude: 47, longitude: 0.69 }]
     });
     prismaMocks.findUnique.mockResolvedValue(item);
@@ -238,6 +241,8 @@ describe("createPrismaEventRepository", () => {
     expect(result?.id).toBe("2");
     expect(result?.occurrences[0].address).toBe("Rue");
     expect(result?.publishedAt).toBe("2026-02-01T09:00:00.000Z");
+    expect(result?.publishedByUserId).toBe("moderator-1");
+    expect(result?.rejectedAt).toBe("2026-02-01T08:00:00.000Z");
   });
 
   it("creates event", async () => {
@@ -448,11 +453,20 @@ describe("createPrismaEventRepository", () => {
 
     const result = await repo.updateStatus("5", "PUBLISHED", {
       publishedAt: "2026-01-01T10:00:00.000Z",
+      publishedByUserId: "moderator-1",
       rejectionReason: null,
+      rejectedByUserId: null,
+      rejectedAt: "2026-01-01T09:00:00.000Z",
       publicationEndAt: "2026-02-01T12:00:00.000Z"
     });
 
     expect(result?.status).toBe("PUBLISHED");
+    expect(prismaMocks.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        publishedByUserId: "moderator-1",
+        rejectedAt: new Date("2026-01-01T09:00:00.000Z")
+      })
+    }));
   });
 
   it("returns null when updateStatus fails", async () => {

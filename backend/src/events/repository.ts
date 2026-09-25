@@ -15,14 +15,17 @@ export interface EventRepository {
   upsertPendingRevision(id: string, input: CreateEventInput, status: EventRevisionStatus): Promise<Event | null>;
   submitPendingRevision(id: string): Promise<Event | null>;
   rejectPendingRevision(id: string, reason: string): Promise<Event | null>;
-  publishPendingRevision(id: string, publishedAt: string): Promise<Event | null>;
+  publishPendingRevision(id: string, publishedAt: string, publishedByUserId?: string): Promise<Event | null>;
   updateFeatured(id: string, featured: boolean): Promise<Event | null>;
   archiveEvent(id: string, archivedAt: string): Promise<Event | null>;
   unarchiveEvent(id: string): Promise<Event | null>;
   delete(id: string): Promise<boolean>;
   updateStatus(id: string, status: EventStatus, data: {
     publishedAt: string | null;
+    publishedByUserId?: string | null;
     rejectionReason: string | null;
+    rejectedByUserId?: string | null;
+    rejectedAt?: string | null;
     publicationEndAt: string;
     featured?: boolean;
   }): Promise<Event | null>;
