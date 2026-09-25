@@ -87,9 +87,9 @@ describe("computeSeoTitle", () => {
     );
   });
 
-  it("ignores a blank/whitespace-only override and falls back to the computed title", () => {
-    expect(computeSeoTitle({ title: "Concert", seoTitleOverride: "   " }, "R3ne")).toBe("Concert — R3ne");
-    expect(computeSeoTitle({ title: "Concert" }, "R3ne")).toBe("Concert — R3ne");
+  it("ignores a blank/whitespace-only override and falls back to the plain title, with no site name suffix", () => {
+    expect(computeSeoTitle({ title: "Concert", seoTitleOverride: "   " }, "R3ne")).toBe("Concert");
+    expect(computeSeoTitle({ title: "Concert" }, "R3ne")).toBe("Concert");
   });
 
   it("falls back to the site name alone when the title is blank", () => {

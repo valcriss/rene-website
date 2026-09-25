@@ -939,7 +939,7 @@ describe("BackofficeEventCreatePage", () => {
 
     await fireEvent.update(screen.getByPlaceholderText("Titre de l'événement"), "Concert de jazz");
 
-    expect(screen.getByTestId("seo-preview-title")).toHaveTextContent("Concert de jazz — R3ne");
+    expect(screen.getByTestId("seo-preview-title")).toHaveTextContent("Concert de jazz");
   });
 
   it("flags a missing image in the SEO preview alerts", async () => {

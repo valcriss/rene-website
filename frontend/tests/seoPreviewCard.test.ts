@@ -18,7 +18,7 @@ describe("SeoPreviewCard", () => {
   it("renders the computed title, description and image by default", () => {
     const wrapper = mount(SeoPreviewCard, { props: baseProps });
 
-    expect(wrapper.find("[data-testid='seo-preview-title']").text()).toBe("Concert de jazz au kiosque — R3ne");
+    expect(wrapper.find("[data-testid='seo-preview-title']").text()).toBe("Concert de jazz au kiosque");
     expect(wrapper.find("[data-testid='seo-preview-description']").text()).toBe(
       "Une soirée jazz exceptionnelle au cœur du parc municipal."
     );
@@ -26,6 +26,17 @@ describe("SeoPreviewCard", () => {
       "https://example.com/image.jpg"
     );
     expect(wrapper.find("[data-testid='seo-preview-image']").attributes("alt")).toBe("Musiciens sur scène");
+  });
+
+  // Regression test: the breadcrumb-style domain used to be guessed from the site name plus a
+  // hardcoded ".fr" TLD ("r3ne.fr"), which was simply wrong for this site (r3ne.art) and would
+  // be wrong again for any future site name/domain mismatch. It must reflect the real origin.
+  it("shows the real site origin in the search/social preview domain, not a guessed TLD", () => {
+    const wrapper = mount(SeoPreviewCard, { props: baseProps });
+
+    const domain = wrapper.find("[data-testid='seo-preview-domain']").text();
+    expect(domain).toBe(`${window.location.origin.replace(/^https?:\/\//, "")} › evenements › ...`);
+    expect(domain).not.toContain(".fr");
   });
 
   it("prefers the overrides when set", () => {

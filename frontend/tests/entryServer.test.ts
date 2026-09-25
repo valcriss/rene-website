@@ -146,7 +146,7 @@ describe("entry-server render", () => {
     const result = await render("/evenements/concert-au-parc", "https://rene.example.org");
     const fullHtml = transformHtmlTemplate(result.head, BASE_TEMPLATE);
 
-    expect(fullHtml).toContain("<title>Concert au parc — R3ne</title>");
+    expect(fullHtml).toContain("<title>Concert au parc</title>");
     expect(fullHtml).toContain('<link rel="canonical" href="https://rene.example.org/evenements/concert-au-parc">');
     expect(fullHtml).toContain('<meta property="og:url" content="https://rene.example.org/evenements/concert-au-parc">');
     expect(fullHtml).toContain('<meta property="og:image" content="https://rene.example.org/uploads/concert.jpg">');
