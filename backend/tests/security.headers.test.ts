@@ -15,7 +15,7 @@ const createSecurityApp = (withUser = false) => {
   app.use(securityHeaders);
   app.use(preventPrivateCaching);
   app.get("/error", (_req, res) => res.status(500).json({ error: true }));
-  app.get("*", (_req, res) => res.json({ ok: true }));
+  app.get("/{*splat}", (_req, res) => res.json({ ok: true }));
   return app;
 };
 

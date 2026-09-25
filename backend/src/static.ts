@@ -32,13 +32,16 @@ const EVENT_SLUG_PATTERN = /^\/evenements\/([^/]+)$/;
 const AGENDA_CITY_PATTERN = /^\/agenda\/ville\/([^/]+)$/;
 const AGENDA_CATEGORY_PATTERN = /^\/agenda\/categorie\/([^/]+)$/;
 
-const sendNoindexIndex = (res: express.Response, indexPath: string, status = 200) => {
-  res.status(status).set("X-Robots-Tag", "noindex").sendFile(indexPath);
+const sendIndex = (res: express.Response, frontendDist: string, status: number) => {
+  res.status(status).sendFile("index.html", { root: frontendDist });
+};
+
+const sendNoindexIndex = (res: express.Response, frontendDist: string, status: number) => {
+  res.status(status).set("X-Robots-Tag", "noindex").sendFile("index.html", { root: frontendDist });
 };
 
 export const registerStatic = (app: express.Express, eventRepository: EventRepository) => {
   const frontendDist = path.resolve(__dirname, "../../frontend/dist/client");
-  const indexPath = path.join(frontendDist, "index.html");
 
   // `index: false` is essential: without it, express.static serves the raw index.html for "/"
   // (and any other directory-like path) before our own handler below can server-render it.
@@ -82,7 +85,7 @@ export const registerStatic = (app: express.Express, eventRepository: EventRepos
     next();
   });
 
-  app.get("*", (req, res) => {
+  app.get("/{*splat}", (req, res) => {
     const pathname = req.path;
 
     if (pathname.startsWith("/api/") || pathname === "/api") {
@@ -108,7 +111,7 @@ export const registerStatic = (app: express.Express, eventRepository: EventRepos
           return;
         }
 
-        res.status(404).sendFile(indexPath);
+        sendIndex(res, frontendDist, 404);
       })();
       return;
     }
@@ -140,7 +143,7 @@ export const registerStatic = (app: express.Express, eventRepository: EventRepos
           getRenderer()
         ]);
         if (status === 404) {
-          res.status(404).sendFile(indexPath);
+          sendIndex(res, frontendDist, 404);
           return;
         }
         const { html } = await renderer.render(req.originalUrl);
@@ -161,7 +164,7 @@ export const registerStatic = (app: express.Express, eventRepository: EventRepos
           getRenderer()
         ]);
         if (status === 404) {
-          res.status(404).sendFile(indexPath);
+          sendIndex(res, frontendDist, 404);
           return;
         }
         const { html } = await renderer.render(req.originalUrl);
@@ -175,12 +178,12 @@ export const registerStatic = (app: express.Express, eventRepository: EventRepos
     }
 
     if (isBackofficeRoute(pathname)) {
-      sendNoindexIndex(res, indexPath);
+      sendNoindexIndex(res, frontendDist, 200);
       return;
     }
 
     if (NOINDEX_ROUTES.has(pathname)) {
-      sendNoindexIndex(res, indexPath);
+      sendNoindexIndex(res, frontendDist, 200);
       return;
     }
 
@@ -193,6 +196,6 @@ export const registerStatic = (app: express.Express, eventRepository: EventRepos
       return;
     }
 
-    res.status(404).sendFile(indexPath);
+    sendIndex(res, frontendDist, 404);
   });
 };

@@ -63,7 +63,8 @@ export const createEventRouter = (
   }));
 
   router.get("/events/:id", requireRole(["EDITOR", "MODERATOR", "ADMIN"]), withErrorHandling(async (req, res) => {
-    const result = await getEventForActor(repo, req.params.id, getAuthenticatedUser(req));
+    const eventId = req.params.id as string;
+    const result = await getEventForActor(repo, eventId, getAuthenticatedUser(req));
     if (!result.ok) {
       res.status(result.status).json({ errors: result.errors });
       return;
@@ -82,7 +83,8 @@ export const createEventRouter = (
   }));
 
   router.put("/events/:id", requireRole(["EDITOR", "MODERATOR", "ADMIN"]), withErrorHandling(async (req, res) => {
-    const result = await updateEvent(repo, req.params.id, req.body, getAuthenticatedUser(req));
+    const eventId = req.params.id as string;
+    const result = await updateEvent(repo, eventId, req.body, getAuthenticatedUser(req));
     if (!result.ok) {
       res.status(result.status).json({ errors: result.errors });
       return;
@@ -92,8 +94,9 @@ export const createEventRouter = (
   }));
 
   router.post("/events/:id/submit", requireRole(["EDITOR", "MODERATOR", "ADMIN"]), withErrorHandling(async (req, res) => {
-    const current = await getEvent(repo, req.params.id);
-    const result = await submitEvent(repo, req.params.id, getAuthenticatedUser(req));
+    const eventId = req.params.id as string;
+    const current = await getEvent(repo, eventId);
+    const result = await submitEvent(repo, eventId, getAuthenticatedUser(req));
     if (!result.ok) {
       res.status(result.status).json({ errors: result.errors });
       return;
@@ -112,7 +115,8 @@ export const createEventRouter = (
   }));
 
   router.post("/events/:id/publish", requireRole(["MODERATOR", "ADMIN"]), withErrorHandling(async (req, res) => {
-    const result = await publishEvent(repo, req.params.id, getAuthenticatedUser(req), req.body?.featured ?? false);
+    const eventId = req.params.id as string;
+    const result = await publishEvent(repo, eventId, getAuthenticatedUser(req), req.body?.featured ?? false);
     if (!result.ok) {
       res.status(result.status).json({ errors: result.errors });
       return;
@@ -127,7 +131,8 @@ export const createEventRouter = (
   }));
 
   router.post("/events/:id/archive", requireRole(["ADMIN"]), withErrorHandling(async (req, res) => {
-    const result = await archiveEvent(repo, req.params.id, getAuthenticatedUser(req));
+    const eventId = req.params.id as string;
+    const result = await archiveEvent(repo, eventId, getAuthenticatedUser(req));
     if (!result.ok) {
       res.status(result.status).json({ errors: result.errors });
       return;
@@ -137,7 +142,8 @@ export const createEventRouter = (
   }));
 
   router.post("/events/:id/unarchive", requireRole(["ADMIN"]), withErrorHandling(async (req, res) => {
-    const result = await unarchiveEvent(repo, req.params.id, getAuthenticatedUser(req));
+    const eventId = req.params.id as string;
+    const result = await unarchiveEvent(repo, eventId, getAuthenticatedUser(req));
     if (!result.ok) {
       res.status(result.status).json({ errors: result.errors });
       return;
@@ -147,7 +153,8 @@ export const createEventRouter = (
   }));
 
   router.patch("/events/:id/featured", requireRole(["ADMIN"]), withErrorHandling(async (req, res) => {
-    const result = await updateEventFeatured(repo, req.params.id, req.body?.featured, getAuthenticatedUser(req));
+    const eventId = req.params.id as string;
+    const result = await updateEventFeatured(repo, eventId, req.body?.featured, getAuthenticatedUser(req));
     if (!result.ok) {
       res.status(result.status).json({ errors: result.errors });
       return;
@@ -158,7 +165,8 @@ export const createEventRouter = (
   }));
 
   router.patch("/events/:id/slug", requireRole(["ADMIN"]), withErrorHandling(async (req, res) => {
-    const result = await updateEventSlug(repo, req.params.id, req.body?.slug, getAuthenticatedUser(req));
+    const eventId = req.params.id as string;
+    const result = await updateEventSlug(repo, eventId, req.body?.slug, getAuthenticatedUser(req));
     if (!result.ok) {
       res.status(result.status).json({ errors: result.errors });
       return;
@@ -169,8 +177,9 @@ export const createEventRouter = (
   }));
 
   router.post("/events/:id/reject", requireRole(["MODERATOR", "ADMIN"]), withErrorHandling(async (req, res) => {
-    const current = await getEvent(repo, req.params.id);
-    const result = await rejectEvent(repo, req.params.id, req.body?.rejectionReason, getAuthenticatedUser(req));
+    const eventId = req.params.id as string;
+    const current = await getEvent(repo, eventId);
+    const result = await rejectEvent(repo, eventId, req.body?.rejectionReason, getAuthenticatedUser(req));
     if (!result.ok) {
       res.status(result.status).json({ errors: result.errors });
       return;
@@ -186,9 +195,10 @@ export const createEventRouter = (
   }));
 
   router.delete("/events/:id", requireRole(["EDITOR", "MODERATOR", "ADMIN"]), withErrorHandling(async (req, res) => {
-    const current = await getEvent(repo, req.params.id);
+    const eventId = req.params.id as string;
+    const current = await getEvent(repo, eventId);
     const user = getAuthenticatedUser(req);
-    const result = await deleteEvent(repo, req.params.id, {
+    const result = await deleteEvent(repo, eventId, {
       id: user.id,
       role: user.role,
     });
@@ -203,7 +213,7 @@ export const createEventRouter = (
         console.warn(JSON.stringify({ event: "event_notification_failed", action: "delete" }));
       }
     }
-    await auditEvent(req, res, "event.delete", `event:${req.params.id}`);
+    await auditEvent(req, res, "event.delete", `event:${eventId}`);
     res.json(result.value);
   }));
 

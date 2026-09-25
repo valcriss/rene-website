@@ -104,13 +104,14 @@ export const createUploadedAssetRouter = () => {
   const router = Router();
 
   router.get("/:filename", withErrorHandling(async (req, res) => {
-    if (!isStoredUploadFilename(req.params.filename)) {
+    const filename = req.params.filename as string;
+    if (!isStoredUploadFilename(filename)) {
       res.status(404).json({ message: "Image introuvable." });
       return;
     }
 
     try {
-      const contents = await readStoredUpload(req.params.filename);
+      const contents = await readStoredUpload(filename);
       res.setHeader("Content-Type", "image/webp");
       res.setHeader("X-Content-Type-Options", "nosniff");
       res.setHeader("Content-Security-Policy", "default-src 'none'; sandbox");

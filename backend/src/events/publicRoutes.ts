@@ -28,7 +28,8 @@ export const createPublicEventsRouter = (repo: EventRepository) => {
   router.get(
     "/events/:id",
     withErrorHandling(async (req, res) => {
-      const event = await getPublicEvent(repo, req.params.id);
+      const eventId = req.params.id as string;
+      const event = await getPublicEvent(repo, eventId);
       if (!event) {
         res.status(404).json({ message: "Événement introuvable." });
         return;
