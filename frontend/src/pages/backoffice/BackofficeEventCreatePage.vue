@@ -429,7 +429,7 @@
               <SeoPreviewCard
                 :title="editorForm.title"
                 :content="editorForm.content ?? null"
-                :image="editorForm.image ?? null"
+                :image="imagePreviewUrl || editorForm.image || null"
                 :image-alt="editorForm.imageAlt ?? null"
                 :seo-title-override="editorForm.seoTitleOverride ?? null"
                 :seo-description-override="editorForm.seoDescriptionOverride ?? null"
