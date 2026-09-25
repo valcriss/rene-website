@@ -16,8 +16,8 @@
 
     <div class="relative mx-auto max-w-[1600px] px-4 py-8 sm:px-6 lg:px-8 lg:py-10 xl:px-10">
       <div class="grid gap-8 xl:grid-cols-[minmax(0,0.92fr)_minmax(480px,1.08fr)] xl:items-stretch">
-        <div class="flex flex-col justify-between rounded-[2rem] border border-white/90 bg-white p-6 shadow-[0_32px_120px_-56px_rgba(30,41,59,0.28)] sm:p-8 xl:p-10">
-          <div class="space-y-6">
+        <div class="flex flex-col justify-between rounded-[2rem] border border-white/90 bg-white p-6 shadow-[0_32px_120px_-56px_rgba(30,41,59,0.28)] sm:p-7 xl:p-8">
+          <div class="space-y-4">
             <HomeTitle :title-lead="homepageSubtitleText" />
             <p class="max-w-2xl text-sm font-semibold uppercase tracking-[0.28em] text-sky-700/65">
               {{ t("home.eyebrow") }}
@@ -27,14 +27,14 @@
             </p>
           </div>
 
-          <div class="mt-8">
+          <div class="mt-6">
             <HomeSearch v-model="filters.search" @reset="resetFilters" />
           </div>
         </div>
 
         <article
           v-if="carouselEvents.length > 0 && currentCarouselEvent"
-          class="group relative overflow-hidden rounded-[2.25rem] border border-slate-900/10 bg-slate-950 text-white shadow-[0_36px_120px_-52px_rgba(15,23,42,0.55)]"
+          class="group relative flex flex-col overflow-hidden rounded-[2.25rem] border border-slate-900/10 bg-white shadow-[0_36px_120px_-52px_rgba(15,23,42,0.3)]"
           :data-testid="`featured-card-${currentCarouselEvent.id}`"
         >
           <RouterLink
@@ -43,82 +43,75 @@
             :aria-label="currentCarouselEvent.title"
             :data-testid="`featured-card-link-${currentCarouselEvent.id}`"
           />
-          <img
-            class="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
-            :src="getEventImage(currentCarouselEvent)"
-            :alt="currentCarouselEvent.imageAlt || currentCarouselEvent.title"
-            loading="eager"
-            fetchpriority="high"
-            decoding="async"
-            @error="markImageError(currentCarouselEvent.id)"
-          />
-          <div class="pointer-events-none absolute inset-x-0 bottom-0 h-[44%] bg-gradient-to-t from-slate-950/74 via-slate-950/34 to-transparent"></div>
-          <div class="relative flex min-h-[300px] flex-col justify-between p-6 sm:min-h-[360px] sm:p-8 xl:min-h-[420px]">
-            <div class="flex flex-wrap items-center gap-3">
-              <span class="rounded-full bg-white/92 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-slate-900">
+          <div class="relative aspect-[16/10] w-full overflow-hidden bg-sky-100 sm:aspect-[16/8] xl:aspect-auto xl:min-h-[260px] xl:flex-1">
+            <img
+              class="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
+              :src="getEventImage(currentCarouselEvent)"
+              :alt="currentCarouselEvent.imageAlt || currentCarouselEvent.title"
+              loading="eager"
+              fetchpriority="high"
+              decoding="async"
+              @error="markImageError(currentCarouselEvent.id)"
+            />
+          </div>
+          <div class="relative bg-white px-5 py-4 text-slate-900 sm:px-6">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-sky-800">
                 {{ t("home.featured") }}
               </span>
-              <span class="rounded-full bg-slate-950/40 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-white ring-1 ring-white/20 backdrop-blur">
+              <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-slate-700">
                 {{ formatEventDateBadge(currentCarouselEvent.occurrences) }}
               </span>
               <span
                 v-if="getCategoryName(currentCarouselEvent.categoryId)"
-                class="rounded-full px-4 py-2 text-xs font-semibold ring-1 backdrop-blur"
+                class="rounded-full px-3 py-1 text-xs font-semibold ring-1"
                 :style="getCategoryTheme(currentCarouselEvent.categoryId)"
               >
                 {{ getCategoryName(currentCarouselEvent.categoryId) }}
               </span>
             </div>
-
-            <div class="max-w-2xl space-y-4 rounded-[1.5rem] border border-white/10 bg-slate-950/28 p-5 backdrop-blur-md sm:p-6">
-              <p class="text-sm font-medium uppercase tracking-[0.28em] text-white/88 [text-shadow:0_1px_10px_rgba(15,23,42,0.8)]">
-                {{ getEventLocationSummary(currentCarouselEvent.occurrences) }}
-              </p>
-              <h2 class="font-display max-w-2xl text-4xl font-semibold leading-tight tracking-tight text-white [text-shadow:0_4px_18px_rgba(15,23,42,0.82)] sm:text-5xl">
-                {{ currentCarouselEvent.title }}
-              </h2>
-              <p class="max-w-xl text-base leading-7 text-white/92 [text-shadow:0_2px_12px_rgba(15,23,42,0.78)] sm:text-lg">
-                {{ getEventShortExcerpt(currentCarouselEvent) || t("home.featuredFallback") }}
-              </p>
-              <p v-if="formatUpdatedAtLabel(currentCarouselEvent.updatedAt)" class="text-xs font-medium tracking-[0.18em] text-white/72">
-                {{ formatUpdatedAtLabel(currentCarouselEvent.updatedAt) }}
-              </p>
-              <div class="flex flex-wrap items-center gap-4 pt-3">
-                <span class="rounded-full bg-gradient-to-r from-sky-500 to-indigo-400 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-slate-900/20">
-                  {{ t("home.viewEvent") }}
-                </span>
-                <span class="text-sm font-medium uppercase tracking-[0.24em] text-white/82 [text-shadow:0_2px_10px_rgba(15,23,42,0.8)]">
-                  {{ t("home.recommended") }}
-                </span>
-                <div v-if="carouselEvents.length > 1" class="relative z-20 ml-auto flex items-center gap-2">
-                  <button
-                    type="button"
-                    class="rounded-full border border-white/20 bg-white/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-white backdrop-blur transition hover:bg-white/20"
-                    :aria-label="t('home.previousFeatured')"
-                    @click.stop="goToPreviousSlide"
-                  >
-                    ‹
-                  </button>
-                  <button
-                    type="button"
-                    class="rounded-full border border-white/20 bg-white/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-white backdrop-blur transition hover:bg-white/20"
-                    :aria-label="t('home.nextFeatured')"
-                    @click.stop="goToNextSlide"
-                  >
-                    ›
-                  </button>
-                </div>
+            <div class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div class="min-w-0">
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  {{ getEventLocationSummary(currentCarouselEvent.occurrences) }}
+                </p>
+                <h2 class="font-display mt-1 text-2xl font-semibold leading-tight tracking-tight text-slate-950 sm:text-3xl">
+                  {{ currentCarouselEvent.title }}
+                </h2>
               </div>
-              <div v-if="carouselEvents.length > 1" class="relative z-20 flex gap-2 pt-2">
+              <span class="shrink-0 self-start rounded-full bg-gradient-to-r from-sky-500 to-indigo-400 px-4 py-2 text-sm font-semibold text-white shadow-sm sm:self-auto">
+                {{ t("home.viewEvent") }}
+              </span>
+            </div>
+            <div v-if="carouselEvents.length > 1" class="relative z-20 mt-3 flex items-center justify-between gap-3 border-t border-slate-100 pt-3">
+              <div class="flex flex-wrap gap-2">
                 <button
                   v-for="(_eventItem, index) in carouselEvents"
                   :key="index"
                   type="button"
-                  class="h-2.5 w-8 rounded-full transition"
-                  :class="index === currentSlide ? 'bg-white' : 'bg-white/35 hover:bg-white/55'"
+                  class="h-2.5 w-7 rounded-full transition"
+                  :class="index === currentSlide ? 'bg-sky-700' : 'bg-slate-200 hover:bg-slate-300'"
                   :aria-label="`${t('home.featured')} ${index + 1}`"
                   @click.stop="currentSlide = index"
                 />
+              </div>
+              <div class="flex items-center gap-2">
+                <button
+                  type="button"
+                  class="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 transition hover:bg-sky-50"
+                  :aria-label="t('home.previousFeatured')"
+                  @click.stop="goToPreviousSlide"
+                >
+                  ‹
+                </button>
+                <button
+                  type="button"
+                  class="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 transition hover:bg-sky-50"
+                  :aria-label="t('home.nextFeatured')"
+                  @click.stop="goToNextSlide"
+                >
+                  ›
+                </button>
               </div>
             </div>
           </div>
