@@ -1,4 +1,5 @@
 import path from "node:path";
+import { readFileSync } from "node:fs";
 import express from "express";
 import { EventRepository } from "./events/repository";
 import { getPublicEventPageStatus, getPublicEventPageStatusBySlug } from "./events/service";
@@ -32,16 +33,37 @@ const EVENT_SLUG_PATTERN = /^\/evenements\/([^/]+)$/;
 const AGENDA_CITY_PATTERN = /^\/agenda\/ville\/([^/]+)$/;
 const AGENDA_CATEGORY_PATTERN = /^\/agenda\/categorie\/([^/]+)$/;
 
-const sendIndex = (res: express.Response, frontendDist: string, status: number) => {
-  res.status(status).sendFile("index.html", { root: frontendDist });
+// Sent as-is for every route we don't server-render (backoffice, auth pages, and genuine
+// 404s): the built file still carries the literal <!--ssr-outlet--> / <!--ssr-state-->
+// placeholders, which only the SSR renderer's own template step ever substitutes. Left in
+// place, `#app` isn't truly empty, so createSSRApp's mount() always attempts to hydrate
+// against that comment node and logs a spurious "Hydration completed but contains mismatches."
+// on every login/backoffice load, even though nothing is actually wrong — stripping them here
+// leaves a genuinely empty container, so mount() does a plain client render instead.
+const stripSsrPlaceholders = (html: string) => html.replace("<!--ssr-outlet-->", "").replace("<!--ssr-state-->", "");
+
+const sendIndex = (res: express.Response, shellHtml: string, status: number) => {
+  res.status(status).type("html").send(shellHtml);
 };
 
-const sendNoindexIndex = (res: express.Response, frontendDist: string, status: number) => {
-  res.status(status).set("X-Robots-Tag", "noindex").sendFile("index.html", { root: frontendDist });
+const sendNoindexIndex = (res: express.Response, shellHtml: string, status: number) => {
+  res.status(status).set("X-Robots-Tag", "noindex").type("html").send(shellHtml);
 };
 
 export const registerStatic = (app: express.Express, eventRepository: EventRepository) => {
   const frontendDist = path.resolve(__dirname, "../../frontend/dist/client");
+
+  // Read and stripped lazily, on the first request that actually needs it (like getRenderer()
+  // below) rather than here — so registerStatic() itself never depends on the built file
+  // existing, and a test that never issues an HTML request never pays for it either. Cached per
+  // registerStatic() call (not module-level) so each Express app/test gets its own fresh read.
+  let cachedShellHtml: string | null = null;
+  const getShellHtml = (): string => {
+    if (cachedShellHtml === null) {
+      cachedShellHtml = stripSsrPlaceholders(readFileSync(path.join(frontendDist, "index.html"), "utf-8"));
+    }
+    return cachedShellHtml;
+  };
 
   // `index: false` is essential: without it, express.static serves the raw index.html for "/"
   // (and any other directory-like path) before our own handler below can server-render it.
@@ -111,7 +133,7 @@ export const registerStatic = (app: express.Express, eventRepository: EventRepos
           return;
         }
 
-        sendIndex(res, frontendDist, 404);
+        sendIndex(res, getShellHtml(), 404);
       })();
       return;
     }
@@ -143,7 +165,7 @@ export const registerStatic = (app: express.Express, eventRepository: EventRepos
           getRenderer()
         ]);
         if (status === 404) {
-          sendIndex(res, frontendDist, 404);
+          sendIndex(res, getShellHtml(), 404);
           return;
         }
         const { html } = await renderer.render(req.originalUrl);
@@ -164,7 +186,7 @@ export const registerStatic = (app: express.Express, eventRepository: EventRepos
           getRenderer()
         ]);
         if (status === 404) {
-          sendIndex(res, frontendDist, 404);
+          sendIndex(res, getShellHtml(), 404);
           return;
         }
         const { html } = await renderer.render(req.originalUrl);
@@ -178,12 +200,12 @@ export const registerStatic = (app: express.Express, eventRepository: EventRepos
     }
 
     if (isBackofficeRoute(pathname)) {
-      sendNoindexIndex(res, frontendDist, 200);
+      sendNoindexIndex(res, getShellHtml(), 200);
       return;
     }
 
     if (NOINDEX_ROUTES.has(pathname)) {
-      sendNoindexIndex(res, frontendDist, 200);
+      sendNoindexIndex(res, getShellHtml(), 200);
       return;
     }
 
@@ -196,6 +218,6 @@ export const registerStatic = (app: express.Express, eventRepository: EventRepos
       return;
     }
 
-    sendIndex(res, frontendDist, 404);
+    sendIndex(res, getShellHtml(), 404);
   });
 };

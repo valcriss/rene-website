@@ -409,4 +409,54 @@ describe("registerStatic", () => {
 
     expect(response.status).toBe(200);
   });
+
+  describe("SSR placeholder stripping for non-server-rendered routes", () => {
+    // Mirrors frontend/index.html's actual shape (`<div id="app"><!--ssr-outlet--></div>` plus
+    // a sibling `<!--ssr-state-->` comment) — only the SSR renderer's own template step ever
+    // substitutes these; every other fixture in this file already omits them.
+    const ssrTemplate = '<div id="app"><!--ssr-outlet--></div>\n<!--ssr-state-->';
+
+    beforeEach(async () => {
+      await fs.writeFile(path.join(frontendDist, "index.html"), ssrTemplate);
+    });
+
+    afterEach(async () => {
+      await fs.writeFile(path.join(frontendDist, "index.html"), "<h1>Index</h1>");
+    });
+
+    // Regression test: left in place, these placeholders mean `#app` isn't truly empty, so
+    // Vue's createSSRApp always attempts to hydrate against that lone comment node and logs a
+    // spurious "Hydration completed but contains mismatches." on every login/backoffice load.
+    it("leaves #app genuinely empty for a backoffice route, not hydration bait", async () => {
+      const app = express();
+      registerStatic(app, createRepo(null));
+
+      const response = await request(app).get("/backoffice/events");
+
+      expect(response.text).toBe('<div id="app"></div>\n');
+      expect(response.text).not.toContain("<!--ssr-outlet-->");
+      expect(response.text).not.toContain("<!--ssr-state-->");
+    });
+
+    it("also strips the placeholders for a genuine 404 shell", async () => {
+      const app = express();
+      registerStatic(app, createRepo(null));
+
+      const response = await request(app).get("/some/unknown/route");
+
+      expect(response.status).toBe(404);
+      expect(response.text).toBe('<div id="app"></div>\n');
+    });
+
+    it("reads and strips the shell only once, reusing the cached result for later requests", async () => {
+      const app = express();
+      registerStatic(app, createRepo(null));
+
+      const first = await request(app).get("/backoffice/events");
+      const second = await request(app).get("/login");
+
+      expect(first.text).toBe('<div id="app"></div>\n');
+      expect(second.text).toBe('<div id="app"></div>\n');
+    });
+  });
 });
