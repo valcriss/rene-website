@@ -6,7 +6,7 @@
         <h3 class="mt-2 text-lg font-semibold text-slate-950">{{ t("editor.cropTitle") }}</h3>
         <p class="mt-2 text-sm text-slate-500">{{ t("editor.cropLead") }}</p>
 
-        <div class="mt-4 max-h-[60vh] overflow-hidden rounded-2xl bg-slate-100">
+        <div class="crop-stage mt-4 h-[60vh] overflow-hidden rounded-2xl bg-slate-100">
           <img ref="imageRef" :src="imageUrl" :alt="t('editor.cropTitle')" class="block max-w-full" />
         </div>
 
@@ -54,11 +54,29 @@
 import { nextTick, onBeforeUnmount, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import Cropper from "cropperjs";
-import "cropperjs/dist/cropper.css";
 
 const TARGET_WIDTH = 466;
 const TARGET_HEIGHT = 291;
 const TARGET_RATIO = TARGET_WIDTH / TARGET_HEIGHT;
+
+const CROPPER_TEMPLATE = `<cropper-canvas class="h-full w-full">
+  <cropper-image rotatable scalable skewable translatable></cropper-image>
+  <cropper-shade hidden></cropper-shade>
+  <cropper-handle action="select" plain></cropper-handle>
+  <cropper-selection aspect-ratio="${TARGET_RATIO}" initial-coverage="1" movable resizable>
+    <cropper-grid role="grid" bordered covered></cropper-grid>
+    <cropper-crosshair centered></cropper-crosshair>
+    <cropper-handle action="move" theme-color="rgba(255, 255, 255, 0.35)"></cropper-handle>
+    <cropper-handle action="n-resize"></cropper-handle>
+    <cropper-handle action="e-resize"></cropper-handle>
+    <cropper-handle action="s-resize"></cropper-handle>
+    <cropper-handle action="w-resize"></cropper-handle>
+    <cropper-handle action="ne-resize"></cropper-handle>
+    <cropper-handle action="nw-resize"></cropper-handle>
+    <cropper-handle action="se-resize"></cropper-handle>
+    <cropper-handle action="sw-resize"></cropper-handle>
+  </cropper-selection>
+</cropper-canvas>`;
 
 const props = defineProps<{ file: File | null }>();
 const emit = defineEmits<{
@@ -91,13 +109,7 @@ watch(
     imageUrl.value = URL.createObjectURL(file);
     await nextTick();
     if (imageRef.value) {
-      cropper = new Cropper(imageRef.value, {
-        viewMode: 1,
-        aspectRatio: TARGET_RATIO,
-        autoCropArea: 1,
-        responsive: true,
-        background: false
-      });
+      cropper = new Cropper(imageRef.value, { template: CROPPER_TEMPLATE });
     }
   },
   { immediate: true }
@@ -112,19 +124,20 @@ const handleCancel = () => {
 };
 
 const handleZoomIn = () => {
-  cropper?.zoom(0.1);
+  cropper?.getCropperImage()?.$zoom(0.1);
 };
 
 const handleZoomOut = () => {
-  cropper?.zoom(-0.1);
+  cropper?.getCropperImage()?.$zoom(-0.1);
 };
 
-const handleConfirm = () => {
-  if (!cropper || !props.file) {
+const handleConfirm = async () => {
+  const selection = cropper?.getCropperSelection();
+  if (!selection || !props.file) {
     return;
   }
 
-  const canvas = cropper.getCroppedCanvas({ width: TARGET_WIDTH, height: TARGET_HEIGHT });
+  const canvas = await selection.$toCanvas({ width: TARGET_WIDTH, height: TARGET_HEIGHT });
   const sourceType = props.file.type || "image/jpeg";
   canvas.toBlob(
     (blob) => {

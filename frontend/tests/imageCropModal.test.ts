@@ -1,18 +1,19 @@
 import "@testing-library/jest-dom";
 import { render, screen } from "@testing-library/vue";
 import { fireEvent } from "@testing-library/vue";
+import { flushPromises } from "@vue/test-utils";
 import { describe, expect, it, vi, afterEach } from "vitest";
 import ImageCropModal from "../src/components/form/ImageCropModal.vue";
 
 const destroyMock = vi.fn();
-const getCroppedCanvasMock = vi.fn();
+const toCanvasMock = vi.fn();
 const zoomMock = vi.fn();
 
 vi.mock("cropperjs", () => ({
   default: class MockCropper {
     destroy = destroyMock;
-    getCroppedCanvas = getCroppedCanvasMock;
-    zoom = zoomMock;
+    getCropperImage = () => ({ $zoom: zoomMock });
+    getCropperSelection = () => ({ $toCanvas: toCanvasMock });
     constructor() {
       // no-op: the real constructor wires up DOM/canvas behavior we don't need in tests
     }
@@ -41,7 +42,7 @@ describe("ImageCropModal", () => {
   });
 
   it("emits the cropped file at the target size on confirm", async () => {
-    getCroppedCanvasMock.mockReturnValue({
+    toCanvasMock.mockResolvedValue({
       toBlob: (callback: (blob: Blob | null) => void) => callback(fakeBlob)
     });
 
@@ -50,8 +51,9 @@ describe("ImageCropModal", () => {
     await screen.findByText("Recadrer l'image");
 
     await fireEvent.click(screen.getByRole("button", { name: "Valider le recadrage" }));
+    await flushPromises();
 
-    expect(getCroppedCanvasMock).toHaveBeenCalledWith({ width: 466, height: 291 });
+    expect(toCanvasMock).toHaveBeenCalledWith({ width: 466, height: 291 });
     const confirmed = emitted().confirm;
     expect(confirmed).toBeTruthy();
     const [croppedFile] = confirmed![0] as [File];
@@ -67,7 +69,7 @@ describe("ImageCropModal", () => {
     await fireEvent.click(screen.getByRole("button", { name: "Annuler" }));
 
     expect(emitted().cancel).toBeTruthy();
-    expect(getCroppedCanvasMock).not.toHaveBeenCalled();
+    expect(toCanvasMock).not.toHaveBeenCalled();
   });
 
   it("zooms in and out via the visible controls", async () => {
