@@ -5,7 +5,7 @@
         {{ t("editor.seoPreviewSearchEyebrow") }}
       </p>
       <div class="mt-2 rounded-2xl border border-slate-200 bg-white p-4">
-        <p class="truncate text-xs text-emerald-700">{{ fakeResultUrl }}</p>
+        <p class="truncate text-xs text-emerald-700" data-testid="seo-preview-domain">{{ fakeResultUrl }}</p>
         <p class="mt-1 truncate text-lg text-sky-800" data-testid="seo-preview-title">{{ effectiveTitle }}</p>
         <p class="mt-1 line-clamp-2 text-sm text-slate-600" data-testid="seo-preview-description">
           {{ effectiveDescription }}
@@ -53,6 +53,7 @@ import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
 import { computeSeoDescription, computeSeoTitle, DEFAULT_OG_IMAGE_PATH } from "../../utils/seo";
 import { computeSeoAlerts, type SeoAlertOccurrence } from "../../utils/seoAlerts";
+import { useSiteUrl } from "../../composables/useSiteUrl";
 
 const props = defineProps<{
   title: string;
@@ -67,7 +68,13 @@ const props = defineProps<{
 
 const { t } = useI18n();
 
-const fakeResultUrl = computed(() => `${props.siteName.toLowerCase().replace(/\s+/g, "")}.fr › evenements › ...`);
+// Derived from the real site URL rather than guessed from the site name (which previously
+// hardcoded a ".fr" TLD, wrong for r3ne.art) — this preview must show the actual domain.
+const siteUrl = useSiteUrl();
+const siteDomain = computed(
+  () => siteUrl.replace(/^https?:\/\//, "").replace(/\/$/, "") || props.siteName.toLowerCase().replace(/\s+/g, "")
+);
+const fakeResultUrl = computed(() => `${siteDomain.value} › evenements › ...`);
 
 const effectiveTitle = computed(() =>
   computeSeoTitle({ title: props.title, seoTitleOverride: props.seoTitleOverride }, props.siteName)

@@ -70,7 +70,7 @@ export const computeSeoTitle = (
   if (override) {
     return override;
   }
-  return event.title.trim() ? `${event.title} — ${siteName}` : siteName;
+  return event.title.trim() || siteName;
 };
 
 export const computeSeoDescription = (event: {
