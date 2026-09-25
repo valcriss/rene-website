@@ -51,7 +51,7 @@ services:
       - -lc
       - |
         set -euo pipefail
-        exec java -jar "/photon/bin/photon.jar" \
+        exec java -jar "/photon/bin/photon.jar" serve \
           -data-dir "/photon/data" \
           -listen-ip "0.0.0.0" \
           -listen-port "2322"

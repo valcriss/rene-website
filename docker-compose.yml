@@ -23,8 +23,10 @@ services:
       SMTP_TIMEOUT_MS: ${SMTP_TIMEOUT_MS:-10000}
       CSP_REPORT_ONLY: ${CSP_REPORT_ONLY:-false}
       FORCE_HTTPS: ${FORCE_HTTPS:-false}
-    ports:
-      - "127.0.0.1:3000:3000"
+      PUBLIC_APP_URL: ${PUBLIC_APP_URL:-https://r3ne.art}
+    networks:
+      - default
+      - shared_network
     depends_on:
       db:
         condition: service_healthy
@@ -90,7 +92,7 @@ services:
     image: debian:bookworm-slim@sha256:3783cc01769c7b2b1b83a5c5ad96c815348e28ed7da68e2e3687004faa906251
     container_name: photon-init
     environment:
-      PHOTON_VERSION: ${PHOTON_VERSION:-0.7.4}
+      PHOTON_VERSION: ${PHOTON_VERSION:-1.3.0}
       PHOTON_JAR_URL: ${PHOTON_JAR_URL:?Set PHOTON_JAR_URL in the deployment environment}
       PHOTON_JAR_SHA256: ${PHOTON_JAR_SHA256:?Set PHOTON_JAR_SHA256 in the deployment environment}
       PHOTON_DB_URL: ${PHOTON_DB_URL:?Set PHOTON_DB_URL in the deployment environment}
@@ -133,7 +135,7 @@ services:
       - -lc
       - |
         set -euo pipefail
-        exec java -jar "/photon/bin/photon.jar" \
+        exec java -jar "/photon/bin/photon.jar" serve \
           -data-dir "/photon/data" \
           -listen-ip "0.0.0.0" \
           -listen-port "2322"
@@ -157,6 +159,11 @@ services:
     mem_limit: 2g
     cpus: 2.0
     pids_limit: 512
+
+networks:
+  default:
+  shared_network:
+    external: true
 
 volumes:
   db-data:

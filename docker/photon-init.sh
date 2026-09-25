@@ -29,11 +29,13 @@ download_and_verify() {
     rm -f "$temporary_file"
     exit 1
   fi
+  echo "Verifying checksum..."
   if ! printf '%s  %s\n' "$checksum" "$temporary_file" | sha256sum -c -; then
     rm -f "$temporary_file"
     echo "Photon artifact checksum verification failed." >&2
     exit 1
   fi
+  echo "Checksum verified."
   mv "$temporary_file" "$destination"
 }
 
@@ -79,13 +81,19 @@ else
   rm -rf "$staging_directory" "$archive"
   echo "Downloading verified Photon DB dump..."
   download_and_verify "$PHOTON_DB_URL" "$PHOTON_DB_SHA256" "$archive"
+  echo "Verifying archive integrity (bzip2 -t)..."
   bzip2 -t "$archive"
+  echo "Archive integrity OK."
+  echo "Checking archive for unsafe paths..."
   if tar -tjf "$archive" | grep -Eq '(^/|(^|/)\.\.(/|$))'; then
     echo "Photon DB archive contains an unsafe path." >&2
     exit 1
   fi
+  echo "No unsafe paths found."
   mkdir -p "$staging_directory"
+  echo "Extracting Photon database (this can take several minutes)..."
   tar -xjf "$archive" -C "$staging_directory" --no-same-owner --no-same-permissions
+  echo "Extraction complete."
   if [ ! -d "$staging_directory/photon_data/node_1/data/nodes/0/indices" ]; then
     echo "Photon DB archive does not contain the expected index." >&2
     exit 1
@@ -96,5 +104,6 @@ else
   printf '%s' "$expected_source" > "$marker"
 fi
 
+echo "Fixing ownership..."
 chown -R 65532:65532 /photon
 echo "Photon initialization complete."
