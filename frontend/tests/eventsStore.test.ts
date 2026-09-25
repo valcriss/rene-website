@@ -200,6 +200,46 @@ describe("events store", () => {
     expect(store.events).toHaveLength(1);
   });
 
+  it("sets hasLoaded after a successful fetch, but not after a failed one", async () => {
+    const store = useEventsStore();
+    expect(store.hasLoaded).toBe(false);
+
+    vi.mocked(fetchEvents).mockRejectedValueOnce(new Error("nope"));
+    const authStore = useAuthStore();
+    authStore.setRole("EDITOR");
+    await store.fetchEvents();
+    expect(store.hasLoaded).toBe(false);
+
+    vi.mocked(fetchEvents).mockResolvedValueOnce([buildEvent()]);
+    await store.fetchEvents();
+    expect(store.hasLoaded).toBe(true);
+  });
+
+  it("loadEvents is a no-op once hasLoaded is set (App.vue's SSR-safe initial-load guard)", async () => {
+    const store = useEventsStore();
+    // Simulates the state entry-client.ts restores from the SSR-embedded Pinia state before
+    // mount: events already populated, hasLoaded already true.
+    store.events = [buildEvent()];
+    store.hasLoaded = true;
+    store.isLoading = false;
+
+    await store.loadEvents();
+
+    expect(store.isLoading).toBe(false);
+    expect(store.error).toBeNull();
+    expect(fetchEvents).not.toHaveBeenCalled();
+
+    store.hasLoaded = false;
+    vi.mocked(fetchEvents).mockResolvedValueOnce([buildEvent({ id: "2" })]);
+    const authStore = useAuthStore();
+    authStore.setRole("EDITOR");
+    await store.loadEvents();
+
+    expect(store.hasLoaded).toBe(true);
+    expect(store.events).toHaveLength(1);
+    expect(store.events[0].id).toBe("2");
+  });
+
   it("publishes with featured flag and updates featured state", async () => {
     const store = useEventsStore();
     const authStore = useAuthStore();

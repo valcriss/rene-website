@@ -5,7 +5,7 @@
 </template>
 
 <script setup lang="ts">
-import { onServerPrefetch, watch } from "vue";
+import { onMounted, onServerPrefetch, watch } from "vue";
 import { useHead } from "@unhead/vue";
 import { useRoute, useRouter } from "vue-router";
 import { useAuthStore } from "./stores/auth";
@@ -58,20 +58,29 @@ watch(
   { immediate: true }
 );
 
-// Re-fetch on every role change (login, logout, role switch in tests) so the store always
-// holds the data set the current visitor is allowed to see: the public, published-only list
-// for anonymous visitors, or the full backoffice list once authenticated.
+// Re-fetch on every *subsequent* role change (login, logout, role switch in tests) so the
+// store always holds the data set the current visitor is allowed to see: the public,
+// published-only list for anonymous visitors, or the full backoffice list once authenticated.
+// No `immediate: true` here — the initial load is handled below by onMounted/onServerPrefetch,
+// which go through the guarded eventsStore.loadEvents(): calling the unconditional
+// fetchEvents() immediately here as well would flip `isLoading`/`error` synchronously during
+// this component's setup(), before hydration runs, mismatching the server's already-settled
+// markup (restoreSession() in entry-client.ts always resolves authStore's state before this
+// component ever mounts, so no real transition is missed by dropping `immediate`).
 watch(
   () => authStore.isAuthenticated,
   () => {
     eventsStore.fetchEvents();
-  },
-  { immediate: true }
+  }
 );
 
-// The watch above fires the initial fetch but doesn't expose its promise; SSR needs to await
-// it (via onServerPrefetch, a no-op on the client) so the response body includes real events.
-onServerPrefetch(() => eventsStore.fetchEvents());
+onMounted(() => {
+  eventsStore.loadEvents();
+});
+
+// onMounted never runs during SSR, so the initial event list would otherwise render blank;
+// onServerPrefetch awaits the same load server-side (see loadEvents' guard doc comment).
+onServerPrefetch(() => eventsStore.loadEvents());
 
 defineExpose({
   handlePublish: eventsStore.handlePublish,

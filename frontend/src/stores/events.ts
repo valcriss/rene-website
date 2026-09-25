@@ -248,16 +248,34 @@ export const useEventsStore = defineStore("events", () => {
     events.value = events.value.filter((event) => event.id !== id);
   };
 
+  const hasLoaded = ref(false);
+
   const fetchEventsData = async () => {
     isLoading.value = true;
     error.value = null;
     try {
       events.value = authStore.isAuthenticated ? await fetchEvents(authStore.role) : await fetchPublicEvents();
+      hasLoaded.value = true;
     } catch (err) {
       error.value = err instanceof Error ? err.message : "Erreur inconnue";
     } finally {
       isLoading.value = false;
     }
+  };
+
+  // Guarded counterpart to fetchEventsData, used for the initial load only (App.vue's
+  // onMounted/onServerPrefetch): on the client, SSR has usually already hydrated `events` and
+  // set `hasLoaded`, so this is a no-op that touches no reactive state — calling
+  // fetchEventsData directly there would flip `isLoading`/`error` synchronously during setup(),
+  // before hydration runs, producing a hydration mismatch against the server's already-settled
+  // markup. A genuine auth change still goes through fetchEventsData (see App.vue's watcher),
+  // which must always re-fetch regardless of `hasLoaded`.
+  const loadEvents = async () => {
+    // `isLoading` defaults to true (see its ref() above), so it can't be used as an "already in
+    // flight" guard here the way the categories/audiences stores do with their own `loading`
+    // flag (which defaults to false) — `hasLoaded` alone is enough for this store's one caller.
+    if (hasLoaded.value) return;
+    await fetchEventsData();
   };
 
   const markImageError = (id: string) => {
@@ -533,7 +551,9 @@ export const useEventsStore = defineStore("events", () => {
     hasApproximateGeolocation,
     canSubmitForModeration,
     updateEventState,
+    hasLoaded,
     fetchEvents: fetchEventsData,
+    loadEvents,
     markImageError,
     getEventImage,
     getEventExcerpt,

@@ -5,6 +5,7 @@ import { vi } from "vitest";
 import App from "../src/App.vue";
 import { useCategoriesStore } from "../src/stores/categories";
 import { useAuthStore } from "../src/stores/auth";
+import { useEventsStore } from "../src/stores/events";
 import { createTestRouter } from "./testRouter";
 
 type FetchInput = string | { url: string };
@@ -165,6 +166,48 @@ describe("App", () => {
     await renderWithRouter();
 
     expect(await screen.findByText("Aucun événement n'est encore publié.")).toBeInTheDocument();
+  });
+
+  // Regression test for a production hydration mismatch: App.vue used to re-fetch events
+  // synchronously (immediate watcher) on every mount, even when the store already held data
+  // restored from the SSR-embedded Pinia state — flipping isLoading/error before hydration ran
+  // and mismatching the server's already-settled markup. It must now be a no-op in that case.
+  it("does not refetch events when the store is already hydrated (SSR hydration guard)", async () => {
+    const fetchMock = vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const router = createTestRouter("/");
+    await router.isReady();
+    const pinia = createPinia();
+    const authStore = useAuthStore(pinia);
+    authStore.sessionInitialized = true;
+
+    const eventsStore = useEventsStore(pinia);
+    eventsStore.events = toEventsPayload([
+      {
+        id: "1",
+        title: "Concert déjà hydraté",
+        eventStartAt: "2026-01-15T20:00:00.000Z",
+        eventEndAt: "2026-01-15T22:00:00.000Z",
+        venueName: "Salle",
+        city: "Descartes",
+        image: "https://example.com",
+        categoryId: "music",
+        latitude: 46.97,
+        longitude: 0.7,
+        status: "PUBLISHED"
+      }
+    ]) as never;
+    eventsStore.hasLoaded = true;
+    eventsStore.isLoading = false;
+
+    render(App, { global: { plugins: [pinia, router] } });
+
+    await waitFor(() => expect(screen.getByRole("heading", { level: 1, name: "R3ne" })).toBeInTheDocument());
+
+    expect(fetchMock).not.toHaveBeenCalledWith("/api/public/events");
+    expect(eventsStore.events).toHaveLength(1);
+    expect(eventsStore.isLoading).toBe(false);
   });
 
   it("logs out and hides editor access", async () => {
