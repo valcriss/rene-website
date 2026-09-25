@@ -1,13 +1,16 @@
 import path from "path";
 import dotenv from "dotenv";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { generateUniqueEventSlug } from "../src/events/slug";
+import { createPrismaEventRepository } from "../src/events/prismaRepository";
 import type { EventOccurrenceInput } from "../src/events/types";
 
 dotenv.config({ path: path.resolve(process.cwd(), "..", ".env") });
 dotenv.config({ path: path.resolve(process.cwd(), ".env") });
 
 const prisma = new PrismaClient();
+
+type EventWithOccurrences = Prisma.EventGetPayload<{ include: { occurrences: true } }>;
 
 // One-off migration companion for 20260924180000_add_event_slug: that migration only adds the
 // `slug` column and the redirect history table, it does not populate slugs for events that were
@@ -18,7 +21,7 @@ const prisma = new PrismaClient();
 //
 // It is idempotent — events that already have a slug are skipped — so it is safe to re-run.
 const backfill = async () => {
-  const events = await prisma.event.findMany({
+  const events: EventWithOccurrences[] = await prisma.event.findMany({
     where: { status: "PUBLISHED", slug: null },
     include: { occurrences: true },
     orderBy: { publishedAt: "asc" }
@@ -27,9 +30,7 @@ const backfill = async () => {
   // eslint-disable-next-line no-console
   console.log(`${events.length} événement(s) publié(s) sans slug.`);
 
-  const slugRepo = {
-    findBySlug: async (slug: string) => prisma.event.findUnique({ where: { slug } })
-  };
+  const slugRepo = createPrismaEventRepository();
 
   for (const event of events) {
     const occurrences: EventOccurrenceInput[] = event.occurrences.map((occurrence) => ({
