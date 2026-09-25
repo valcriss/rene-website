@@ -58,7 +58,7 @@ const consumePersistentRateLimit = async (
   // Calling prisma.$transaction directly (rather than extracting it into a standalone
   // reference first) matters: detaching it from `prisma` loses the `this` binding its
   // implementation relies on internally, which surfaces as a `_engineConfig` TypeError.
-  return prisma.$transaction(async (prismaTx) => {
+  return prisma.$transaction(async (prismaTx: unknown) => {
     const tx = prismaTx as unknown as RateLimitTransaction;
     // PostgreSQL advisory locks make the read/modify/write sequence atomic across API replicas.
     await tx.$executeRawUnsafe("SELECT pg_advisory_xact_lock(hashtext($1))", input.key);
