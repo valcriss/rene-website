@@ -14,9 +14,7 @@ export const createAdminRepository = (): AdminRepository => {
     console.info("DATABASE_URL is set, using Prisma admin repository (categories)");
     return createPrismaAdminRepository();
   }
-  if (process.env.NODE_ENV !== "test") {
-    // eslint-disable-next-line no-console
-    console.warn("DATABASE_URL is not set, using in-memory admin repository");
-  }
+  // eslint-disable-next-line no-console
+  console.warn("DATABASE_URL is not set, using in-memory admin repository");
   return createInMemoryAdminRepository();
 };

@@ -14,9 +14,7 @@ export const createCategorySubscriptionRepository = (): CategorySubscriptionRepo
     console.info("DATABASE_URL is set, using Prisma category subscription repository");
     return createPrismaCategorySubscriptionRepository();
   }
-  if (process.env.NODE_ENV !== "test") {
-    // eslint-disable-next-line no-console
-    console.warn("DATABASE_URL is not set, using in-memory category subscription repository");
-  }
+  // eslint-disable-next-line no-console
+  console.warn("DATABASE_URL is not set, using in-memory category subscription repository");
   return createInMemoryCategorySubscriptionRepository();
 };

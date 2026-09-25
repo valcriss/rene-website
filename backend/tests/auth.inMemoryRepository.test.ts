@@ -79,6 +79,37 @@ describe("inMemoryAuthRepository", () => {
     await expect(verifyPassword("secret456", storedUser!.passwordHash)).resolves.toBe(true);
   });
 
+  it("looks up, updates and verifies a user stored after others when several users exist", async () => {
+    const repo = createInMemoryAuthRepository();
+    const firstUser = await repo.createEditorUser({
+      name: "First",
+      email: "first@example.com",
+      passwordHash: await hashPassword("secret123")
+    });
+    const secondUser = await repo.createEditorUser({
+      name: "Second",
+      email: "second@example.com",
+      passwordHash: await hashPassword("secret123")
+    });
+    const nextPasswordHash = await hashPassword("secret456");
+
+    const storedById = await repo.getUserById(secondUser!.id);
+    expect(storedById?.email).toBe("second@example.com");
+
+    await repo.updatePasswordHash(secondUser!.id, nextPasswordHash);
+    const updated = await repo.getUserById(secondUser!.id);
+    await expect(verifyPassword("secret456", updated!.passwordHash)).resolves.toBe(true);
+
+    await repo.markEmailVerified!(secondUser!.id);
+    const verified = await repo.getUserById(secondUser!.id);
+    expect(verified?.emailVerifiedAt).toBeInstanceOf(Date);
+    expect(verified?.accountStatus).toBe("ACTIVE");
+
+    // The first user, never targeted above, must be untouched by any of the lookups on the second.
+    const untouchedFirstUser = await repo.getUserById(firstUser!.id);
+    await expect(verifyPassword("secret123", untouchedFirstUser!.passwordHash)).resolves.toBe(true);
+  });
+
   it("stores and replaces a password reset token", async () => {
     const repo = createInMemoryAuthRepository();
     const user = await repo.createEditorUser({

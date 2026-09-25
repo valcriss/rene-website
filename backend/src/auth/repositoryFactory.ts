@@ -14,10 +14,8 @@ export const createAuthRepository = (): AuthRepository => {
 		return createPrismaAuthRepository();
 	}
 
-	if (process.env.NODE_ENV !== "test") {
-		// eslint-disable-next-line no-console
-		console.warn("DATABASE_URL is not set, using in-memory auth repository");
-	}
+	// eslint-disable-next-line no-console
+	console.warn("DATABASE_URL is not set, using in-memory auth repository");
 
 	return createInMemoryAuthRepository();
 };

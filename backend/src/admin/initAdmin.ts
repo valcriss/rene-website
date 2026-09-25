@@ -58,9 +58,7 @@ const readEnvValue = (env: Env, ...keys: string[]) => {
       continue;
     }
 
-    if (value) {
-      return value;
-    }
+    return value;
   }
 
   return undefined;

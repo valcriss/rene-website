@@ -144,7 +144,7 @@ const copyLinkViaFallback = (url: string): boolean => {
   document.body.appendChild(textarea);
   textarea.focus();
   textarea.select();
-  let succeeded = false;
+  let succeeded: boolean;
   try {
     succeeded = document.execCommand("copy");
   } catch {

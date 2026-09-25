@@ -65,7 +65,7 @@ const waitForServer = (child) =>
   });
 
 const startBackend = () =>
-  // Plain ts-node (not `npm run dev`'s ts-node-dev watcher) — a one-shot audit needs no file
+  // Plain ts-node (not `npm run dev`'s tsx watcher) — a one-shot audit needs no file
   // watcher, and this keeps the process tree this script has to manage down to one child.
   spawn("npx", ["ts-node", "--transpile-only", "src/index.ts"], {
     cwd: path.join(repoRoot, "backend"),

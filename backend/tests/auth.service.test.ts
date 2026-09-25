@@ -177,6 +177,28 @@ describe("auth service", () => {
     expect(result).toEqual({ ok: true, value: { user: null, message: expect.any(String) } });
   });
 
+  it("skips the artificial delay once the minimum response time has already elapsed", async () => {
+    const repo = buildRepo(await hashPassword("secret"));
+    let fakeNow = 0;
+    const nowSpy = jest.spyOn(Date, "now").mockImplementation(() => {
+      fakeNow += 150;
+      return fakeNow;
+    });
+
+    try {
+      const result = await signup(repo, {
+        name: "Test",
+        email: "test@example.com",
+        password: "correct horse battery",
+        passwordConfirmation: "correct horse battery"
+      });
+
+      expect(result).toEqual({ ok: true, value: { user: null, message: expect.any(String) } });
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
+
   it("returns a neutral response when repository rejects a duplicate signup", async () => {
     const repo = buildRepo(null, async () => null);
     const result = await signup(repo, {

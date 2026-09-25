@@ -14,9 +14,7 @@ export const createModerationReminderRepository = (): ModerationReminderReposito
     console.info("DATABASE_URL is set, using Prisma moderation reminder repository");
     return createPrismaModerationReminderRepository();
   }
-  if (process.env.NODE_ENV !== "test") {
-    // eslint-disable-next-line no-console
-    console.warn("DATABASE_URL is not set, using in-memory moderation reminder repository");
-  }
+  // eslint-disable-next-line no-console
+  console.warn("DATABASE_URL is not set, using in-memory moderation reminder repository");
   return createInMemoryModerationReminderRepository();
 };

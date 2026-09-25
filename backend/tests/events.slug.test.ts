@@ -46,6 +46,15 @@ describe("buildEventSlugBase", () => {
     expect(base).toBe("festival-tours-2026");
   });
 
+  it("keeps the earliest occurrence when a later one appears afterward", () => {
+    const base = buildEventSlugBase("Festival", [
+      occurrence({ city: "Tours", eventStartAt: "2026-01-15T20:00:00.000Z" }),
+      occurrence({ city: "Descartes", eventStartAt: "2026-06-01T20:00:00.000Z" })
+    ]);
+
+    expect(base).toBe("festival-tours-2026");
+  });
+
   it("skips occurrences without a start date when picking the earliest one", () => {
     const base = buildEventSlugBase("Festival", [
       occurrence({ city: "Sans-date" }),
