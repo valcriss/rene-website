@@ -56,5 +56,13 @@ module.exports = [
       sourceType: "module",
       globals: globals.node
     }
+  },
+  {
+    // SSR entry point: runs in Node (backend/src/ssr.ts imports it), not the browser, so it
+    // also needs `process` alongside the fetch/DOM globals shared with client code.
+    files: ["src/entry-server.ts"],
+    languageOptions: {
+      globals: { ...globals.browser, ...globals.node }
+    }
   }
 ];

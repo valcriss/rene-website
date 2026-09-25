@@ -1,8 +1,29 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { transformHtmlTemplate } from "unhead/server";
-import { render } from "../src/entry-server";
+import { render, resolveServerFetchTarget } from "../src/entry-server";
 
 const BASE_TEMPLATE = "<!doctype html><html><head><title>R3ne</title></head><body></body></html>";
+
+describe("resolveServerFetchTarget", () => {
+  it("prefixes a root-relative API path with the loopback address Node's fetch can resolve", () => {
+    expect(resolveServerFetchTarget("/api/public/events")).toBe("http://127.0.0.1:3000/api/public/events");
+    expect(resolveServerFetchTarget("/api/events/123")).toBe("http://127.0.0.1:3000/api/events/123");
+  });
+
+  it("leaves an already-absolute URL untouched", () => {
+    expect(resolveServerFetchTarget("https://fonts.googleapis.com/css2")).toBe(
+      "https://fonts.googleapis.com/css2"
+    );
+  });
+
+  it("leaves non-string fetch inputs (Request, URL) untouched", () => {
+    const request = new Request("https://example.org/api/public/events");
+    expect(resolveServerFetchTarget(request)).toBe(request);
+
+    const url = new URL("https://example.org/api/public/events");
+    expect(resolveServerFetchTarget(url)).toBe(url);
+  });
+});
 
 const jsonResponse = (body: unknown) =>
   Promise.resolve({
