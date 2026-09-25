@@ -22,7 +22,7 @@ COPY backend/package.json backend/package.json
 COPY backend/prisma backend/prisma
 COPY frontend/package.json frontend/package.json
 
-RUN npm ci --omit=dev --omit=peer --workspace backend --include-workspace-root=false \
+RUN npm ci --omit=dev --omit=peer --include-workspace-root=false \
 	&& npx prisma generate --schema backend/prisma/schema.prisma \
 	&& rm -rf /app/node_modules/typescript \
 	&& npm cache clean --force
