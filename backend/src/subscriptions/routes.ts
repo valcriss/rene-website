@@ -38,7 +38,8 @@ export const createSubscriptionsRouter = (
     requireRole(["MODERATOR", "ADMIN"]),
     withErrorHandling(async (req, res) => {
       const actor = getAuthenticatedUser(req);
-      const result = await setCategorySubscription(subscriptionRepo, actor, req.params.categoryId, req.body?.subscribed);
+      const categoryId = req.params.categoryId as string;
+      const result = await setCategorySubscription(subscriptionRepo, actor, categoryId, req.body?.subscribed);
       if (!result.ok) {
         res.status(400).json({ errors: result.errors });
         return;
