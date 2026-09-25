@@ -18,14 +18,17 @@ vi.mock("../src/components/EventMap.vue", () => ({
   }
 }));
 
-const cropGetCroppedCanvasMock = vi.fn(() => ({
-  toBlob: (callback: (blob: Blob | null) => void) => callback(new Blob(["cropped"], { type: "image/png" }))
-}));
+const cropToCanvasMock = vi.fn(() =>
+  Promise.resolve({
+    toBlob: (callback: (blob: Blob | null) => void) => callback(new Blob(["cropped"], { type: "image/png" }))
+  })
+);
 
 vi.mock("cropperjs", () => ({
   default: class MockCropper {
     destroy = vi.fn();
-    getCroppedCanvas = cropGetCroppedCanvasMock;
+    getCropperImage = () => ({ $zoom: vi.fn() });
+    getCropperSelection = () => ({ $toCanvas: cropToCanvasMock });
     constructor() {
       // no-op: the real constructor wires up DOM/canvas behavior jsdom doesn't support
     }
