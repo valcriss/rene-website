@@ -47,3 +47,48 @@ jobs:
           ignore-unfixed: false
           scanners: vuln
           severity: HIGH,CRITICAL
+
+  docker-compose-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Validate docker-compose.yml renders with all required deployment settings
+        run: |
+          set -euo pipefail
+          secrets_dir="$(mktemp -d)"
+          for name in database_url migration_database_url jwt_secret cron_secret smtp_password postgres_migration_password postgres_app_password; do
+            echo "dummy" > "$secrets_dir/$name"
+          done
+          export DATABASE_URL_SECRET_FILE="$secrets_dir/database_url"
+          export MIGRATION_DATABASE_URL_SECRET_FILE="$secrets_dir/migration_database_url"
+          export JWT_SECRET_FILE="$secrets_dir/jwt_secret"
+          export CRON_SECRET_FILE="$secrets_dir/cron_secret"
+          export SMTP_PASSWORD_SECRET_FILE="$secrets_dir/smtp_password"
+          export POSTGRES_MIGRATION_PASSWORD_SECRET_FILE="$secrets_dir/postgres_migration_password"
+          export POSTGRES_APP_PASSWORD_SECRET_FILE="$secrets_dir/postgres_app_password"
+          export SITE_URL=https://example.test
+          export SMTP_HOST=smtp.example.test
+          export SMTP_USER=ci-user
+          export SENDER_EMAIL=noreply@example.test
+          export POSTGRES_MIGRATION_USER=migration
+          export POSTGRES_DB=rene
+          export POSTGRES_APP_USER=app
+          export PHOTON_JAR_URL=https://example.test/photon.jar
+          export PHOTON_JAR_SHA256="$(printf '0%.0s' $(seq 1 64))"
+          export PHOTON_DB_URL=https://example.test/photon-db.tar.bz2
+          export PHOTON_DB_SHA256="$(printf '0%.0s' $(seq 1 64))"
+          docker compose -f docker-compose.yml config -q
+      - name: Validate docker-compose.dev.yml renders from .env.example
+        run: |
+          set -euo pipefail
+          cp .env.example .env
+          sed -i \
+            -e 's/^POSTGRES_USER=$/POSTGRES_USER=ci/' \
+            -e 's/^POSTGRES_PASSWORD=$/POSTGRES_PASSWORD=ci/' \
+            -e 's/^POSTGRES_DB=$/POSTGRES_DB=rene/' \
+            -e "s/^PHOTON_DB_SHA256=\$/PHOTON_DB_SHA256=$(printf '0%.0s' $(seq 1 64))/" \
+            .env
+          docker compose -f docker-compose.dev.yml config -q
+          rm -f .env
+      - name: Verify photon-init.sh against a local HTTPS fixture server
+        run: sh .github/scripts/verify-photon-init.sh

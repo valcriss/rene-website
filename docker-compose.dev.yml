@@ -56,6 +56,12 @@ services:
           -listen-ip "0.0.0.0" \
           -listen-port "2322"
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/2322 && exec 3<&-"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 90s
 
 volumes:
   db-data:
