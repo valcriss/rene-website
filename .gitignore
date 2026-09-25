@@ -9,3 +9,4 @@ coverage/
 *.log
 .DS_Store
 photon/
+__pycache__/
