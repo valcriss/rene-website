@@ -127,9 +127,16 @@
                   class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm"
                   @change="handleImageChange"
                 />
-                <p v-if="editorForm.image" class="mt-2 text-xs text-slate-500">
-                  {{ t("editor.currentImage", { image: editorForm.image }) }}
-                </p>
+                <div v-if="imagePreviewUrl || editorForm.image" class="mt-3 flex items-center gap-3">
+                  <img
+                    :src="imagePreviewUrl || editorForm.image || ''"
+                    alt=""
+                    class="h-16 w-24 flex-none rounded-xl border border-slate-200 object-cover"
+                  />
+                  <p class="text-xs font-medium text-emerald-700" data-testid="editor-image-selected">
+                    {{ imagePreviewUrl ? t("editor.imageSelected") : t("editor.currentImage", { image: editorForm.image }) }}
+                  </p>
+                </div>
               </label>
               <label class="text-sm text-slate-600 md:col-span-2">
                 {{ t("editor.imageAlt") }}
@@ -524,6 +531,7 @@ const {
   editingPublishedRevisionStatus,
   editorError,
   editorForm,
+  imagePreviewUrl,
   isPersisting,
   isSavingDraft,
   isSubmittingForModeration,

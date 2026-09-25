@@ -354,6 +354,7 @@ export const messages = {
       noCategories: "Aucune cat\u00e9gorie disponible.",
       noAudiences: "Aucun public concern\u00e9 disponible.",
       currentImage: "Image actuelle : {image}",
+      imageSelected: "Nouvelle image prête à être enregistrée.",
       imageAlt: "Texte alternatif de l'image",
       imageAltHelp:
         "Décrivez ce que montre l'image en une courte phrase (pour les lecteurs d'écran et les moteurs de recherche). Obligatoire pour soumettre la fiche si une image est fournie.",
@@ -928,6 +929,7 @@ export const messages = {
       noCategories: "No category available.",
       noAudiences: "No audience available.",
       currentImage: "Current image: {image}",
+      imageSelected: "New image ready to be saved.",
       imageAlt: "Image alt text",
       imageAltHelp:
         "Describe what the image shows in a short sentence (for screen readers and search engines). Required to submit the listing if an image is provided.",

@@ -132,6 +132,18 @@ export const useEditorStore = defineStore("editor", () => {
   const editorError = ref<string | null>(null);
   const editorForm = reactive<CreateEventPayload>(defaultEditorForm());
   const imageFile = ref<File | null>(null);
+  // Object URL for imageFile, so the form can show a thumbnail of a just-cropped image before
+  // it's actually uploaded (editorForm.image only ever holds a persisted URL). Created once per
+  // file in setImageFile rather than in a computed, since createObjectURL must be paired with a
+  // revokeObjectURL for the exact same call to avoid leaking blobs.
+  const imagePreviewUrl = ref<string | null>(null);
+
+  const revokeImagePreview = () => {
+    if (imagePreviewUrl.value) {
+      URL.revokeObjectURL(imagePreviewUrl.value);
+      imagePreviewUrl.value = null;
+    }
+  };
   const isSavingDraft = ref(false);
   const isSubmittingForModeration = ref(false);
   const isPublishingDirectly = ref(false);
@@ -147,6 +159,7 @@ export const useEditorStore = defineStore("editor", () => {
     editingPublishedEvent.value = false;
     editingPublishedRevisionStatus.value = null;
     imageFile.value = null;
+    revokeImagePreview();
     useManualLocation.value = [false];
     lastGeolocationPrecision.value = [null];
     Object.assign(editorForm, defaultEditorForm());
@@ -175,6 +188,7 @@ export const useEditorStore = defineStore("editor", () => {
     editingPublishedEvent.value = eventItem.status === "PUBLISHED";
     editingPublishedRevisionStatus.value = eventItem.pendingRevision?.status ?? null;
     imageFile.value = null;
+    revokeImagePreview();
     editorForm.title = source.title;
     editorForm.content = source.content ?? "";
     editorForm.image = source.image ?? "";
@@ -217,7 +231,9 @@ export const useEditorStore = defineStore("editor", () => {
   };
 
   const setImageFile = (file: File | null) => {
+    revokeImagePreview();
     imageFile.value = file;
+    imagePreviewUrl.value = file ? URL.createObjectURL(file) : null;
   };
 
   const hasManualCoordinates = (index: number) => {
@@ -392,6 +408,7 @@ export const useEditorStore = defineStore("editor", () => {
           : await createEvent(payload, authStore.role);
       eventsStore.updateEventState(updated);
       imageFile.value = null;
+      revokeImagePreview();
       editorMode.value = "edit";
       editingEventId.value = updated.id;
       editingPublishedEvent.value = updated.status === "PUBLISHED";
@@ -555,6 +572,7 @@ export const useEditorStore = defineStore("editor", () => {
     editingPublishedRevisionStatus,
     editorForm,
     editorError,
+    imagePreviewUrl,
     isSavingDraft,
     isSubmittingForModeration,
     isPublishingDirectly,
