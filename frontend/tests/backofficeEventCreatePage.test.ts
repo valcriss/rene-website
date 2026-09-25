@@ -954,4 +954,32 @@ describe("BackofficeEventCreatePage", () => {
 
     expect(screen.getByTestId("seo-alert-missingImage")).toBeInTheDocument();
   });
+
+  // Regression test: the SEO preview's :image binding only ever read editorForm.image, which
+  // stays empty until the file is actually uploaded on save — so a freshly cropped, not-yet-saved
+  // image still showed "Aucune image n'est renseignée" and the generic social preview image.
+  it("clears the missing-image SEO alert as soon as a crop is confirmed, before saving", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) }))
+    );
+
+    const setup = await setupPage();
+    setup.categoriesStore.hasLoaded = true;
+    renderPageWithCropStub(setup);
+
+    expect(screen.getByTestId("seo-alert-missingImage")).toBeInTheDocument();
+
+    const input = document.querySelector("section label input[type='file']") as HTMLInputElement | null;
+    if (!input) {
+      throw new Error("Main image input not found");
+    }
+    const file = new File(["image"], "photo.png", { type: "image/png" });
+    Object.defineProperty(input, "files", { value: [file], configurable: true });
+    await fireEvent.update(input, "photo.png");
+    await fireEvent.click(await screen.findByTestId("confirm-crop"));
+
+    expect(screen.queryByTestId("seo-alert-missingImage")).not.toBeInTheDocument();
+    expect(screen.getByTestId("seo-preview-image")).toHaveAttribute("src", setup.editorStore.imagePreviewUrl ?? "");
+  });
 });
