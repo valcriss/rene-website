@@ -32,12 +32,22 @@ reset_photon_dir() {
 }
 
 run_init() {
-  # Runs the real script with the given env, capturing combined output for assertions.
-  env "$@" sh "$script_under_test" >"$work_dir/output.log" 2>&1
+  # Runs the real script with the given env, capturing combined output for assertions. Needs
+  # root, exactly like it runs for real (photon-init has the run of its own debian-slim
+  # container): the script's own last step chowns to a fixed uid/gid it doesn't run as, which
+  # only root can do. The redirect below still runs as the invoking (non-root) user, which is
+  # fine: it owns work_dir, so creating output.log in it needs no elevated permission.
+  # shellcheck disable=SC2024
+  if ! sudo env "$@" sh "$script_under_test" >"$work_dir/output.log" 2>&1; then
+    echo "--- photon-init.sh exited non-zero unexpectedly; captured output ---" >&2
+    cat "$work_dir/output.log" >&2
+    fail "photon-init.sh failed on what should have been a successful run"
+  fi
 }
 
 run_init_expect_failure() {
-  if env "$@" sh "$script_under_test" >"$work_dir/output.log" 2>&1; then
+  # shellcheck disable=SC2024
+  if sudo env "$@" sh "$script_under_test" >"$work_dir/output.log" 2>&1; then
     fail "expected photon-init.sh to fail, but it exited 0 ($*)"
   fi
 }
