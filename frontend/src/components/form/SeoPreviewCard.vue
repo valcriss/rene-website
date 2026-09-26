@@ -15,19 +15,19 @@
 
     <div>
       <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-        {{ t("editor.seoPreviewSocialEyebrow") }}
+        {{ t("editor.seoPreviewSocialEyebrow") }} · {{ t("editor.seoPreviewIndicative") }}
       </p>
-      <div class="mt-2 flex overflow-hidden rounded-2xl border border-slate-200 bg-white">
+      <div class="mt-2 overflow-hidden rounded-2xl border border-slate-200 bg-white">
         <img
-          class="h-24 w-24 flex-none object-cover"
+          class="aspect-[1.91/1] w-full object-cover object-center"
           :src="previewImage"
           :alt="imageAlt || effectiveTitle"
           data-testid="seo-preview-image"
         />
-        <div class="min-w-0 flex-1 p-3">
-          <p class="truncate text-xs uppercase tracking-wide text-slate-400">{{ fakeResultUrl }}</p>
-          <p class="mt-1 truncate text-sm font-semibold text-slate-900">{{ effectiveTitle }}</p>
-          <p class="mt-1 line-clamp-2 text-xs text-slate-500">{{ effectiveDescription }}</p>
+        <div class="min-w-0 p-4">
+          <p class="truncate text-xs uppercase tracking-wide text-slate-500">{{ siteDomain }}</p>
+          <p class="mt-1 line-clamp-2 text-base font-semibold text-slate-900">{{ effectiveTitle }}</p>
+          <p class="mt-1 line-clamp-2 text-sm text-slate-600">{{ effectiveDescription }}</p>
         </div>
       </div>
     </div>

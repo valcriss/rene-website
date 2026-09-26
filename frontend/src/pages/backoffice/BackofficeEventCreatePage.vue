@@ -42,7 +42,7 @@
             v-if="editorMode === 'edit'"
             type="button"
             class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-sky-200 hover:bg-sky-50/70 hover:text-slate-900"
-            @click="resetEditorForm"
+            @click="handleNewDraft"
           >
             {{ t("editor.newDraft") }}
           </button>
@@ -66,6 +66,15 @@
         </div>
       </Teleport>
 
+      <div v-if="validationAttempted && validationIssues.length" class="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-800" role="alert" data-testid="editor-validation-summary">
+        <p class="font-semibold">{{ t("editor.validationSummary") }}</p>
+        <ul class="mt-2 list-inside list-disc space-y-1">
+          <li v-for="issue in validationIssues" :key="issue.id">
+            <button type="button" class="text-left underline underline-offset-2 hover:text-rose-950" @click="focusIssue(issue)">{{ issue.label }}</button>
+          </li>
+        </ul>
+      </div>
+
       <div class="grid gap-6">
           <section class="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-[0_24px_60px_-40px_rgba(15,23,42,0.22)]">
             <p class="text-xs uppercase tracking-[0.3em] text-slate-500">{{ t("editor.identityEyebrow") }}</p>
@@ -74,15 +83,18 @@
               <label class="text-sm text-slate-600 md:col-span-2">
                 {{ t("common.title") }}
                 <input
+                  id="editor-title"
                   v-model="editorForm.title"
                   type="text"
                   class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm"
                   :placeholder="t('editor.placeholders.title')"
                 />
+                <p v-if="hasIssue('editor-title')" class="mt-1 text-xs text-rose-700">{{ t("editor.requiredField") }}</p>
               </label>
               <label class="text-sm text-slate-600">
                 {{ t("common.category") }}
                 <select
+                  id="editor-category"
                   v-model="editorForm.categoryId"
                   class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm"
                   :disabled="categoriesLoading"
@@ -92,6 +104,7 @@
                     {{ category.name }}
                   </option>
                 </select>
+                <p v-if="hasIssue('editor-category')" class="mt-1 text-xs text-rose-700">{{ t("editor.requiredField") }}</p>
                 <p v-if="categoriesLoading" class="mt-2 text-xs text-slate-500">
                   {{ t("editor.loadingCategories") }}
                 </p>
@@ -102,6 +115,7 @@
               <label class="text-sm text-slate-600">
                 {{ t("common.audience") }}
                 <select
+                  id="editor-audience"
                   v-model="editorForm.audienceId"
                   class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm"
                   :disabled="audiencesLoading"
@@ -111,6 +125,7 @@
                     {{ audience.name }}
                   </option>
                 </select>
+                <p v-if="hasIssue('editor-audience')" class="mt-1 text-xs text-rose-700">{{ t("editor.requiredField") }}</p>
                 <p v-if="audiencesLoading" class="mt-2 text-xs text-slate-500">
                   {{ t("editor.loadingAudiences") }}
                 </p>
@@ -121,12 +136,14 @@
               <label class="text-sm text-slate-600">
                 {{ t("common.image") }}
                 <input
+                  id="editor-image"
                   ref="imageInputRef"
                   type="file"
                   accept="image/*"
                   class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm"
                   @change="handleImageChange"
                 />
+                <p v-if="hasIssue('editor-image')" class="mt-1 text-xs text-rose-700">{{ t("editor.requiredField") }}</p>
                 <div v-if="imagePreviewUrl || editorForm.image" class="mt-3 flex items-center gap-3">
                   <img
                     :src="imagePreviewUrl || editorForm.image || ''"
@@ -141,6 +158,7 @@
               <label class="text-sm text-slate-600 md:col-span-2">
                 {{ t("editor.imageAlt") }}
                 <input
+                  id="editor-image-alt"
                   v-model="editorForm.imageAlt"
                   type="text"
                   maxlength="200"
@@ -148,12 +166,13 @@
                   :placeholder="t('editor.placeholders.imageAlt')"
                   data-testid="editor-image-alt"
                 />
+                <p v-if="hasIssue('editor-image-alt')" class="mt-1 text-xs text-rose-700">{{ t("editor.requiredField") }}</p>
                 <p class="mt-2 text-xs text-slate-500">{{ t("editor.imageAltHelp") }}</p>
               </label>
             </div>
           </section>
 
-          <section class="rounded-[2rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(248,250,252,0.96),rgba(255,255,255,1))] p-6 shadow-[0_28px_72px_-44px_rgba(15,23,42,0.26)] sm:p-7">
+          <section id="editor-content" class="rounded-[2rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(248,250,252,0.96),rgba(255,255,255,1))] p-6 shadow-[0_28px_72px_-44px_rgba(15,23,42,0.26)] sm:p-7">
             <p class="text-xs uppercase tracking-[0.3em] text-sky-700/70">{{ t("editor.contentEyebrow") }}</p>
             <div class="mt-3 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
               <div class="max-w-3xl">
@@ -165,6 +184,7 @@
             </div>
             <div class="mt-6 text-sm text-slate-600">
               <RichTextEditor v-model="editorForm.content" />
+              <p v-if="hasIssue('editor-content')" class="mt-2 text-xs text-rose-700">{{ t("editor.requiredField") }}</p>
             </div>
           </section>
 
@@ -192,7 +212,16 @@
                 :data-testid="`occurrence-row-${index}`"
               >
                 <div class="flex flex-wrap items-center justify-between gap-3">
-                  <p class="text-sm font-semibold text-slate-700">{{ t("editor.occurrenceLabel", { index: index + 1 }) }}</p>
+                  <button
+                    type="button"
+                    class="min-w-0 text-left text-sm font-semibold text-slate-700 hover:text-sky-800"
+                    :aria-expanded="occurrencePanels[index]?.open ?? true"
+                    :aria-controls="`occurrence-fields-${index}`"
+                    @click="toggleOccurrence(index)"
+                  >
+                    {{ t("editor.occurrenceLabel", { index: index + 1 }) }} · {{ occurrenceSummary(occurrence) }}
+                    <span class="ml-2 text-xs font-normal text-sky-700">{{ occurrencePanels[index]?.open ? t("editor.collapseSection") : t("editor.expandSection") }}</span>
+                  </button>
                   <button
                     v-if="editorForm.occurrences.length > 1"
                     type="button"
@@ -203,14 +232,17 @@
                   </button>
                 </div>
 
-                <div class="mt-4 grid gap-4 md:grid-cols-2">
+                <div v-show="occurrencePanels[index]?.open ?? true" :id="`occurrence-fields-${index}`">
+                  <div class="mt-4 grid gap-4 md:grid-cols-2">
                   <label class="text-sm text-slate-600">
                     {{ t("common.start") }}
-                    <input v-model="occurrence.eventStartAt" type="date" class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm" />
+                    <input :id="`editor-occurrence-${index}-start`" v-model="occurrence.eventStartAt" type="date" class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm" />
+                    <p v-if="hasIssue(`editor-occurrence-${index}-start`)" class="mt-1 text-xs text-rose-700">{{ t("editor.requiredField") }}</p>
                   </label>
                   <label class="text-sm text-slate-600">
                     {{ t("common.end") }}
-                    <input v-model="occurrence.eventEndAt" type="date" class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm" />
+                    <input :id="`editor-occurrence-${index}-end`" v-model="occurrence.eventEndAt" type="date" class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm" />
+                    <p v-if="hasIssue(`editor-occurrence-${index}-end`)" class="mt-1 text-xs text-rose-700">{{ occurrence.eventStartAt && occurrence.eventEndAt ? t("editor.invalidDateRange") : t("editor.requiredField") }}</p>
                   </label>
                   <label class="text-sm text-slate-600 md:col-span-2">
                     {{ t("common.venue") }}
@@ -223,6 +255,7 @@
                   <label class="text-sm text-slate-600">
                     {{ t("common.postalCode") }}
                     <input
+                      :id="`editor-occurrence-${index}-postal`"
                       v-model="occurrence.postalCode"
                       type="text"
                       inputmode="numeric"
@@ -232,10 +265,12 @@
                       :data-testid="`occurrence-postal-code-${index}`"
                       @input="onPostalCodeInput(index)"
                     />
+                    <p v-if="hasIssue(`editor-occurrence-${index}-postal`)" class="mt-1 text-xs text-rose-700">{{ t("editor.postalCodeForCity") }}</p>
                   </label>
                   <label class="text-sm text-slate-600">
                     {{ t("common.city") }}
                     <select
+                      :id="`editor-occurrence-${index}-city`"
                       v-model="occurrence.city"
                       class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"
                       :disabled="cityOptions(index).length === 0"
@@ -244,6 +279,7 @@
                       <option value="">{{ cityPlaceholder(index) }}</option>
                       <option v-for="option in cityOptions(index)" :key="option" :value="option">{{ option }}</option>
                     </select>
+                    <p v-if="hasIssue(`editor-occurrence-${index}-city`)" class="mt-1 text-xs text-rose-700">{{ t("editor.requiredField") }}</p>
                     <p v-if="communesLoading(index)" class="mt-2 text-xs text-slate-500">{{ t("editor.communesLoading") }}</p>
                     <p v-else-if="communesError(index)" class="mt-2 text-xs text-rose-600">{{ communesError(index) }}</p>
                     <p v-else-if="isPostalCodeComplete(index) && cityOptions(index).length === 0" class="mt-2 text-xs text-slate-500">
@@ -276,6 +312,7 @@
                       <input v-model.number="occurrence.longitude" type="number" step="any" min="-180" max="180" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" />
                     </label>
                   </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -284,11 +321,18 @@
           <section class="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-[0_24px_60px_-40px_rgba(15,23,42,0.22)]">
             <p class="text-xs uppercase tracking-[0.3em] text-slate-500">{{ t("editor.organizerEyebrow") }}</p>
             <h3 class="mt-2 text-lg font-semibold text-slate-950">{{ t("editor.organizerTitle") }}</h3>
-            <div class="mt-5 grid gap-4 md:grid-cols-2">
-              <label class="text-sm text-slate-600">
+            <div class="mt-5">
+              <label class="block text-sm text-slate-600">
                 {{ t("common.organizer") }}
-                <input v-model="editorForm.organizerName" type="text" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" :placeholder="t('editor.placeholders.organizer')" />
+                <input id="editor-organizer" v-model="editorForm.organizerName" type="text" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" :placeholder="t('editor.placeholders.organizer')" />
+                <p v-if="hasIssue('editor-organizer')" class="mt-1 text-xs text-rose-700">{{ t("editor.requiredField") }}</p>
               </label>
+            </div>
+            <button type="button" class="mt-5 flex w-full items-center justify-between gap-3 rounded-2xl border border-slate-200 px-4 py-3 text-left text-sm text-slate-700 hover:bg-slate-50" :aria-expanded="contactsOpen" aria-controls="editor-contacts-fields" @click="contactsOpen = !contactsOpen">
+              <span>{{ t("editor.optionalContacts") }} · {{ contactsSummary }}</span>
+              <span class="text-sky-700">{{ contactsOpen ? t("editor.collapseSection") : t("editor.expandSection") }}</span>
+            </button>
+            <div v-show="contactsOpen" id="editor-contacts-fields" class="mt-4 grid gap-4 md:grid-cols-2">
               <label class="text-sm text-slate-600">
                 {{ t("detail.organizerWebsite") }}
                 <input v-model="editorForm.organizerUrl" type="text" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" placeholder="https://..." />
@@ -306,8 +350,11 @@
 
           <section class="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-[0_24px_60px_-40px_rgba(15,23,42,0.22)]">
             <p class="text-xs uppercase tracking-[0.3em] text-slate-500">{{ t("editor.usefulLinksEyebrow") }}</p>
-            <h3 class="mt-2 text-lg font-semibold text-slate-950">{{ t("editor.usefulLinksTitle") }}</h3>
-            <div class="mt-5 grid gap-4 md:grid-cols-2">
+            <button type="button" class="mt-2 flex w-full items-center justify-between gap-3 text-left" :aria-expanded="linksOpen" aria-controls="editor-links-fields" @click="linksOpen = !linksOpen">
+              <span><span class="block text-lg font-semibold text-slate-950">{{ t("editor.usefulLinksTitle") }}</span><span class="mt-1 block text-sm text-slate-500">{{ linksSummary }}</span></span>
+              <span class="text-sm text-sky-700">{{ linksOpen ? t("editor.collapseSection") : t("editor.expandSection") }}</span>
+            </button>
+            <div v-show="linksOpen" id="editor-links-fields" class="mt-5 grid gap-4 md:grid-cols-2">
               <label class="text-sm text-slate-600">
                 {{ t("common.ticketing") }}
                 <input v-model="editorForm.ticketUrl" type="text" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" placeholder="https://..." />
@@ -391,7 +438,11 @@
 
           <section class="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-[0_24px_60px_-40px_rgba(15,23,42,0.22)]" data-testid="editor-seo-section">
             <p class="text-xs uppercase tracking-[0.3em] text-slate-500">{{ t("editor.seoEyebrow") }}</p>
-            <h3 class="mt-2 text-lg font-semibold text-slate-950">{{ t("editor.seoTitle") }}</h3>
+            <button type="button" class="mt-2 flex w-full items-center justify-between gap-3 text-left" :aria-expanded="seoOpen" aria-controls="editor-seo-fields" data-testid="editor-seo-toggle" @click="seoOpen = !seoOpen">
+              <span><span class="block text-lg font-semibold text-slate-950">{{ t("editor.seoTitle") }}</span><span class="mt-1 block text-sm text-slate-500">{{ seoSummary }}<span v-if="seoAlerts.length" class="ml-2 text-amber-700">· {{ t("editor.alertCount", { count: seoAlerts.length }) }}</span></span></span>
+              <span class="text-sm text-sky-700">{{ seoOpen ? t("editor.collapseSection") : t("editor.expandSection") }}</span>
+            </button>
+            <div v-show="seoOpen" id="editor-seo-fields">
             <p class="mt-2 text-sm text-slate-500">{{ t("editor.seoLead") }}</p>
 
             <div class="mt-5 grid gap-6 lg:grid-cols-2">
@@ -437,6 +488,7 @@
                 :site-name="t('navigation.title')"
               />
             </div>
+            </div>
           </section>
       </div>
 
@@ -460,7 +512,7 @@
             </button>
             <button
               type="button"
-              class="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-medium text-slate-950 transition hover:bg-sky-50"
+              class="inline-flex items-center gap-2 rounded-full border border-slate-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-white/10"
               :disabled="isPersisting || !hasTitle"
               @click="handleSaveAndRedirect"
             >
@@ -469,8 +521,8 @@
             </button>
             <button
               type="button"
-              class="inline-flex items-center gap-2 rounded-full border border-slate-700 px-5 py-2.5 text-sm font-medium text-white transition hover:border-slate-500 hover:bg-white/5"
-              :disabled="isPersisting || !hasTitle"
+              class="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-sky-50"
+              :disabled="isPersisting"
               @click="handleSubmitAndRedirect"
             >
               <LoadingSpinner v-if="isSubmittingForModeration" size="sm" />
@@ -479,8 +531,8 @@
             <button
               v-if="canModerate"
               type="button"
-              class="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-emerald-500"
-              :disabled="isPersisting || !hasTitle"
+              class="inline-flex items-center gap-2 rounded-full border border-emerald-400 px-5 py-2.5 text-sm font-medium text-emerald-100 transition hover:bg-emerald-900/40"
+              :disabled="isPersisting"
               @click="handlePublishAndRedirect"
             >
               <LoadingSpinner v-if="isPublishingDirectly" size="sm" />
@@ -496,11 +548,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
-import type { SocialLinkType } from "../../api/events";
+import type { EventOccurrenceInput, SocialLinkType } from "../../api/events";
+import { computeSeoDescription } from "../../utils/seo";
+import { computeSeoAlerts } from "../../utils/seoAlerts";
 import RichTextEditor from "../../components/form/RichTextEditor.vue";
 import ImageCropModal from "../../components/form/ImageCropModal.vue";
 import SeoPreviewCard from "../../components/form/SeoPreviewCard.vue";
@@ -514,7 +568,7 @@ import { useEventsStore } from "../../stores/events";
 import type { EventItem } from "../../api/events";
 
 const router = useRouter();
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const authStore = useAuthStore();
 const categoriesStore = useCategoriesStore();
 const audiencesStore = useAudiencesStore();
@@ -554,6 +608,123 @@ const {
   addOccurrence,
   removeOccurrence
 } = editorStore;
+
+const contactsOpen = ref(false);
+const linksOpen = ref(false);
+const seoOpen = ref(false);
+const validationAttempted = ref(false);
+const occurrencePanels = ref<Array<{ item: EventOccurrenceInput; open: boolean }>>([]);
+
+const isCompleteOccurrence = (occurrence: EventOccurrenceInput) =>
+  Boolean(occurrence.eventStartAt && occurrence.eventEndAt && occurrence.eventEndAt >= occurrence.eventStartAt && occurrence.city?.trim());
+
+watch(
+  () => editorForm.value.occurrences.slice(),
+  (items) => {
+    const previous = occurrencePanels.value;
+    occurrencePanels.value = items.map((item) => ({
+      item,
+      open: previous.find((panel) => panel.item === item)?.open ?? !isCompleteOccurrence(item)
+    }));
+  },
+  { immediate: true }
+);
+
+const toggleOccurrence = (index: number) => {
+  const panel = occurrencePanels.value[index];
+  if (panel) panel.open = !panel.open;
+};
+
+const occurrenceSummary = (occurrence: EventOccurrenceInput) => {
+  const date = occurrence.eventStartAt
+    ? new Intl.DateTimeFormat(locale.value, { dateStyle: "medium" }).format(new Date(`${occurrence.eventStartAt.slice(0, 10)}T12:00:00`))
+    : t("editor.dateToComplete");
+  const place = [occurrence.venueName, occurrence.city].filter(Boolean).join(", ");
+  return place ? `${date} · ${place}` : date;
+};
+
+const filledSummary = (labels: string[]) => labels.length ? labels.join(" · ") : t("editor.noOptionalInfo");
+const contactsSummary = computed(() => filledSummary([
+  editorForm.value.organizerUrl?.trim() && t("detail.organizerWebsite"),
+  editorForm.value.contactEmail?.trim() && t("common.email"),
+  editorForm.value.contactPhone?.trim() && t("common.phone")
+].filter((value): value is string => Boolean(value))));
+const linksSummary = computed(() => filledSummary([
+  editorForm.value.ticketUrl?.trim() && t("common.ticketing"),
+  editorForm.value.websiteUrl?.trim() && t("common.website"),
+  editorForm.value.socialLinks?.length && t("editor.socialLinksTitle"),
+  editorForm.value.pricingInfo?.trim() && t("editor.pricingInfoTitle")
+].filter((value): value is string => typeof value === "string" && Boolean(value))));
+const seoSummary = computed(() =>
+  editorForm.value.seoTitleOverride?.trim() || editorForm.value.seoDescriptionOverride?.trim()
+    ? t("editor.seoCustomized")
+    : t("editor.seoAutomatic")
+);
+const seoAlerts = computed(() => computeSeoAlerts({
+  title: editorForm.value.title,
+  description: computeSeoDescription(editorForm.value),
+  image: imagePreviewUrl.value || editorForm.value.image,
+  occurrences: editorForm.value.occurrences
+}));
+
+type ValidationIssue = { id: string; label: string; occurrenceIndex?: number };
+const validationIssues = computed<ValidationIssue[]>(() => {
+  const form = editorForm.value;
+  const issues: ValidationIssue[] = [];
+  const add = (id: string, label: string, occurrenceIndex?: number) => issues.push({ id, label, occurrenceIndex });
+  if (!form.title?.trim()) add("editor-title", t("common.title"));
+  if (!form.categoryId?.trim()) add("editor-category", t("common.category"));
+  if (!form.audienceId?.trim()) add("editor-audience", t("common.audience"));
+  if (!imagePreviewUrl.value && !form.image?.trim()) add("editor-image", t("common.image"));
+  else if (!form.imageAlt?.trim()) add("editor-image-alt", t("editor.imageAlt"));
+  if (!form.content?.replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").trim()) add("editor-content", t("editor.contentTitle"));
+  if (!form.organizerName?.trim()) add("editor-organizer", t("common.organizer"));
+  if (!form.occurrences.some(isCompleteOccurrence)) {
+    const index = 0;
+    const occurrence = form.occurrences[index];
+    if (occurrence) {
+      if (!occurrence.eventStartAt) add(`editor-occurrence-${index}-start`, t("common.start"), index);
+      if (!occurrence.eventEndAt) add(`editor-occurrence-${index}-end`, t("common.end"), index);
+      if (!occurrence.city?.trim()) {
+        if (!occurrence.postalCode || !/^\d{5}$/.test(occurrence.postalCode.trim()) || cityOptions(index).length === 0) {
+          add(`editor-occurrence-${index}-postal`, t("editor.postalCodeForCity"), index);
+        } else {
+          add(`editor-occurrence-${index}-city`, t("common.city"), index);
+        }
+      }
+    }
+  }
+  form.occurrences.forEach((occurrence, index) => {
+    if (occurrence.eventStartAt && occurrence.eventEndAt && occurrence.eventEndAt < occurrence.eventStartAt) {
+      add(`editor-occurrence-${index}-end`, t("editor.invalidDateRange"), index);
+    }
+  });
+  return issues;
+});
+const hasIssue = (id: string) => validationAttempted.value && validationIssues.value.some((issue) => issue.id === id);
+const focusIssue = async (issue: ValidationIssue) => {
+  if (issue.occurrenceIndex !== undefined && occurrencePanels.value[issue.occurrenceIndex]) {
+    occurrencePanels.value[issue.occurrenceIndex].open = true;
+  }
+  await nextTick();
+  const target = document.getElementById(issue.id);
+  target?.scrollIntoView?.({ block: "center", behavior: "smooth" });
+  if (target?.matches("input, select, textarea")) target.focus();
+  else target?.querySelector<HTMLElement>("[contenteditable]")?.focus();
+};
+
+const validateBeforePublishing = async () => {
+  editorError.value = null;
+  validationAttempted.value = true;
+  if (!validationIssues.value.length) return true;
+  validationIssues.value.forEach((issue) => {
+    if (issue.occurrenceIndex !== undefined && occurrencePanels.value[issue.occurrenceIndex]) {
+      occurrencePanels.value[issue.occurrenceIndex].open = true;
+    }
+  });
+  await focusIssue(validationIssues.value[0]);
+  return false;
+};
 
 const geolocationStatusLabel = (index: number) => {
   switch (lastGeolocationPrecision.value[index]) {
@@ -692,6 +863,14 @@ const goToEvents = () => {
   router.push("/backoffice/events");
 };
 
+const handleNewDraft = () => {
+  resetEditorForm();
+  contactsOpen.value = false;
+  linksOpen.value = false;
+  seoOpen.value = false;
+  validationAttempted.value = false;
+};
+
 const imageInputRef = ref<HTMLInputElement | null>(null);
 const pendingCropFile = ref<File | null>(null);
 
@@ -719,6 +898,7 @@ const handleCropCancel = () => {
 const handleSaveAndRedirect = async () => {
   const savedEvent = await saveDraftAndReturn();
   if (savedEvent) {
+    validationAttempted.value = false;
     router.push({
       path: "/backoffice/events",
       query: getLocationQuery(savedEvent)
@@ -727,6 +907,7 @@ const handleSaveAndRedirect = async () => {
 };
 
 const handleSubmitAndRedirect = async () => {
+  if (!await validateBeforePublishing()) return;
   const ok = await handleSaveAndSubmit();
   if (ok) {
     router.push("/backoffice/events");
@@ -734,6 +915,7 @@ const handleSubmitAndRedirect = async () => {
 };
 
 const handlePublishAndRedirect = async () => {
+  if (!await validateBeforePublishing()) return;
   const ok = await handleSaveAndPublish();
   if (ok) {
     router.push("/backoffice/events");

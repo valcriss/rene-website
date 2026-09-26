@@ -577,6 +577,13 @@ describe("BackofficeEventCreatePage", () => {
     const categoriesStore = useCategoriesStore(pinia);
     categoriesStore.hasLoaded = true;
     editorStore.editorMode = "edit";
+    Object.assign(editorStore.editorForm, {
+      title: "Concert", content: "Hello", image: "img", imageAlt: "Affiche du concert",
+      categoryId: "music", audienceId: "all", organizerName: "Org"
+    });
+    Object.assign(editorStore.editorForm.occurrences[0], {
+      eventStartAt: "2030-01-15", eventEndAt: "2030-01-15", city: "Descartes"
+    });
     vi.spyOn(editorStore, "handleSaveAndSubmit").mockResolvedValue(true);
 
     render(BackofficeEventCreatePage, {
