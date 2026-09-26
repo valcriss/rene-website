@@ -26,6 +26,8 @@ describe("SeoPreviewCard", () => {
       "https://example.com/image.jpg"
     );
     expect(wrapper.find("[data-testid='seo-preview-image']").attributes("alt")).toBe("Musiciens sur scène");
+    expect(wrapper.find("[data-testid='seo-preview-image']").classes()).toContain("aspect-[1.91/1]");
+    expect(wrapper.text()).toContain("Aperçu indicatif");
   });
 
   // Regression test: the breadcrumb-style domain used to be guessed from the site name plus a

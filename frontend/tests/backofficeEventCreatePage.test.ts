@@ -20,6 +20,23 @@ const setupPage = async () => {
   return { router, pinia, editorStore, categoriesStore };
 };
 
+const completeForm = (editorStore: ReturnType<typeof useEditorStore>) => {
+  Object.assign(editorStore.editorForm, {
+    title: "Concert",
+    content: "<p>Une soirée musicale.</p>",
+    image: "/uploads/test.png",
+    imageAlt: "Musiciens sur scène",
+    categoryId: "music",
+    audienceId: "all",
+    organizerName: "Association"
+  });
+  Object.assign(editorStore.editorForm.occurrences[0], {
+    eventStartAt: "2026-01-15",
+    eventEndAt: "2026-01-15",
+    city: "Descartes"
+  });
+};
+
 const renderPage = ({ router, pinia }: { router: ReturnType<typeof createTestRouter>; pinia: ReturnType<typeof createPinia> }) => {
   render(BackofficeEventCreatePage, {
     global: {
@@ -239,6 +256,7 @@ describe("BackofficeEventCreatePage", () => {
     const setup = await setupPage();
     setup.categoriesStore.hasLoaded = true;
     setup.editorStore.editorMode = "edit";
+    completeForm(setup.editorStore);
     const saveSpy = vi.spyOn(setup.editorStore, "saveDraftAndReturn").mockResolvedValue({
       id: "draft-1",
       title: "Concert",
@@ -515,7 +533,7 @@ describe("BackofficeEventCreatePage", () => {
     expect(screen.getByRole("button", { name: "Soumettre à modération" })).toBeDisabled();
   });
 
-  it("disables save and submit buttons while the title is empty", async () => {
+  it("keeps submission available to reveal missing fields while a title is empty", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) }))
@@ -526,7 +544,9 @@ describe("BackofficeEventCreatePage", () => {
     renderPage(setup);
 
     expect(await screen.findByRole("button", { name: "Enregistrer le brouillon" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Soumettre à modération" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Soumettre à modération" })).not.toBeDisabled();
+    await fireEvent.click(screen.getByRole("button", { name: "Soumettre à modération" }));
+    expect(screen.getByTestId("editor-validation-summary")).toHaveTextContent("Titre");
   });
 
   it("enables save and submit buttons once a title is entered", async () => {
@@ -582,6 +602,7 @@ describe("BackofficeEventCreatePage", () => {
     const setup = await setupPage();
     setup.categoriesStore.hasLoaded = true;
     useAuthStore(setup.pinia).setRole("MODERATOR");
+    completeForm(setup.editorStore);
     renderPage(setup);
 
     expect(await screen.findByRole("button", { name: "Publier directement" })).toBeInTheDocument();
@@ -596,11 +617,11 @@ describe("BackofficeEventCreatePage", () => {
     const setup = await setupPage();
     setup.categoriesStore.hasLoaded = true;
     useAuthStore(setup.pinia).setRole("MODERATOR");
+    completeForm(setup.editorStore);
     const handleSaveAndPublish = vi.spyOn(setup.editorStore, "handleSaveAndPublish").mockResolvedValue(true);
     const pushSpy = vi.spyOn(setup.router, "push");
     renderPage(setup);
 
-    await fireEvent.update(screen.getByPlaceholderText("Titre de l'événement"), "Concert");
     await fireEvent.click(await screen.findByRole("button", { name: "Publier directement" }));
 
     expect(handleSaveAndPublish).toHaveBeenCalledOnce();
@@ -707,6 +728,7 @@ describe("BackofficeEventCreatePage", () => {
     setup.categoriesStore.hasLoaded = true;
     renderPage(setup);
 
+    await fireEvent.click(screen.getByRole("button", { name: /Billetterie et site public/ }));
     await fireEvent.click(await screen.findByRole("button", { name: "Ajouter un réseau social" }));
 
     expect(setup.editorStore.editorForm.socialLinks).toHaveLength(1);
@@ -888,6 +910,57 @@ describe("BackofficeEventCreatePage", () => {
     renderPage(setup);
 
     expect(screen.getByText("Saisissez d'abord un code postal")).toBeInTheDocument();
+  });
+
+  it("starts optional sections collapsed and retains their values", async () => {
+    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) })));
+    const setup = await setupPage();
+    setup.categoriesStore.hasLoaded = true;
+    renderPage(setup);
+
+    const seoToggle = screen.getByTestId("editor-seo-toggle");
+    expect(seoToggle).toHaveAttribute("aria-expanded", "false");
+    expect(seoToggle).toHaveTextContent("Référencement automatique");
+    await fireEvent.click(seoToggle);
+    await fireEvent.update(screen.getByTestId("editor-seo-title-override"), "Titre personnalisé");
+    await fireEvent.click(seoToggle);
+    expect(seoToggle).toHaveTextContent("Référencement personnalisé");
+    await fireEvent.click(seoToggle);
+    expect(screen.getByTestId("editor-seo-title-override")).toHaveValue("Titre personnalisé");
+  });
+
+  it("keeps an expanded occurrence associated with its data after removing another", async () => {
+    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) })));
+    const setup = await setupPage();
+    setup.categoriesStore.hasLoaded = true;
+    completeForm(setup.editorStore);
+    setup.editorStore.addOccurrence();
+    Object.assign(setup.editorStore.editorForm.occurrences[1], {
+      eventStartAt: "2026-01-16", eventEndAt: "2026-01-16", city: "Tours"
+    });
+    setup.editorStore.editorMode = "edit";
+    renderPage(setup);
+
+    expect(screen.getByTestId("occurrence-row-0").querySelector("button[aria-expanded='false']")).toBeInTheDocument();
+    await fireEvent.click(screen.getByTestId("occurrence-row-1").querySelector("button[aria-expanded='false']") as HTMLElement);
+    await fireEvent.click(screen.getByTestId("occurrence-row-0").querySelector("button:last-child") as HTMLElement);
+    expect(screen.getByTestId("occurrence-row-0")).toHaveTextContent("Tours");
+    expect(screen.getByTestId("occurrence-row-0").querySelector("button[aria-expanded='true']")).toBeInTheDocument();
+  });
+
+  it("lists missing fields and focuses a selected field without calling the API", async () => {
+    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) })));
+    const setup = await setupPage();
+    setup.categoriesStore.hasLoaded = true;
+    const submitSpy = vi.spyOn(setup.editorStore, "handleSaveAndSubmit");
+    renderPage(setup);
+
+    await fireEvent.click(screen.getByRole("button", { name: "Soumettre à modération" }));
+    const summary = screen.getByTestId("editor-validation-summary");
+    expect(summary).toHaveTextContent("Organisateur");
+    await fireEvent.click(summary.querySelector("button") as HTMLElement);
+    expect(document.activeElement).toBe(document.getElementById("editor-title"));
+    expect(submitSpy).not.toHaveBeenCalled();
   });
 
   it("binds the image alt text and SEO override inputs to the editor form", async () => {
