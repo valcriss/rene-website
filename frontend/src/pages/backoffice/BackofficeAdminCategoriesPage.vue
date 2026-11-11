@@ -8,7 +8,7 @@
       </p>
     </div>
 
-    <div v-if="!isAdmin" class="rounded-[1.75rem] border border-slate-200 bg-white p-8 shadow-sm">
+    <div v-if="!isAdmin" class="rounded-[1.75rem] border border-slate-200 bg-white p-8 shadow-xs">
       <h3 class="text-lg font-medium text-slate-900">{{ t("common.accessDenied") }}</h3>
       <p class="mt-2 text-sm text-slate-500">
         {{ t("admin.deniedCategories") }}

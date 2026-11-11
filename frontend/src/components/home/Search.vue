@@ -1,5 +1,5 @@
 <template>
-  <div class="rounded-[1.75rem] border border-sky-100 bg-gradient-to-br from-sky-50/85 to-white p-4 shadow-sm sm:p-5">
+  <div class="rounded-[1.75rem] border border-sky-100 bg-linear-to-br from-sky-50/85 to-white p-4 shadow-xs sm:p-5">
     <label class="text-sm font-semibold text-slate-800" for="home-search">
       {{ $t("search.label") }}
     </label>
@@ -10,12 +10,12 @@
         data-testid="home-search"
         type="text"
         :placeholder="$t('search.placeholder')"
-        class="w-full rounded-2xl border border-sky-100 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm transition focus:border-sky-300 focus:outline-none focus:ring-4 focus:ring-sky-100"
+        class="w-full rounded-2xl border border-sky-100 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-xs transition focus:border-sky-300 focus:outline-hidden focus:ring-4 focus:ring-sky-100"
         @input="onInput"
       />
       <button
         type="button"
-        class="rounded-2xl border border-sky-200 bg-white px-4 py-2.5 text-sm font-medium text-sky-900 shadow-sm transition hover:bg-sky-50"
+        class="rounded-2xl border border-sky-200 bg-white px-4 py-2.5 text-sm font-medium text-sky-900 shadow-xs transition hover:bg-sky-50"
         @click="emitReset"
       >
         {{ $t("search.reset") }}

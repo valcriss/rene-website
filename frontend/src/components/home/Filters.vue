@@ -2,7 +2,7 @@
   <aside>
     <button
       type="button"
-      class="flex w-full items-center justify-between rounded-[1.5rem] border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 lg:hidden"
+      class="flex w-full items-center justify-between rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 lg:hidden"
       :aria-expanded="isOpen ? 'true' : 'false'"
       aria-controls="home-filters-panel"
       @click="isOpen = !isOpen"

@@ -12,7 +12,6 @@ module.exports = [
       "dist/**",
       "coverage/**",
       "**/*.config.cjs",
-      "tailwind.config.js",
       "postcss.config.cjs",
       "eslint.config.cjs",
       ".eslintrc.cjs"

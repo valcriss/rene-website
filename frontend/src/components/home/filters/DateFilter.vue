@@ -1,5 +1,5 @@
 <template>
-  <div class="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm">
+  <div class="rounded-3xl border border-slate-200 bg-white p-4 shadow-xs">
     <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">{{ $t("filters.dates") }}</p>
     <div class="mt-3 grid gap-3">
       <label class="text-sm font-medium text-slate-600">

@@ -1,5 +1,6 @@
 import { createSSRApp } from "vue";
 import type { App } from "vue";
+import "./fontAwesomeConfig";
 import { createPinia } from "pinia";
 import type { Pinia } from "pinia";
 import { createMemoryHistory, createWebHistory } from "vue-router";

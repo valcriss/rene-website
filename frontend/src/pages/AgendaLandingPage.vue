@@ -26,7 +26,7 @@
           class="block"
           :data-testid="`agenda-landing-card-${eventItem.id}`"
         >
-          <div class="relative aspect-[16/10] overflow-hidden bg-sky-100">
+          <div class="relative aspect-16/10 overflow-hidden bg-sky-100">
             <img
               class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
               :src="getEventImage(eventItem)"
@@ -35,7 +35,7 @@
               decoding="async"
               @error="markImageError(eventItem.id)"
             />
-            <span class="absolute left-4 top-4 rounded-full bg-white/95 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-800 shadow-sm">
+            <span class="absolute left-4 top-4 rounded-full bg-white/95 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-800 shadow-xs">
               {{ formatEventDateBadge(eventItem.occurrences) }}
             </span>
           </div>

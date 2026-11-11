@@ -1,12 +1,12 @@
 <template>
-  <section class="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(191,219,254,0.42),_transparent_26%),radial-gradient(circle_at_top_right,_rgba(224,231,255,0.7),_transparent_28%),linear-gradient(180deg,_#f7fbff_0%,_#eef4ff_46%,_#f8fbff_100%)]">
+  <section class="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(191,219,254,0.42),transparent_26%),radial-gradient(circle_at_top_right,rgba(224,231,255,0.7),transparent_28%),linear-gradient(180deg,#f7fbff_0%,#eef4ff_46%,#f8fbff_100%)]">
     <div class="pointer-events-none absolute inset-0">
-      <div class="absolute left-[-7rem] top-16 h-56 w-56 rounded-full bg-sky-200/30 blur-3xl"></div>
-      <div class="absolute right-[-6rem] top-24 h-64 w-64 rounded-full bg-indigo-200/25 blur-3xl"></div>
+      <div class="absolute -left-28 top-16 h-56 w-56 rounded-full bg-sky-200/30 blur-3xl"></div>
+      <div class="absolute -right-24 top-24 h-64 w-64 rounded-full bg-indigo-200/25 blur-3xl"></div>
     </div>
 
     <div class="relative mx-auto max-w-[1500px] px-4 py-10 sm:px-6 lg:px-8 xl:px-10">
-      <div class="rounded-[2rem] border border-white/90 bg-white/72 p-4 shadow-[0_24px_80px_-48px_rgba(30,41,59,0.16)] backdrop-blur sm:p-6">
+      <div class="rounded-4xl border border-white/90 bg-white/72 p-4 shadow-[0_24px_80px_-48px_rgba(30,41,59,0.16)] backdrop-blur-sm sm:p-6">
         <slot name="header" />
 
         <div v-if="isLoading && !props.event" class="mt-6 flex items-center gap-3 rounded-[1.75rem] border border-dashed border-sky-100 bg-sky-50/60 p-6 text-slate-500">
@@ -18,7 +18,7 @@
         </div>
         <div v-else class="mt-6 space-y-8" data-testid="event-detail">
           <article
-            class="overflow-hidden rounded-[2rem] border border-slate-900/10 bg-slate-950 text-white shadow-[0_32px_120px_-56px_rgba(15,23,42,0.48)]"
+            class="overflow-hidden rounded-4xl border border-slate-900/10 bg-slate-950 text-white shadow-[0_32px_120px_-56px_rgba(15,23,42,0.48)]"
             :class="hasPoster ? '' : 'bg-[linear-gradient(135deg,#0f172a_0%,#1e293b_52%,#334155_100%)]'"
           >
             <div class="relative" :class="hasPoster ? '' : 'xl:grid xl:grid-cols-[minmax(280px,0.7fr)_minmax(0,1.3fr)] xl:items-stretch'">
@@ -38,7 +38,7 @@
               />
               <div
                 v-if="hasPoster"
-                class="pointer-events-none absolute inset-x-0 bottom-0 h-[44%] bg-gradient-to-t from-slate-950/74 via-slate-950/34 to-transparent"
+                class="pointer-events-none absolute inset-x-0 bottom-0 h-[44%] bg-linear-to-t from-slate-950/74 via-slate-950/34 to-transparent"
               ></div>
               <div
                 v-if="!hasPoster"
@@ -54,13 +54,13 @@
                   </span>
                   <span
                     v-if="categoryName"
-                    class="rounded-full px-4 py-2 text-xs font-semibold ring-1 backdrop-blur"
+                    class="rounded-full px-4 py-2 text-xs font-semibold ring-1 backdrop-blur-sm"
                     :style="categoryTheme"
                   >
                     {{ categoryName }}
                   </span>
                 </div>
-                <div class="mt-5 max-w-3xl space-y-4 rounded-[1.5rem] border border-white/10 bg-slate-950/28 p-5 backdrop-blur-md sm:p-6">
+                <div class="mt-5 max-w-3xl space-y-4 rounded-3xl border border-white/10 bg-slate-950/28 p-5 backdrop-blur-md sm:p-6">
                   <p class="text-sm font-medium uppercase tracking-[0.28em] text-white/88 [text-shadow:0_1px_10px_rgba(15,23,42,0.8)]">
                     {{ detailLocationLabel }}
                   </p>
@@ -75,14 +75,14 @@
           <div
             v-if="isEventEnded"
             data-testid="event-ended-banner"
-            class="rounded-[1.5rem] border border-amber-200 bg-amber-50/80 p-5 text-sm text-amber-900"
+            class="rounded-3xl border border-amber-200 bg-amber-50/80 p-5 text-sm text-amber-900"
           >
             {{ t("detail.eventEnded") }}
           </div>
 
           <div class="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(340px,0.8fr)] xl:items-stretch">
             <div class="space-y-6">
-              <section class="rounded-[2rem] border border-white/90 bg-white p-6 shadow-[0_20px_72px_-54px_rgba(30,41,59,0.24)] sm:p-8">
+              <section class="rounded-4xl border border-white/90 bg-white p-6 shadow-[0_20px_72px_-54px_rgba(30,41,59,0.24)] sm:p-8">
                 <div class="flex flex-wrap items-start justify-between gap-4">
                   <div>
                     <p class="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700/70">{{ t("detail.summaryEyebrow") }}</p>
@@ -97,11 +97,11 @@
                 </div>
 
                 <div class="mt-6 grid gap-4 sm:grid-cols-2">
-                  <div class="rounded-[1.5rem] border border-sky-100 bg-sky-50/60 p-4">
+                  <div class="rounded-3xl border border-sky-100 bg-sky-50/60 p-4">
                     <p class="text-xs font-semibold uppercase tracking-[0.22em] text-sky-700/70">{{ t("common.category") }}</p>
                     <p class="mt-2 text-sm leading-6 text-slate-700">{{ categoryName || t("detail.categoryFallback") }}</p>
                   </div>
-                  <div class="rounded-[1.5rem] border border-sky-100 bg-sky-50/60 p-4">
+                  <div class="rounded-3xl border border-sky-100 bg-sky-50/60 p-4">
                     <p class="text-xs font-semibold uppercase tracking-[0.22em] text-sky-700/70">{{ t("common.audience") }}</p>
                     <p class="mt-2 text-sm leading-6 text-slate-700">{{ audienceName || t("common.notProvided") }}</p>
                   </div>
@@ -113,7 +113,7 @@
                     <li
                       v-for="occurrence in detailOccurrences"
                       :key="occurrence.id"
-                      class="flex flex-wrap items-center justify-between gap-3 rounded-[1.5rem] bg-gradient-to-br from-slate-900 to-sky-800 p-5 text-white shadow-sm shadow-slate-900/20"
+                      class="flex flex-wrap items-center justify-between gap-3 rounded-3xl bg-linear-to-br from-slate-900 to-sky-800 p-5 text-white shadow-xs shadow-slate-900/20"
                       :data-testid="`detail-occurrence-${occurrence.id}`"
                     >
                       <div>
@@ -149,7 +149,7 @@
                   </ul>
                 </div>
 
-                <div v-if="sanitizedPricingInfo" class="mt-4 rounded-[1.5rem] border border-amber-200 bg-amber-50/70 p-5">
+                <div v-if="sanitizedPricingInfo" class="mt-4 rounded-3xl border border-amber-200 bg-amber-50/70 p-5">
                   <p class="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-amber-800">
                     <font-awesome-icon class="h-3.5 w-3.5" :icon="faTicket" />
                     {{ t("detail.pricingInfo") }}
@@ -161,7 +161,7 @@
                 <!-- eslint-disable-next-line vue/no-v-html -->
                 <div class="prose prose-slate mt-8 max-w-none prose-p:text-slate-600 prose-a:text-sky-700 prose-strong:text-slate-900" v-html="sanitizedContent"></div>
 
-                <div v-if="socialLinks.length > 0" class="mt-8 rounded-[1.5rem] border border-sky-100 bg-sky-50/60 p-5" data-testid="detail-social-links">
+                <div v-if="socialLinks.length > 0" class="mt-8 rounded-3xl border border-sky-100 bg-sky-50/60 p-5" data-testid="detail-social-links">
                   <div class="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <p class="text-xs font-semibold uppercase tracking-[0.22em] text-sky-700/70">{{ t("detail.socialLinks") }}</p>
@@ -171,7 +171,7 @@
                       <a
                         v-for="socialLink in socialLinks"
                         :key="`${socialLink.type}-${socialLink.url}`"
-                        class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-sky-200 bg-white text-sky-700 shadow-sm shadow-sky-100/70 transition hover:border-sky-300 hover:bg-sky-50"
+                        class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-sky-200 bg-white text-sky-700 shadow-xs shadow-sky-100/70 transition hover:border-sky-300 hover:bg-sky-50"
                         :href="socialLink.url"
                         target="_blank"
                         rel="noopener noreferrer"
@@ -187,7 +187,7 @@
                 <ShareEvent :url="shareUrl" :title="detailEvent.title" />
               </section>
 
-              <section class="rounded-[2rem] border border-sky-100 bg-gradient-to-br from-white to-sky-50/70 p-5 shadow-[0_20px_72px_-54px_rgba(30,41,59,0.18)] sm:p-6">
+              <section class="rounded-4xl border border-sky-100 bg-linear-to-br from-white to-sky-50/70 p-5 shadow-[0_20px_72px_-54px_rgba(30,41,59,0.18)] sm:p-6">
                 <div class="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <p class="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700/75">{{ t("detail.mapEyebrow") }}</p>
@@ -202,12 +202,12 @@
             </div>
 
             <aside class="xl:flex">
-              <section class="flex h-full w-full flex-col rounded-[2rem] border border-white/90 bg-white p-6 shadow-[0_20px_72px_-54px_rgba(30,41,59,0.24)]">
+              <section class="flex h-full w-full flex-col rounded-4xl border border-white/90 bg-white p-6 shadow-[0_20px_72px_-54px_rgba(30,41,59,0.24)]">
                 <p class="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700/70">{{ t("detail.practicalEyebrow") }}</p>
                 <h2 class="font-display mt-2 text-2xl font-semibold tracking-tight text-slate-950">{{ t("detail.practicalTitle") }}</h2>
 
                 <div class="mt-6 flex-1 space-y-5 text-sm text-slate-600">
-                  <div class="space-y-2 rounded-[1.5rem] border border-sky-200 bg-sky-50/70 p-4">
+                  <div class="space-y-2 rounded-3xl border border-sky-200 bg-sky-50/70 p-4">
                     <p class="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-sky-700">
                       <font-awesome-icon class="h-3.5 w-3.5" :icon="faLocationDot" />
                       {{ t("detail.venueAccess") }}
