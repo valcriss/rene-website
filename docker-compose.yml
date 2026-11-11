@@ -89,57 +89,19 @@ services:
     security_opt:
       - no-new-privileges:true
 
-  photon-init:
-    image: debian:bookworm-slim@sha256:3783cc01769c7b2b1b83a5c5ad96c815348e28ed7da68e2e3687004faa906251
-    container_name: photon-init
-    environment:
-      PHOTON_VERSION: ${PHOTON_VERSION:-1.3.0}
-      PHOTON_JAR_URL: ${PHOTON_JAR_URL:?Set PHOTON_JAR_URL in the deployment environment}
-      PHOTON_JAR_SHA256: ${PHOTON_JAR_SHA256:?Set PHOTON_JAR_SHA256 in the deployment environment}
-      PHOTON_DB_URL: ${PHOTON_DB_URL:?Set PHOTON_DB_URL in the deployment environment}
-      PHOTON_DB_SHA256: ${PHOTON_DB_SHA256:?Set PHOTON_DB_SHA256 in the deployment environment}
-    volumes:
-      - photon-data:/photon
-    configs:
-      - source: photon-init-script
-        target: /usr/local/bin/photon-init.sh
-        mode: 0555
-    command:
-      - bash
-      - -lc
-      - |
-        set -euo pipefail
-        export DEBIAN_FRONTEND=noninteractive
-        apt-get update
-        apt-get install -y --no-install-recommends ca-certificates curl bzip2 tar
-        rm -rf /var/lib/apt/lists/*
-
-        exec /usr/local/bin/photon-init.sh
-    restart: "no"
-    security_opt:
-      - no-new-privileges:true
-    mem_limit: 512m
-    cpus: 1.0
-    pids_limit: 128
-
   photon:
-    image: eclipse-temurin:21-jre@sha256:49e21e16e3c86eb7816a44a67549910ed090fbeb40c29c525d58bf5e02e91b0f
+    image: rtuszik/photon-docker:2.5.0@sha256:c5babeb0ac396b485822036cf3c69e54fb6c79d699328a4e042e11bbd6f73f1a
     container_name: photon
-    depends_on:
-      photon-init:
-        condition: service_completed_successfully
+    environment:
+      REGION: ${PHOTON_REGION:-france}
+      # PARALLEL: the new index is downloaded in the background then swapped in (needs 2x disk).
+      UPDATE_STRATEGY: PARALLEL
+      UPDATE_INTERVAL: ${PHOTON_UPDATE_INTERVAL:-720h}
     volumes:
-      - photon-data:/photon
-    user: "65532:65532"
-    command:
-      - bash
-      - -lc
-      - |
-        set -euo pipefail
-        exec java -jar "/photon/bin/photon.jar" serve \
-          -data-dir "/photon/data" \
-          -listen-ip "0.0.0.0" \
-          -listen-port "2322"
+      - photon-data-v2:/photon/data
+    # 9011 is the image's own "photon" user: a fresh named volume inherits its ownership, so the
+    # container never needs root (PUID/PGID are ignored when `user:` is set).
+    user: "9011:9011"
     restart: unless-stopped
     read_only: true
     tmpfs:
@@ -148,15 +110,6 @@ services:
       - ALL
     security_opt:
       - no-new-privileges:true
-    healthcheck:
-      # No curl/wget in eclipse-temurin's JRE image (that's why photon-init uses a separate
-      # debian image for its download step); a bare TCP connect via bash's /dev/tcp is enough to
-      # tell "the JVM has bound the port" from "still loading the index into memory".
-      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/2322 && exec 3<&-"]
-      interval: 15s
-      timeout: 5s
-      retries: 10
-      start_period: 90s
     mem_limit: 2g
     cpus: 2.0
     pids_limit: 512
@@ -168,7 +121,7 @@ networks:
 
 volumes:
   db-data:
-  photon-data:
+  photon-data-v2:
   uploads-data:
 
 secrets:
@@ -186,7 +139,3 @@ secrets:
     file: ${POSTGRES_MIGRATION_PASSWORD_SECRET_FILE:?Set POSTGRES_MIGRATION_PASSWORD_SECRET_FILE in the deployment environment}
   postgres_app_password:
     file: ${POSTGRES_APP_PASSWORD_SECRET_FILE:?Set POSTGRES_APP_PASSWORD_SECRET_FILE in the deployment environment}
-
-configs:
-  photon-init-script:
-    file: ./docker/photon-init.sh
