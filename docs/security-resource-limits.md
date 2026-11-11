@@ -8,6 +8,7 @@ Les compteurs applicatifs sont enregistrés dans PostgreSQL (`AuthRateLimit`) et
 | Upload | 30 / 15 min | 20 / 15 min |
 | Contact | 5 / 15 min | — |
 | Géocodage | 60 / 15 min | 120 / 15 min |
+| Lectures backoffice (`GET /api/events`, `GET /api/events/:id`) | 900 / 15 min | 600 / 15 min |
 
 Les limites d'authentification sont documentées séparément dans [security-authentication.md](security-authentication.md). Toute réponse limitée est un `429` avec l'en-tête `Retry-After`.
 
@@ -25,3 +26,7 @@ Le reverse proxy doit aussi appliquer des limites de connexions et de débit ava
 - SMTP : délais connexion, accueil et socket de 10 s par défaut (`SMTP_TIMEOUT_MS`, borné entre 1 s et 60 s).
 
 Les délais et les quotas peuvent être réglés uniquement dans leurs bornes de sécurité. En cas de Photon indisponible, l'API retourne une erreur générique sans bloquer le processus. Les notifications asynchrones signalent leur échec sans modifier les réponses neutres des parcours d'authentification.
+
+## Lectures authentifiées des événements
+
+Le quota général `/api` ignore `GET`, `HEAD` et `OPTIONS` : les lectures publiques (`/api/public/*`, catégories, paramètres) ne sont donc pas limitées par lui et restent bornées par le reverse proxy. Les deux lectures authentifiées du backoffice ont en revanche un quota dédié (action `events-read`), car `GET /api/events` charge toute la liste depuis le dépôt avant de filtrer selon l'acteur. Les deux routes partagent le même compteur ; il est consommé après la vérification du rôle, donc un trafic anonyme (`401`) n'utilise pas le quota d'un tiers. Les plafonds sont très supérieurs à l'usage normal (un chargement de page = quelques lectures) et ne visent que les rafales scriptées. Ils sont couverts par `backend/tests/events.routes.readRateLimit.test.ts`, qui passe par `createApp()` pour que les middlewares de sécurité restent en place.

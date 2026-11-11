@@ -1,4 +1,4 @@
-import { Request, Response, Router } from "express";
+import { NextFunction, Request, Response, Router } from "express";
 import { requireRole } from "../auth/roles";
 import { AuthRepository } from "../auth/repository";
 import { CategorySubscriptionRepository } from "../subscriptions/repository";
@@ -15,6 +15,7 @@ import { Event } from "./types";
 import { computePublicationEndAt } from "./occurrences";
 import { getAuthenticatedUser } from "../auth/request";
 import { auditLogger } from "../security/audit";
+import { createRequestRateLimiter, enforceRequestRateLimit } from "../security/rateLimiter";
 import { safeErrorMessage } from "../security/logging";
 
 type AsyncHandler = (req: Request, res: Response) => Promise<void>;
@@ -50,19 +51,33 @@ const toRevisionSnapshot = (event: Event): Event => {
   };
 };
 
+// The general /api quota skips GET/HEAD/OPTIONS, so the authenticated backoffice reads need their
+// own bound: GET /events loads the whole list from the repository before filtering per actor.
+// The limits are far above normal backoffice use (a page load is a handful of reads) and only
+// stop scripted bursts. requireRole runs first, so anonymous traffic never consumes this quota.
+export const eventsReadRateLimitPolicy = {
+  action: "events-read",
+  ip: { max: 900, windowMs: 15 * 60 * 1000 },
+  actor: { max: 600, windowMs: 15 * 60 * 1000 }
+};
+
 export const createEventRouter = (
   repo: EventRepository,
   authRepo: AuthRepository,
   subscriptionRepo?: CategorySubscriptionRepository
 ) => {
   const router = Router();
+  const readRateLimiter = createRequestRateLimiter(authRepo);
+  const limitReads = async (req: Request, res: Response, next: NextFunction) => {
+    if (await enforceRequestRateLimit(readRateLimiter, req, res, eventsReadRateLimitPolicy)) next();
+  };
 
-  router.get("/events", requireRole(["EDITOR", "MODERATOR", "ADMIN"]), withErrorHandling(async (req, res) => {
+  router.get("/events", requireRole(["EDITOR", "MODERATOR", "ADMIN"]), limitReads, withErrorHandling(async (req, res) => {
     const events = await listEvents(repo, getAuthenticatedUser(req));
     res.json(events);
   }));
 
-  router.get("/events/:id", requireRole(["EDITOR", "MODERATOR", "ADMIN"]), withErrorHandling(async (req, res) => {
+  router.get("/events/:id", requireRole(["EDITOR", "MODERATOR", "ADMIN"]), limitReads, withErrorHandling(async (req, res) => {
     const eventId = req.params.id as string;
     const result = await getEventForActor(repo, eventId, getAuthenticatedUser(req));
     if (!result.ok) {
