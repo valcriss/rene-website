@@ -1,6 +1,6 @@
 <template>
   <div
-    class="mt-8 rounded-[1.5rem] border border-emerald-200 bg-emerald-50/60 p-5"
+    class="mt-8 rounded-3xl border border-emerald-200 bg-emerald-50/60 p-5"
     data-testid="detail-share-event"
   >
     <div class="flex flex-wrap items-start justify-between gap-3">
@@ -14,7 +14,7 @@
         <button
           v-if="canNativeShare"
           type="button"
-          class="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-emerald-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+          class="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-emerald-600 px-4 text-sm font-semibold text-white shadow-xs transition hover:bg-emerald-700"
           data-testid="share-native-button"
           @click="shareNatively"
         >
@@ -23,7 +23,7 @@
         </button>
         <button
           type="button"
-          class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-emerald-200 bg-white text-emerald-700 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50"
+          class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-emerald-200 bg-white text-emerald-700 shadow-xs transition hover:border-emerald-300 hover:bg-emerald-50"
           :aria-label="t('detail.copyLink')"
           :title="t('detail.copyLink')"
           data-testid="share-copy-button"
@@ -34,7 +34,7 @@
         <a
           v-for="link in shareLinks"
           :key="link.type"
-          class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-emerald-200 bg-white text-emerald-700 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50"
+          class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-emerald-200 bg-white text-emerald-700 shadow-xs transition hover:border-emerald-300 hover:bg-emerald-50"
           :href="link.href"
           target="_blank"
           rel="noopener noreferrer"

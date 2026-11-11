@@ -5,7 +5,7 @@
     <template #header>
       <RouterLink
         to="/"
-        class="inline-flex items-center justify-center gap-2 rounded-full border border-sky-100 bg-white px-4 py-2 text-sm font-medium text-sky-900 shadow-sm transition hover:bg-sky-50"
+        class="inline-flex items-center justify-center gap-2 rounded-full border border-sky-100 bg-white px-4 py-2 text-sm font-medium text-sky-900 shadow-xs transition hover:bg-sky-50"
       >
         <font-awesome-icon class="h-4 w-4" :icon="faArrowLeft" />
         <span>{{ $t("detail.backToAgenda") }}</span>

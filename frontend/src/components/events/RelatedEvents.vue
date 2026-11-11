@@ -22,7 +22,7 @@
           :data-testid="`related-event-card-${eventItem.id}`"
           @click="emitSelect(eventItem.id)"
         >
-          <div class="relative aspect-[16/10] overflow-hidden bg-sky-100">
+          <div class="relative aspect-16/10 overflow-hidden bg-sky-100">
             <img
               class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
               :src="getEventImage(eventItem)"
@@ -32,12 +32,12 @@
               @error="markImageError(eventItem.id)"
             />
             <div class="absolute left-4 top-4 flex flex-wrap gap-2">
-              <span class="rounded-full bg-white/95 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-800 shadow-sm">
+              <span class="rounded-full bg-white/95 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-800 shadow-xs">
                 {{ formatEventDateBadge(eventItem.occurrences) }}
               </span>
               <span
                 v-if="getCategoryName(eventItem.categoryId)"
-                class="rounded-full px-3 py-1 text-xs font-semibold ring-1 shadow-sm"
+                class="rounded-full px-3 py-1 text-xs font-semibold ring-1 shadow-xs"
                 :style="getCategoryTheme(eventItem.categoryId)"
               >
                 {{ getCategoryName(eventItem.categoryId) }}
