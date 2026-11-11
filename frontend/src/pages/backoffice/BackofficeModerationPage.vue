@@ -23,7 +23,7 @@
       </div>
     </div>
 
-    <div v-if="!canModerate" class="rounded-[1.75rem] border border-slate-200 bg-white p-8 shadow-sm">
+    <div v-if="!canModerate" class="rounded-[1.75rem] border border-slate-200 bg-white p-8 shadow-xs">
       <h3 class="text-lg font-medium text-slate-900">{{ t("common.accessDenied") }}</h3>
       <p class="mt-2 text-sm text-slate-500">
         {{ t("moderation.deniedLead") }}
@@ -55,7 +55,7 @@
         <li
           v-for="eventItem in pendingEvents"
           :key="eventItem.id"
-          class="rounded-[1.5rem] border border-slate-200 bg-slate-50/70 p-5"
+          class="rounded-3xl border border-slate-200 bg-slate-50/70 p-5"
         >
           <div class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,26rem)]">
             <div>
@@ -90,7 +90,7 @@
                 <input
                   :checked="featuredEventIds[eventItem.id] ?? eventItem.featured === true"
                   type="checkbox"
-                  class="h-4 w-4 rounded border-slate-300"
+                  class="h-4 w-4 rounded-sm border-slate-300"
                   @change="setFeaturedEvent(eventItem.id, ($event.target as HTMLInputElement).checked)"
                 />
                 <span>{{ t("moderation.markAsFeatured") }}</span>

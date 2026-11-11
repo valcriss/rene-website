@@ -11,12 +11,12 @@
   />
 
   <section class="relative overflow-hidden">
-    <div class="absolute inset-x-0 top-0 h-72 bg-[radial-gradient(circle_at_top_left,_rgba(186,230,253,0.5),_transparent_48%),radial-gradient(circle_at_top_right,_rgba(224,242,254,0.7),_transparent_42%)]"></div>
+    <div class="absolute inset-x-0 top-0 h-72 bg-[radial-gradient(circle_at_top_left,rgba(186,230,253,0.5),transparent_48%),radial-gradient(circle_at_top_right,rgba(224,242,254,0.7),transparent_42%)]"></div>
 
-    <div class="relative mx-auto max-w-[92rem] px-5 py-8 sm:px-6 lg:px-8 lg:py-10">
+    <div class="relative mx-auto max-w-368 px-5 py-8 sm:px-6 lg:px-8 lg:py-10">
       <div class="grid gap-6 xl:grid-cols-[18rem_minmax(0,1fr)]">
         <aside class="space-y-4">
-          <div class="rounded-[2rem] border border-sky-100 bg-white/95 p-6 shadow-[0_28px_70px_-38px_rgba(15,23,42,0.28)] backdrop-blur">
+          <div class="rounded-4xl border border-sky-100 bg-white/95 p-6 shadow-[0_28px_70px_-38px_rgba(15,23,42,0.28)] backdrop-blur-sm">
             <p class="text-xs uppercase tracking-[0.32em] text-sky-700/70">{{ t("backoffice.proSpace") }}</p>
             <h1 class="mt-3 text-2xl font-semibold text-slate-950">{{ t("backoffice.title") }}</h1>
             <p class="mt-3 text-sm leading-6 text-slate-600">
@@ -81,7 +81,7 @@
         </aside>
 
         <div class="space-y-5">
-          <div class="rounded-[2rem] border border-sky-100 bg-white/95 p-6 shadow-[0_28px_70px_-38px_rgba(15,23,42,0.24)] backdrop-blur">
+          <div class="rounded-4xl border border-sky-100 bg-white/95 p-6 shadow-[0_28px_70px_-38px_rgba(15,23,42,0.24)] backdrop-blur-sm">
             <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
               <div class="max-w-3xl">
                 <p class="text-xs uppercase tracking-[0.3em] text-sky-700/70">{{ sectionEyebrow }}</p>
@@ -126,7 +126,7 @@
             </div>
           </div>
 
-          <div v-if="!isAuthenticated" class="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-[0_28px_70px_-42px_rgba(15,23,42,0.24)]">
+          <div v-if="!isAuthenticated" class="rounded-4xl border border-slate-200 bg-white p-8 shadow-[0_28px_70px_-42px_rgba(15,23,42,0.24)]">
             <h3 class="text-xl font-medium text-slate-900">{{ t("common.loginRequired") }}</h3>
             <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
               {{ t("backoffice.connectLead") }}
@@ -140,7 +140,7 @@
             </button>
           </div>
 
-          <div v-else class="rounded-[2rem] border border-slate-200 bg-white/90 p-5 shadow-[0_28px_70px_-42px_rgba(15,23,42,0.2)] backdrop-blur sm:p-6 lg:p-7">
+          <div v-else class="rounded-4xl border border-slate-200 bg-white/90 p-5 shadow-[0_28px_70px_-42px_rgba(15,23,42,0.2)] backdrop-blur-sm sm:p-6 lg:p-7">
             <RouterView />
           </div>
         </div>

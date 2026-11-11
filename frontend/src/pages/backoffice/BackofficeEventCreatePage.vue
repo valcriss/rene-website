@@ -19,7 +19,7 @@
       </button>
     </div>
 
-    <div v-if="!canEdit" class="rounded-[1.75rem] border border-slate-200 bg-white p-8 shadow-sm">
+    <div v-if="!canEdit" class="rounded-[1.75rem] border border-slate-200 bg-white p-8 shadow-xs">
       <h3 class="text-lg font-medium text-slate-900">{{ t("common.accessDenied") }}</h3>
       <p class="mt-2 text-sm text-slate-500">
         {{ t("editor.deniedCreateLead") }}
@@ -51,7 +51,7 @@
 
       <div
         v-if="editingPublishedEvent"
-        class="rounded-[1.5rem] border border-amber-100 bg-amber-50/80 p-5 text-sm text-amber-800"
+        class="rounded-3xl border border-amber-100 bg-amber-50/80 p-5 text-sm text-amber-800"
       >
         {{ publishedEditLead }}
       </div>
@@ -172,7 +172,7 @@
             </div>
           </section>
 
-          <section id="editor-content" class="rounded-[2rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(248,250,252,0.96),rgba(255,255,255,1))] p-6 shadow-[0_28px_72px_-44px_rgba(15,23,42,0.26)] sm:p-7">
+          <section id="editor-content" class="rounded-4xl border border-sky-100 bg-[linear-gradient(180deg,rgba(248,250,252,0.96),rgba(255,255,255,1))] p-6 shadow-[0_28px_72px_-44px_rgba(15,23,42,0.26)] sm:p-7">
             <p class="text-xs uppercase tracking-[0.3em] text-sky-700/70">{{ t("editor.contentEyebrow") }}</p>
             <div class="mt-3 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
               <div class="max-w-3xl">
@@ -208,7 +208,7 @@
               <div
                 v-for="(occurrence, index) in editorForm.occurrences"
                 :key="index"
-                class="rounded-[1.5rem] border border-slate-200 bg-slate-50/60 p-5"
+                class="rounded-3xl border border-slate-200 bg-slate-50/60 p-5"
                 :data-testid="`occurrence-row-${index}`"
               >
                 <div class="flex flex-wrap items-center justify-between gap-3">

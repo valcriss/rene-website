@@ -1,6 +1,6 @@
 <template>
   <div class="grid gap-3">
-    <div class="rounded-[1.5rem] border border-slate-200 bg-slate-50/80 p-3">
+    <div class="rounded-3xl border border-slate-200 bg-slate-50/80 p-3">
       <div class="flex flex-wrap gap-2">
         <button
           type="button"
@@ -139,7 +139,7 @@
     </div>
 
     <EditorContent
-      class="rounded-[1.5rem] border border-slate-200 bg-white px-5 py-4 text-base leading-7 text-slate-700 shadow-[0_16px_42px_-34px_rgba(15,23,42,0.35)]"
+      class="rounded-3xl border border-slate-200 bg-white px-5 py-4 text-base leading-7 text-slate-700 shadow-[0_16px_42px_-34px_rgba(15,23,42,0.35)]"
       :class="compact ? 'min-h-[180px] text-sm leading-6' : 'min-h-[360px]'"
       :editor="editor"
       :aria-label="ariaLabel || t('common.description')"

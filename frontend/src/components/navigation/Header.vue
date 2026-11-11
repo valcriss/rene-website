@@ -1,5 +1,5 @@
 <template>
-  <header class="relative z-40 border-b border-sky-100 bg-white/80 backdrop-blur">
+  <header class="relative z-40 border-b border-sky-100 bg-white/80 backdrop-blur-sm">
     <div class="mx-auto flex max-w-[1600px] items-center justify-between px-6 py-4 xl:px-10">
       <div>
         <p class="text-xs uppercase tracking-[0.2em] text-sky-700/60">{{ resolvedTagline }}</p>
@@ -27,7 +27,7 @@
           <button
             v-if="!isAuthenticated"
             type="button"
-            class="rounded-full bg-gradient-to-r from-slate-900 to-sky-700 px-4 py-2 text-sm font-medium text-white shadow-sm shadow-slate-900/20 transition hover:brightness-105"
+            class="rounded-full bg-linear-to-r from-slate-900 to-sky-700 px-4 py-2 text-sm font-medium text-white shadow-xs shadow-slate-900/20 transition hover:brightness-105"
             @click="handleLoginClick"
           >
             {{ resolvedLoginLabel }}
@@ -35,7 +35,7 @@
           <div v-else>
             <button
               type="button"
-              class="inline-flex items-center gap-3 rounded-full border border-slate-200 bg-white px-4 py-2 text-left text-sm text-slate-700 shadow-sm transition hover:border-sky-200 hover:bg-sky-50/70"
+              class="inline-flex items-center gap-3 rounded-full border border-slate-200 bg-white px-4 py-2 text-left text-sm text-slate-700 shadow-xs transition hover:border-sky-200 hover:bg-sky-50/70"
               :aria-expanded="menuOpen ? 'true' : 'false'"
               :aria-label="t('common.account')"
               @click="toggleAccountMenu"
@@ -49,7 +49,7 @@
 
             <div
               v-if="menuOpen"
-              class="absolute right-0 top-[calc(100%+0.75rem)] z-50 w-64 rounded-[1.5rem] border border-slate-200 bg-white p-3 shadow-[0_24px_60px_-32px_rgba(15,23,42,0.28)]"
+              class="absolute right-0 top-[calc(100%+0.75rem)] z-50 w-64 rounded-3xl border border-slate-200 bg-white p-3 shadow-[0_24px_60px_-32px_rgba(15,23,42,0.28)]"
             >
               <div class="rounded-[1.1rem] border border-sky-100 bg-sky-50/80 px-4 py-3">
                 <p class="text-[11px] uppercase tracking-[0.22em] text-slate-500">{{ t('common.account') }}</p>

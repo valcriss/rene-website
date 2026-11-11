@@ -1,6 +1,84 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+/*
+  Font Awesome's own stylesheet is unlayered by default, and unlayered CSS beats every Tailwind
+  v4 layer, so its svg-inline--fa sizing would override utilities like h-4 w-4. Importing it into
+  the components layer (and disabling runtime injection in appFactory.ts) restores v3 behaviour.
+*/
+@import '@fortawesome/fontawesome-svg-core/styles.css' layer(components);
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
+
+/*
+  Tailwind CSS v4 preflight changed three defaults that v3 pages relied on. Restore them so the
+  migration keeps the existing look: buttons use the pointer cursor, placeholders use the v3
+  grey instead of a faded currentcolor, and date inputs keep their natural inner height.
+*/
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--color-gray-400);
+  }
+
+  /* v4 preflight forces opacity: 1 on form controls, hiding the browser's dimmed disabled state. */
+  input:disabled,
+  select:disabled,
+  textarea:disabled {
+    opacity: revert;
+  }
+
+  option {
+    padding: revert;
+  }
+
+  /* v4 preflight zeroes the native file button's border/padding/margin; v3 left it untouched. */
+  ::file-selector-button {
+    border: revert;
+    padding: revert;
+    margin: revert;
+  }
+
+  ::-webkit-datetime-edit,
+  ::-webkit-datetime-edit-year-field,
+  ::-webkit-datetime-edit-month-field,
+  ::-webkit-datetime-edit-day-field,
+  ::-webkit-datetime-edit-hour-field,
+  ::-webkit-datetime-edit-minute-field,
+  ::-webkit-datetime-edit-second-field,
+  ::-webkit-datetime-edit-millisecond-field,
+  ::-webkit-datetime-edit-meridiem-field {
+    padding-block: 1px;
+  }
+}
+
+@utility font-display {
+  font-family: var(--font-display);
+}
+
+@utility font-body {
+  font-family: var(--font-body);
+}
 
 @layer base {
   :root {
@@ -23,15 +101,5 @@
   h4 {
     font-family: var(--font-display);
     font-feature-settings: "liga" 1, "kern" 1;
-  }
-}
-
-@layer utilities {
-  .font-display {
-    font-family: var(--font-display);
-  }
-
-  .font-body {
-    font-family: var(--font-body);
   }
 }

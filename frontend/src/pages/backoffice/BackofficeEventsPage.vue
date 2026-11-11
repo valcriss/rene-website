@@ -52,7 +52,7 @@
       </div>
     </div>
 
-    <div v-if="!canEdit" class="rounded-[1.75rem] border border-slate-200 bg-white p-8 shadow-sm">
+    <div v-if="!canEdit" class="rounded-[1.75rem] border border-slate-200 bg-white p-8 shadow-xs">
       <h3 class="text-lg font-medium text-slate-900">{{ t("common.accessDenied") }}</h3>
       <p class="mt-2 text-sm text-slate-500">
         {{ t("editor.deniedLead") }}
@@ -89,7 +89,7 @@
           <li
             v-for="eventItem in myDraftEvents"
             :key="eventItem.id"
-            class="rounded-[1.5rem] border border-slate-200 bg-slate-50/70 p-5"
+            class="rounded-3xl border border-slate-200 bg-slate-50/70 p-5"
           >
             <article class="flex flex-col gap-4">
               <div class="flex flex-wrap items-start justify-between gap-4">
@@ -178,7 +178,7 @@
           <li
             v-for="eventItem in myEditorialReviewEvents"
             :key="eventItem.id"
-            class="rounded-[1.5rem] border border-slate-200 bg-slate-50/70 p-5"
+            class="rounded-3xl border border-slate-200 bg-slate-50/70 p-5"
           >
             <article class="flex flex-col gap-4">
               <div class="flex flex-wrap items-start justify-between gap-4">
@@ -266,7 +266,7 @@
           <li
             v-for="eventItem in visibleMyPublishedEvents"
             :key="eventItem.id"
-            class="rounded-[1.5rem] border border-slate-200 bg-white p-5"
+            class="rounded-3xl border border-slate-200 bg-white p-5"
           >
             <article class="flex flex-col gap-4">
               <div class="flex flex-wrap items-start justify-between gap-4">
@@ -385,7 +385,7 @@
           <li
             v-for="eventItem in visibleOtherEditableEvents"
             :key="eventItem.id"
-            class="rounded-[1.5rem] border border-slate-200 bg-white p-5"
+            class="rounded-3xl border border-slate-200 bg-white p-5"
           >
             <article class="flex flex-col gap-4">
               <div class="flex flex-wrap items-start justify-between gap-4">

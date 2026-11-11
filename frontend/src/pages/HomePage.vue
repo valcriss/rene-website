@@ -7,16 +7,16 @@
     @logout="handleLogout"
   />
 
-  <section class="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(191,219,254,0.55),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(224,231,255,0.85),_transparent_30%),linear-gradient(180deg,_#f7fbff_0%,_#eef4ff_42%,_#f8fbff_100%)]">
+  <section class="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(191,219,254,0.55),transparent_28%),radial-gradient(circle_at_top_right,rgba(224,231,255,0.85),transparent_30%),linear-gradient(180deg,#f7fbff_0%,#eef4ff_42%,#f8fbff_100%)]">
     <div class="pointer-events-none absolute inset-0">
-      <div class="absolute left-[-8rem] top-16 h-64 w-64 rounded-full bg-sky-200/35 blur-3xl"></div>
-      <div class="absolute right-[-6rem] top-24 h-72 w-72 rounded-full bg-indigo-200/30 blur-3xl"></div>
+      <div class="absolute -left-32 top-16 h-64 w-64 rounded-full bg-sky-200/35 blur-3xl"></div>
+      <div class="absolute -right-24 top-24 h-72 w-72 rounded-full bg-indigo-200/30 blur-3xl"></div>
       <div class="absolute bottom-24 left-1/3 h-52 w-52 rounded-full bg-cyan-100/40 blur-3xl"></div>
     </div>
 
     <div class="relative mx-auto max-w-[1600px] px-4 py-8 sm:px-6 lg:px-8 lg:py-10 xl:px-10">
       <div class="grid gap-8 xl:grid-cols-[minmax(0,0.92fr)_minmax(480px,1.08fr)] xl:items-stretch">
-        <div class="flex flex-col justify-between rounded-[2rem] border border-white/90 bg-white p-6 shadow-[0_32px_120px_-56px_rgba(30,41,59,0.28)] sm:p-7 xl:p-8">
+        <div class="flex flex-col justify-between rounded-4xl border border-white/90 bg-white p-6 shadow-[0_32px_120px_-56px_rgba(30,41,59,0.28)] sm:p-7 xl:p-8">
           <div class="space-y-4">
             <HomeTitle :title-lead="homepageSubtitleText" />
             <p class="max-w-2xl text-sm font-semibold uppercase tracking-[0.28em] text-sky-700/65">
@@ -43,7 +43,7 @@
             :aria-label="currentCarouselEvent.title"
             :data-testid="`featured-card-link-${currentCarouselEvent.id}`"
           />
-          <div class="relative aspect-[16/10] w-full overflow-hidden bg-sky-100 sm:aspect-[16/8] xl:aspect-auto xl:min-h-[260px] xl:flex-1">
+          <div class="relative aspect-16/10 w-full overflow-hidden bg-sky-100 sm:aspect-16/8 xl:aspect-auto xl:min-h-[260px] xl:flex-1">
             <img
               class="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
               :src="getEventImage(currentCarouselEvent)"
@@ -79,7 +79,7 @@
                   {{ currentCarouselEvent.title }}
                 </h2>
               </div>
-              <span class="shrink-0 self-start rounded-full bg-gradient-to-r from-sky-500 to-indigo-400 px-4 py-2 text-sm font-semibold text-white shadow-sm sm:self-auto">
+              <span class="shrink-0 self-start rounded-full bg-linear-to-r from-sky-500 to-indigo-400 px-4 py-2 text-sm font-semibold text-white shadow-xs sm:self-auto">
                 {{ t("home.viewEvent") }}
               </span>
             </div>
@@ -119,13 +119,13 @@
 
         <div
           v-else
-          class="rounded-[2.25rem] border border-dashed border-sky-100 bg-white/80 p-8 text-slate-500 shadow-sm backdrop-blur sm:min-h-[360px] xl:min-h-[420px]"
+          class="rounded-[2.25rem] border border-dashed border-sky-100 bg-white/80 p-8 text-slate-500 shadow-xs backdrop-blur-sm sm:min-h-[360px] xl:min-h-[420px]"
         >
           {{ t("home.noFeatured") }}
         </div>
       </div>
 
-      <div class="mt-8 rounded-[2rem] border border-white/90 bg-white/90 p-4 shadow-[0_24px_80px_-48px_rgba(30,41,59,0.2)] backdrop-blur sm:p-6 xl:p-8">
+      <div class="mt-8 rounded-4xl border border-white/90 bg-white/90 p-4 shadow-[0_24px_80px_-48px_rgba(30,41,59,0.2)] backdrop-blur-sm sm:p-6 xl:p-8">
         <div class="flex flex-wrap items-start justify-between gap-4">
           <div class="space-y-2">
             <p class="text-xs font-semibold uppercase tracking-[0.26em] text-sky-700/75">{{ t("home.sectionEyebrow") }}</p>
@@ -136,7 +136,7 @@
               {{ t("home.sectionLead") }}
             </p>
           </div>
-          <span class="rounded-full bg-gradient-to-r from-slate-900 to-sky-700 px-4 py-2 text-sm font-medium text-white shadow-sm shadow-slate-900/15">
+          <span class="rounded-full bg-linear-to-r from-slate-900 to-sky-700 px-4 py-2 text-sm font-medium text-white shadow-xs shadow-slate-900/15">
             {{ t("home.results", filteredEvents.length) }}
           </span>
         </div>
@@ -183,10 +183,10 @@
               <li
                 v-for="eventItem in spotlightEvents"
                 :key="eventItem.id"
-                class="group overflow-hidden rounded-[2rem] border border-sky-100 bg-white shadow-[0_24px_72px_-54px_rgba(30,41,59,0.28)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_32px_84px_-46px_rgba(30,41,59,0.24)]"
+                class="group overflow-hidden rounded-4xl border border-sky-100 bg-white shadow-[0_24px_72px_-54px_rgba(30,41,59,0.28)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_32px_84px_-46px_rgba(30,41,59,0.24)]"
               >
                 <RouterLink :to="getEventDetailPath(eventItem)" class="block" :data-testid="`event-card-${eventItem.id}`">
-                  <div class="relative aspect-[16/10] overflow-hidden bg-sky-100">
+                  <div class="relative aspect-16/10 overflow-hidden bg-sky-100">
                     <img
                       class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
                       :src="getEventImage(eventItem)"
@@ -196,12 +196,12 @@
                       @error="markImageError(eventItem.id)"
                     />
                     <div class="absolute left-5 top-5 flex flex-wrap gap-2">
-                      <span class="rounded-full bg-white/95 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-800 shadow-sm">
+                      <span class="rounded-full bg-white/95 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-800 shadow-xs">
                         {{ formatEventDateBadge(eventItem.occurrences) }}
                       </span>
                       <span
                         v-if="getCategoryName(eventItem.categoryId)"
-                        class="rounded-full px-3 py-1.5 text-xs font-semibold ring-1 shadow-sm"
+                        class="rounded-full px-3 py-1.5 text-xs font-semibold ring-1 shadow-xs"
                         :style="getCategoryTheme(eventItem.categoryId)"
                       >
                         {{ getCategoryName(eventItem.categoryId) }}
@@ -239,7 +239,7 @@
               </li>
             </ul>
 
-            <div class="rounded-[2rem] border border-sky-100 bg-gradient-to-br from-white to-sky-50/70 p-5 shadow-[0_24px_72px_-52px_rgba(30,41,59,0.18)] sm:p-6">
+            <div class="rounded-4xl border border-sky-100 bg-linear-to-br from-white to-sky-50/70 p-5 shadow-[0_24px_72px_-52px_rgba(30,41,59,0.18)] sm:p-6">
               <div class="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p class="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700/75">{{ t("home.mapEyebrow") }}</p>
@@ -257,7 +257,7 @@
     </div>
 
     <div v-if="agendaMeshLinks.length > 0" class="mx-auto mt-10 max-w-[1500px] px-4 sm:px-6 lg:px-8 xl:px-10">
-      <div class="rounded-[2rem] border border-sky-100 bg-white/80 p-6 shadow-[0_20px_60px_-48px_rgba(30,41,59,0.2)]">
+      <div class="rounded-4xl border border-sky-100 bg-white/80 p-6 shadow-[0_20px_60px_-48px_rgba(30,41,59,0.2)]">
         <p class="text-xs font-semibold uppercase tracking-[0.24em] text-sky-700/70">{{ t("home.exploreAgendaEyebrow") }}</p>
         <h2 class="font-display mt-2 text-xl font-semibold tracking-tight text-slate-950">{{ t("home.exploreAgendaTitle") }}</h2>
         <ul class="mt-4 flex flex-wrap gap-2" data-testid="agenda-mesh-links">
