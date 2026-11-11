@@ -46,7 +46,7 @@
     "@tailwindcss/postcss": "^4.3.5",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/vue": "^8.1.0",
-    "@types/node": "^24.19.2",
+    "@types/node": "^26.6.6",
     "@typescript-eslint/eslint-plugin": "^8.53.0",
     "@typescript-eslint/parser": "^8.53.0",
     "@vitejs/plugin-vue": "^6.0.9",

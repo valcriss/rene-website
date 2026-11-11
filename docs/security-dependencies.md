@@ -28,7 +28,7 @@ la version `6.12.0` : les versions ultérieures disponibles au 24 septembre 2026
 dépendance vulnérable à `deepmerge-ts`. Les mainteneurs du projet doivent réévaluer ce verrouillage
 au plus tard le 31 octobre 2026, ou dès la publication d'une version Prisma corrigée.
 
-Le projet requiert Node.js `>=24.9.0` et utilise la branche LTS 24 dans la CI et les images Docker.
+Le projet requiert Node.js `>=26.0.0` et utilise la branche LTS 26 dans la CI et les images Docker.
 
 Le gestionnaire npm global de l'image Node n'est pas requis à l'exécution et est retiré du stage
 final. Le point d'entrée appelle directement le CLI Prisma et le module d'import des communes avec
