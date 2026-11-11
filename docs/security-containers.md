@@ -24,7 +24,7 @@ Contrairement à l’ancien `photon-init`, l’image ne vérifie pas de SHA-256 
 
 ## Migration depuis `photon-init`
 
-Le volume `photon-data` de l’ancienne configuration (jar + index) n’est plus utilisé : la production utilise `photon-data-v2` et le développement un volume nommé `photon-data` au lieu du dossier `./photon`. Après validation, supprimer l’ancien volume (`docker volume rm <projet>_photon-data`) et le dossier `./photon` local. Le premier démarrage télécharge l’index (quelques minutes) ; `rene` attend le healthcheck de `photon`.
+Le volume `photon-data` de l’ancienne configuration (jar + index) n’est plus utilisé : la production utilise `photon-data-v2` et le développement un volume nommé `photon-data` au lieu du dossier `./photon`. Après validation, supprimer l’ancien volume (`docker volume rm <projet>_photon-data`) et le dossier `./photon` local. Le premier démarrage télécharge l’index (environ 5 Go, une dizaine de minutes) ; `rene` attend le healthcheck de `photon`, dont la période de grâce (`start_period`) est de 20 minutes pour couvrir ce téléchargement.
 
 ## Mettre à jour les bases
 
