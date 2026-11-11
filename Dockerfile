@@ -22,7 +22,8 @@ COPY backend/package.json backend/package.json
 COPY backend/prisma backend/prisma
 COPY frontend/package.json frontend/package.json
 
-RUN npm ci --omit=dev --omit=peer --include-workspace-root=false \
+RUN mkdir -p frontend/node_modules \
+	&& npm ci --omit=dev --omit=peer --include-workspace-root=false \
 	&& npx prisma generate --schema backend/prisma/schema.prisma \
 	&& rm -rf /app/node_modules/typescript \
 	&& npm cache clean --force
@@ -35,6 +36,9 @@ ENV PORT=3000
 ENV UPLOAD_DIR=/app/uploads
 
 COPY --from=production-dependencies /app/node_modules ./node_modules
+# npm may nest workspace dependencies under frontend/node_modules (pinia, vue-router and their
+# deps are placed there). The SSR bundle imports them at runtime, so the runtime image needs them.
+COPY --from=production-dependencies /app/frontend/node_modules ./frontend/node_modules
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/backend/package.json ./backend/package.json
 COPY --from=builder /app/backend/dist ./backend/dist
