@@ -41,7 +41,7 @@ npm run prisma:migrate -w backend
 npm run prisma:seed -w backend
 ```
 
-Local Postgres + Photon (geocoding) for dev: `docker-compose.dev.yml` (services: `db`, `photon`, `photon-init`).
+Local Postgres + Photon (geocoding) for dev: `docker-compose.dev.yml` (services: `db`, `photon` — image `rtuszik/photon-docker`, region France).
 
 ## Code quality bar (non-negotiable, see agents.md §8)
 
