@@ -9,6 +9,20 @@ updates:
         dependency-type: production
       development-dependencies:
         dependency-type: development
+    ignore:
+      # TypeScript 7 no longer exposes the JavaScript compiler API: ts-jest (peer typescript <7) and
+      # typescript-eslint (peer <6.1) cannot run with it. Revisit once both support it (see #110).
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      # Node typings follow the supported runtime (engines/CI: Node 24), not the newest release.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+      # Prisma 7 changes how the client is generated and imported (no PrismaClient export from
+      # @prisma/client); it needs its own migration rather than a grouped bump.
+      - dependency-name: "prisma"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@prisma/client"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: docker
     directory: "/"
     schedule:
