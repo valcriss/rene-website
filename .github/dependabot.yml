@@ -18,12 +18,15 @@ updates:
       # Raise this bound together with the runtime.
       - dependency-name: "@types/node"
         versions: [">=27"]
-      # Prisma 7 changes how the client is generated and imported (no PrismaClient export from
-      # @prisma/client); it needs its own migration rather than a grouped bump.
+      # Prisma stays on 6.12.x until the Prisma 7 migration:
+      # - 6.13+ pulls in deepmerge-ts <8 through @prisma/config (CVE-2026-40345, HIGH), which fails
+      #   npm audit and Trivy; the fix only exists in Prisma 7;
+      # - Prisma 7 changes how the client is generated and imported (no PrismaClient export from
+      #   @prisma/client), so it needs its own migration rather than a grouped bump.
       - dependency-name: "prisma"
-        update-types: ["version-update:semver-major"]
+        versions: [">=6.13.0"]
       - dependency-name: "@prisma/client"
-        update-types: ["version-update:semver-major"]
+        versions: [">=6.13.0"]
   - package-ecosystem: docker
     directory: "/"
     schedule:
