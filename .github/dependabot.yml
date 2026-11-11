@@ -14,9 +14,10 @@ updates:
       # typescript-eslint (peer <6.1) cannot run with it. Revisit once both support it (see #110).
       - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
-      # Node typings follow the supported runtime (engines/CI: Node 24), not the newest release.
+      # Node typings follow the supported runtime (engines/CI/Docker: Node 26), not newer releases.
+      # Raise this bound together with the runtime.
       - dependency-name: "@types/node"
-        update-types: ["version-update:semver-major"]
+        versions: [">=27"]
       # Prisma 7 changes how the client is generated and imported (no PrismaClient export from
       # @prisma/client); it needs its own migration rather than a grouped bump.
       - dependency-name: "prisma"
