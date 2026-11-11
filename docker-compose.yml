@@ -110,6 +110,12 @@ services:
       - ALL
     security_opt:
       - no-new-privileges:true
+    healthcheck:
+      # Only the grace period is overridden: the image keeps its own probe (HTTP /status). On a
+      # fresh volume Photon first downloads and unpacks the France index (~5 GB, about 10 minutes
+      # on a good link) and failures during start_period do not count. With the image default of
+      # 4 minutes, `rene` (which waits for a healthy photon) never started on the first deploy.
+      start_period: 20m
     mem_limit: 2g
     cpus: 2.0
     pids_limit: 512
