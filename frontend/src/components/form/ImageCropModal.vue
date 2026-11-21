@@ -58,6 +58,8 @@ import Cropper from "cropperjs";
 const TARGET_WIDTH = 466;
 const TARGET_HEIGHT = 291;
 const TARGET_RATIO = TARGET_WIDTH / TARGET_HEIGHT;
+const CROPPED_TYPE = "image/png";
+const CROPPED_FILENAME = "cover.png";
 
 const CROPPER_TEMPLATE = `<cropper-canvas class="h-full w-full">
   <cropper-image rotatable scalable skewable translatable></cropper-image>
@@ -138,16 +140,16 @@ const handleConfirm = async () => {
   }
 
   const canvas = await selection.$toCanvas({ width: TARGET_WIDTH, height: TARGET_HEIGHT });
-  const sourceType = props.file.type || "image/jpeg";
-  canvas.toBlob(
-    (blob) => {
-      if (!blob) {
-        return;
-      }
-      emit("confirm", new File([blob], props.file!.name, { type: sourceType }));
-    },
-    sourceType,
-    0.92
-  );
+  // Always export as PNG, whatever the source format: every browser can encode it, whereas
+  // canvas.toBlob silently falls back to PNG for formats it can't encode (e.g. WebP on Safari),
+  // which would produce a PNG labelled as WebP that the backend rightly rejects. The backend
+  // re-encodes every upload to WebP anyway. The fixed filename also avoids rejections caused by
+  // source names the backend doesn't accept (e.g. several dots).
+  canvas.toBlob((blob) => {
+    if (!blob) {
+      return;
+    }
+    emit("confirm", new File([blob], CROPPED_FILENAME, { type: CROPPED_TYPE }));
+  }, CROPPED_TYPE);
 };
 </script>
