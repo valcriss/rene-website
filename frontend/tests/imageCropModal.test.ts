@@ -57,8 +57,41 @@ describe("ImageCropModal", () => {
     const confirmed = emitted().confirm;
     expect(confirmed).toBeTruthy();
     const [croppedFile] = confirmed![0] as [File];
-    expect(croppedFile.name).toBe("photo.png");
+    expect(croppedFile.name).toBe("cover.png");
     expect(croppedFile.type).toBe("image/png");
+  });
+
+  it("exports a WebP source as PNG so browsers unable to encode WebP don't mislabel the file", async () => {
+    // Mimics Safari: canvas.toBlob can't encode WebP and silently returns a PNG blob.
+    const toBlob = vi.fn((callback: (blob: Blob | null) => void) => callback(fakeBlob));
+    toCanvasMock.mockResolvedValue({ toBlob });
+
+    const file = new File(["source"], "affiche.concert.webp", { type: "image/webp" });
+    const { emitted } = render(ImageCropModal, { props: { file } });
+    await screen.findByText("Recadrer l'image");
+
+    await fireEvent.click(screen.getByRole("button", { name: "Valider le recadrage" }));
+    await flushPromises();
+
+    expect(toBlob).toHaveBeenCalledWith(expect.any(Function), "image/png");
+    const [croppedFile] = emitted().confirm![0] as [File];
+    expect(croppedFile.name).toBe("cover.png");
+    expect(croppedFile.type).toBe("image/png");
+  });
+
+  it("emits nothing when the canvas can't produce a blob", async () => {
+    toCanvasMock.mockResolvedValue({
+      toBlob: (callback: (blob: Blob | null) => void) => callback(null)
+    });
+
+    const file = new File(["source"], "photo.webp", { type: "image/webp" });
+    const { emitted } = render(ImageCropModal, { props: { file } });
+    await screen.findByText("Recadrer l'image");
+
+    await fireEvent.click(screen.getByRole("button", { name: "Valider le recadrage" }));
+    await flushPromises();
+
+    expect(emitted().confirm).toBeUndefined();
   });
 
   it("emits cancel without producing a file", async () => {
