@@ -171,6 +171,10 @@
           </span>
         </div>
 
+        <p v-if="deleteError && myEditorialReviewEvents.length > 0" class="mt-5 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          {{ deleteError }}
+        </p>
+
         <div v-if="myEditorialReviewEvents.length === 0" class="mt-6 rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-6 text-sm text-slate-500">
           {{ t("editor.noEditorialReview") }}
         </div>
@@ -213,6 +217,13 @@
                     @click="handleSubmitDraft(eventItem.id)"
                   >
                     {{ t("editor.submit") }}
+                  </button>
+                  <button
+                    type="button"
+                    class="rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-100"
+                    @click="handleDelete(eventItem.id)"
+                  >
+                    {{ t("common.delete") }}
                   </button>
                 </div>
               </div>

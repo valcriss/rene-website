@@ -356,6 +356,29 @@ describe("BackofficeEventsPage", () => {
     expect(deleteSpy).toHaveBeenCalledTimes(1);
   });
 
+  it("lets editors delete events sent back by moderation and shows delete errors there", async () => {
+    const { router, pinia } = await setup("/backoffice/events", "EDITOR");
+    const eventsStore = useEventsStore(pinia);
+    const deleteSpy = vi.spyOn(eventsStore, "handleDelete").mockResolvedValue();
+    eventsStore.events = [
+      buildEvent({ id: "2", status: "REJECTED", title: "Ma reprise", rejectionReason: "test" })
+    ];
+    eventsStore.deleteError = "Erreur suppression";
+
+    render(BackofficeEventsPage, {
+      global: {
+        plugins: [pinia, router]
+      }
+    });
+
+    const reviewCard = screen.getByText("Ma reprise").closest("li");
+    expect(reviewCard).not.toBeNull();
+    await fireEvent.click(within(reviewCard as HTMLElement).getByText("Supprimer"));
+
+    expect(deleteSpy).toHaveBeenCalledWith("2");
+    expect(screen.getAllByText("Erreur suppression").length).toBeGreaterThan(0);
+  });
+
   it("shows an unresolved-location banner and disables draft submission when coordinates are missing", async () => {
     const { router, pinia } = await setup("/backoffice/events?location=unresolved&saved=draft", "EDITOR");
     const eventsStore = useEventsStore(pinia);
