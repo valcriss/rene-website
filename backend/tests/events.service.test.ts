@@ -1110,6 +1110,35 @@ describe("event services", () => {
     ]);
   });
 
+  it("deleteEvent lets editors remove their own events sent back by moderation", async () => {
+    const repo = createRepo({
+      ...baseEvent,
+      createdByUserId: "owner-1",
+      status: "REJECTED",
+      rejectionReason: "À compléter"
+    });
+    const result = await deleteEvent(repo, "id", { role: "EDITOR", id: "owner-1" });
+    expect(result.ok).toBe(true);
+  });
+
+  it("deleteEvent forbids editors from removing rejected events they do not own", async () => {
+    const repo = createRepo({ ...baseEvent, createdByUserId: "owner-2", status: "REJECTED" });
+    const result = await deleteEvent(repo, "id", { role: "EDITOR", id: "owner-1" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContain("Action non autorisée.");
+    }
+  });
+
+  it("deleteEvent forbids editors from removing pending events", async () => {
+    const repo = createRepo({ ...baseEvent, createdByUserId: "owner-1", status: "PENDING" });
+    const result = await deleteEvent(repo, "id", { role: "EDITOR", id: "owner-1" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors).toContain("Suppression non autorisée.");
+    }
+  });
+
   it("deleteEvent forbids editors from removing published events", async () => {
     const repo = createRepo({
       ...baseEvent,
