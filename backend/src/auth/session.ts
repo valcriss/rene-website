@@ -7,8 +7,20 @@ export const ACCESS_COOKIE = "rene_access";
 export const REFRESH_COOKIE = "rene_refresh";
 export const CSRF_COOKIE = "rene_csrf";
 export const accessTokenMinutes = 15;
-export const refreshTokenAbsoluteHours = 8;
-export const refreshTokenIdleMinutes = 30;
+export const DEFAULT_SESSION_IDLE_MINUTES = 120;
+export const DEFAULT_SESSION_MAX_HOURS = 7 * 24;
+
+const readPositiveIntegerEnv = (name: string, fallback: number) => {
+  const value = Number(process.env[name]?.trim());
+  return Number.isInteger(value) && value > 0 ? value : fallback;
+};
+
+// How long a session survives without any refresh. The frontend refreshes while the user is
+// active (see frontend/src/auth/sessionKeepAlive.ts), so this only ends sessions left idle.
+export const getSessionIdleMinutes = () => readPositiveIntegerEnv("SESSION_IDLE_MINUTES", DEFAULT_SESSION_IDLE_MINUTES);
+
+// Hard cap from login, after which the user must sign in again whatever their activity.
+export const getSessionMaxHours = () => readPositiveIntegerEnv("SESSION_MAX_HOURS", DEFAULT_SESSION_MAX_HOURS);
 
 export const hashRefreshToken = (token: string) => createHash("sha256").update(token).digest("hex");
 export const generateRefreshToken = () => randomBytes(32).toString("base64url");
@@ -55,7 +67,7 @@ const buildSession = (
   refreshToken: string,
   now: Date,
   familyId: string = randomUUID(),
-  expiresAt = new Date(now.getTime() + refreshTokenAbsoluteHours * 60 * 60 * 1000)
+  expiresAt = new Date(now.getTime() + getSessionMaxHours() * 60 * 60 * 1000)
 ) => ({
   id: randomUUID(),
   userId: user.id,
@@ -93,7 +105,7 @@ export const createSession = async (
 
 const isSessionExpired = (session: AuthSession, now: Date) =>
   session.expiresAt.getTime() <= now.getTime() ||
-  session.lastUsedAt.getTime() + refreshTokenIdleMinutes * 60 * 1000 <= now.getTime();
+  session.lastUsedAt.getTime() + getSessionIdleMinutes() * 60 * 1000 <= now.getTime();
 
 export const refreshSession = async (
   repo: AuthRepository,

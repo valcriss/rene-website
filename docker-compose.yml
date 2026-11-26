@@ -18,6 +18,8 @@ services:
       SMTP_USER: ${SMTP_USER:?Set SMTP_USER in the deployment environment}
       SMTP_PASSWORD_FILE: /run/secrets/smtp_password
       SENDER_EMAIL: ${SENDER_EMAIL:?Set SENDER_EMAIL in the deployment environment}
+      SESSION_IDLE_MINUTES: ${SESSION_IDLE_MINUTES:-120}
+      SESSION_MAX_HOURS: ${SESSION_MAX_HOURS:-168}
       TRUST_PROXY_HOPS: ${TRUST_PROXY_HOPS:-0}
       PHOTON_TIMEOUT_MS: ${PHOTON_TIMEOUT_MS:-3000}
       SMTP_TIMEOUT_MS: ${SMTP_TIMEOUT_MS:-10000}

@@ -7,8 +7,8 @@ L’authentification du navigateur repose sur deux cookies et une protection CSR
 | Cookie | Contenu | Durée | Portée | Attributs |
 | --- | --- | --- | --- | --- |
 | `rene_access` | JWT d’accès | 15 minutes | `/api` | `HttpOnly`, `Secure` en production, `SameSite=Strict` |
-| `rene_refresh` | Secret opaque aléatoire | 8 heures maximum | `/api/auth` | `HttpOnly`, `Secure` en production, `SameSite=Strict` |
-| `rene_csrf` | Secret CSRF non authentifiant | 8 heures maximum | `/` (lecture requise par la SPA) | `Secure` en production, `SameSite=Strict` |
+| `rene_refresh` | Secret opaque aléatoire | 7 jours maximum (`SESSION_MAX_HOURS`) | `/api/auth` | `HttpOnly`, `Secure` en production, `SameSite=Strict` |
+| `rene_csrf` | Secret CSRF non authentifiant | 7 jours maximum (`SESSION_MAX_HOURS`) | `/` (lecture requise par la SPA) | `Secure` en production, `SameSite=Strict` |
 
 Le JWT est signé exclusivement en `HS256`. Le backend impose l’émetteur `rene-website`, l’audience `rene-website-web` et une expiration de 15 minutes par défaut. La clé `JWT_SECRET` reste obligatoire et doit être générée comme décrit dans la documentation d’environnement.
 
@@ -27,7 +27,16 @@ Une modification administrative du compte incrémente `sessionVersion` et révoq
 
 Le refresh token n’est stocké en base que sous forme de condensat SHA-256. À chaque appel de `POST /api/auth/refresh`, il est remplacé et l’ancien enregistrement est révoqué. La présentation ultérieure d’un token déjà utilisé est considérée comme une réutilisation frauduleuse et révoque toute sa famille.
 
-Une famille expire après 8 heures, sans prolongation lors des rotations. Une inactivité de 30 minutes rend aussi le refresh token inutilisable. `POST /api/auth/logout` révoque la famille côté serveur puis efface les trois cookies.
+Une famille expire après `SESSION_MAX_HOURS` heures (168, soit 7 jours, par défaut), sans prolongation lors des rotations. Une inactivité de `SESSION_IDLE_MINUTES` minutes (120 par défaut) rend aussi le refresh token inutilisable. Une valeur absente ou invalide (non entière ou inférieure ou égale à zéro) retombe sur la valeur par défaut. `POST /api/auth/logout` révoque la famille côté serveur puis efface les trois cookies.
+
+## Maintien de la session côté navigateur
+
+Le JWT d’accès reste court (15 minutes) ; la SPA le renouvelle sans intervention de l’utilisateur :
+
+- toute requête authentifiée qui reçoit un `401` déclenche un unique `POST /api/auth/refresh` (les requêtes concurrentes partagent le même appel, pour ne jamais présenter deux fois le même refresh token), puis est rejouée avec le nouveau jeton CSRF. L’utilisateur n’est déconnecté que si ce renouvellement échoue ;
+- tant que l’utilisateur est actif (clavier, souris, défilement, toucher), la SPA renouvelle la session au plus toutes les 10 minutes. Sans activité, aucun renouvellement n’a lieu et la session expire après `SESSION_IDLE_MINUTES`.
+
+Si la session expire réellement pendant la saisie d’un événement, le contenu du formulaire est conservé dans le `sessionStorage` de l’onglet, associé à l’identifiant de l’utilisateur, puis restauré après sa reconnexion et effacé aussitôt. Seul le contenu du formulaire y est écrit, jamais de credentials. Une image recadrée mais pas encore envoyée n’est pas conservée.
 
 ## Protection CSRF et vol de session
 

@@ -5,7 +5,7 @@ import {
   CSRF_COOKIE,
   generateCsrfToken,
   REFRESH_COOKIE,
-  refreshTokenAbsoluteHours
+  getSessionMaxHours
 } from "./session";
 
 const secure = () => process.env.NODE_ENV === "production";
@@ -23,14 +23,14 @@ export const setSessionCookies = (res: Response, accessToken: string, refreshTok
     secure: secure(),
     sameSite: "strict",
     path: "/api/auth",
-    maxAge: refreshTokenAbsoluteHours * 60 * 60 * 1000
+    maxAge: getSessionMaxHours() * 60 * 60 * 1000
   });
   res.cookie(CSRF_COOKIE, generateCsrfToken(), {
     httpOnly: false,
     secure: secure(),
     sameSite: "strict",
     path: "/",
-    maxAge: refreshTokenAbsoluteHours * 60 * 60 * 1000
+    maxAge: getSessionMaxHours() * 60 * 60 * 1000
   });
 };
 

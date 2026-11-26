@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { uploadImage } from "../src/api/uploads";
+import { setSessionExpiredHandler } from "../src/api/authHeaders";
 
 describe("uploads api", () => {
   afterEach(() => {
@@ -51,5 +52,16 @@ describe("uploads api", () => {
 
     const file = new File(["image"], "photo.png", { type: "image/png" });
     await expect(uploadImage(file)).rejects.toThrow("Upload refusé");
+  });
+
+  it("hands an expired session over to the session-expired handler instead of showing an error", async () => {
+    const onExpired = vi.fn();
+    setSessionExpiredHandler(onExpired);
+    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve({ ok: false, status: 401, json: () => Promise.resolve({}) })));
+
+    const file = new File(["image"], "photo.png", { type: "image/png" });
+    void uploadImage(file);
+
+    await vi.waitFor(() => expect(onExpired).toHaveBeenCalledTimes(1));
   });
 });

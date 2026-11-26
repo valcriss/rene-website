@@ -108,6 +108,26 @@ describe("BackofficeEventCreatePage", () => {
     expect(await screen.findByText("Aucune catégorie disponible.")).toBeInTheDocument();
   });
 
+  it("tells the user their input was restored after re-login and lets them dismiss it", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve([]) }))
+    );
+
+    const setup = await setupPage();
+    setup.categoriesStore.hasLoaded = true;
+    setup.editorStore.restoredAfterReauth = { hadPendingImage: true };
+    renderPage(setup);
+
+    const notice = await screen.findByTestId("restored-after-reauth");
+    expect(notice).toHaveTextContent("votre saisie a été restaurée");
+    expect(notice).toHaveTextContent("sélectionnez-la à nouveau");
+
+    await fireEvent.click(screen.getByRole("button", { name: "Masquer" }));
+
+    expect(screen.queryByTestId("restored-after-reauth")).not.toBeInTheDocument();
+  });
+
   it("shows the editor error as an always-visible floating alert", async () => {
     vi.stubGlobal(
       "fetch",

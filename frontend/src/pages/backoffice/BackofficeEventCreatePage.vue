@@ -56,6 +56,21 @@
         {{ publishedEditLead }}
       </div>
 
+      <div
+        v-if="restoredAfterReauth"
+        class="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"
+        role="status"
+        data-testid="restored-after-reauth"
+      >
+        <div class="grid gap-1">
+          <p>{{ t("editor.restoredAfterReauth") }}</p>
+          <p v-if="restoredAfterReauth.hadPendingImage">{{ t("editor.restoredAfterReauthImage") }}</p>
+        </div>
+        <button type="button" class="text-sm font-medium underline underline-offset-2" @click="dismissRestoredNotice">
+          {{ t("editor.dismissRestoredNotice") }}
+        </button>
+      </div>
+
       <Teleport to="body">
         <div
           v-if="editorError"
@@ -591,7 +606,8 @@ const {
   isSubmittingForModeration,
   isPublishingDirectly,
   useManualLocation,
-  lastGeolocationPrecision
+  lastGeolocationPrecision,
+  restoredAfterReauth
 } = storeToRefs(editorStore);
 
 const {
@@ -606,7 +622,8 @@ const {
   updateSocialLink,
   setManualLocation,
   addOccurrence,
-  removeOccurrence
+  removeOccurrence,
+  dismissRestoredNotice
 } = editorStore;
 
 const contactsOpen = ref(false);

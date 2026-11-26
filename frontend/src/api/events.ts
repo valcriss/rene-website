@@ -1,4 +1,5 @@
 import { buildAuthHeaders, handleSessionExpired } from "./authHeaders";
+import { authFetch } from "./authFetch";
 
 export type EventStatus = "DRAFT" | "PENDING" | "PUBLISHED" | "REJECTED";
 
@@ -136,7 +137,7 @@ export const fetchPublicEvents = async (): Promise<EventItem[]> => {
 };
 
 export const fetchEvents = async (role: string): Promise<EventItem[]> => {
-  const response = await fetch("/api/events", { headers: buildAuthHeaders(role) });
+  const response = await authFetch("/api/events", { headers: buildAuthHeaders(role) });
   if (!response.ok) {
     if (response.status === 401) {
       return handleSessionExpired();
@@ -147,7 +148,7 @@ export const fetchEvents = async (role: string): Promise<EventItem[]> => {
 };
 
 export const createEvent = async (payload: CreateEventPayload, role: string): Promise<EventItem> => {
-  const response = await fetch("/api/events", {
+  const response = await authFetch("/api/events", {
     method: "POST",
     headers: buildAuthHeaders(role),
     body: JSON.stringify(payload)
@@ -166,7 +167,7 @@ export const updateEvent = async (
   payload: CreateEventPayload,
   role: string
 ): Promise<EventItem> => {
-  const response = await fetch(`/api/events/${id}`, {
+  const response = await authFetch(`/api/events/${id}`, {
     method: "PUT",
     headers: buildAuthHeaders(role),
     body: JSON.stringify(payload)
@@ -181,7 +182,7 @@ export const updateEvent = async (
 };
 
 export const submitEvent = async (id: string, role: string): Promise<EventItem> => {
-  const response = await fetch(`/api/events/${id}/submit`, {
+  const response = await authFetch(`/api/events/${id}/submit`, {
     method: "POST",
     headers: buildAuthHeaders(role)
   });
@@ -195,7 +196,7 @@ export const submitEvent = async (id: string, role: string): Promise<EventItem> 
 };
 
 export const deleteEvent = async (id: string, role: string): Promise<{ id: string }> => {
-  const response = await fetch(`/api/events/${id}`, {
+  const response = await authFetch(`/api/events/${id}`, {
     method: "DELETE",
     headers: buildAuthHeaders(role)
   });

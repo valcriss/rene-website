@@ -1,4 +1,5 @@
-import { buildAuthHeaders } from "./authHeaders";
+import { buildAuthHeaders, handleSessionExpired } from "./authHeaders";
+import { authFetch } from "./authFetch";
 
 const parseApiError = async (response: Response, fallback: string) => {
   try {
@@ -18,12 +19,15 @@ const parseApiError = async (response: Response, fallback: string) => {
 export const uploadImage = async (file: File): Promise<string> => {
   const formData = new FormData();
   formData.append("image", file);
-  const response = await fetch("/api/uploads", {
+  const response = await authFetch("/api/uploads", {
     method: "POST",
     headers: buildAuthHeaders(undefined, false),
     body: formData
   });
   if (!response.ok) {
+    if (response.status === 401) {
+      return handleSessionExpired();
+    }
     throw new Error(await parseApiError(response, "Impossible d'uploader l'image"));
   }
   const data = (await response.json()) as { url: string };
