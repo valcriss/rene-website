@@ -7,6 +7,7 @@ import { useCategoriesStore } from "../src/stores/categories";
 import { useAuthStore } from "../src/stores/auth";
 import { useEventsStore } from "../src/stores/events";
 import { createTestRouter } from "./testRouter";
+import { handleSessionExpired } from "../src/api/authHeaders";
 
 type FetchInput = string | { url: string };
 type FetchInit = { method?: string };
@@ -239,6 +240,59 @@ describe("App", () => {
 
     await waitFor(() => expect(router.currentRoute.value.path).toBe("/login"));
     expect(screen.queryByText(/Impossible de charger/)).not.toBeInTheDocument();
+  });
+
+  it("renews an expired access token without logging the user out", async () => {
+    let usersCalls = 0;
+    const fetchMock = vi.fn((input: FetchInput) => {
+      const url = typeof input === "string" ? input : input.url;
+      if (url === "/api/admin/users") {
+        usersCalls += 1;
+        return Promise.resolve(
+          usersCalls === 1
+            ? { ok: false, status: 401, json: () => Promise.resolve({}) }
+            : { ok: true, status: 200, json: () => Promise.resolve([]) }
+        );
+      }
+      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([]) });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const router = await renderWithRouter("/backoffice/events", "ADMIN");
+
+    await waitFor(() => expect(usersCalls).toBe(2));
+    expect(fetchMock.mock.calls.some(([input]) => input === "/api/auth/refresh")).toBe(true);
+    expect(router.currentRoute.value.path).toBe("/backoffice/events");
+  });
+
+  it("restores the event being written after the session expires and the user signs back in", async () => {
+    window.sessionStorage.clear();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: FetchInput) => {
+        const url = typeof input === "string" ? input : input.url;
+        if (url.includes("/api/auth/login")) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ user: { id: "user-1", name: "User", email: "user@test", role: "EDITOR" } })
+          });
+        }
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([]) });
+      })
+    );
+    const router = await renderWithRouter("/backoffice/events/new", "EDITOR");
+    await fireEvent.update(await screen.findByLabelText("Titre"), "Concert à restaurer");
+
+    void handleSessionExpired();
+
+    await waitFor(() => expect(router.currentRoute.value.path).toBe("/login"));
+    await fireEvent.update(screen.getByLabelText("Email"), "user@test");
+    await fireEvent.update(screen.getByLabelText("Mot de passe"), "secret");
+    await fireEvent.click(screen.getByRole("button", { name: "Se connecter" }));
+
+    await waitFor(() => expect(router.currentRoute.value.path).toBe("/backoffice/events/new"));
+    expect(await screen.findByDisplayValue("Concert à restaurer")).toBeInTheDocument();
+    expect(screen.getByTestId("restored-after-reauth")).toHaveTextContent("votre saisie a été restaurée");
   });
 
   it("shows account access instead of login on home when authenticated", async () => {

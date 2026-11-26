@@ -86,10 +86,12 @@ import { useRouter } from "vue-router";
 import NavigationHeader from "../components/navigation/Header.vue";
 import PasswordField from "../components/form/PasswordField.vue";
 import { useAuthStore } from "../stores/auth";
+import { useEditorStore } from "../stores/editor";
 
 const router = useRouter();
 const { t } = useI18n();
 const authStore = useAuthStore();
+const editorStore = useEditorStore();
 const { email, password, canEdit, authError } = storeToRefs(authStore);
 const isDev = import.meta.env.DEV;
 const quickLogin = ref("");
@@ -112,7 +114,9 @@ const handleLogin = async () => {
   try {
     await authStore.loginWithPassword();
     authStore.resetCredentials();
-    router.push("/backoffice");
+    // Back to the event form if its input was kept when the previous session expired.
+    const restored = authStore.userId !== null && editorStore.restoreFormAfterReauth(authStore.userId);
+    router.push(restored ? "/backoffice/events/new" : "/backoffice");
   } catch (error) {
     authError.value = error instanceof Error ? error.message : "Connexion impossible";
   }

@@ -62,6 +62,22 @@ const defaultSocialLink = (): SocialLink => ({
 const cloneSocialLinks = (socialLinks?: SocialLink[]) => socialLinks?.map((link) => ({ ...link })) ?? [];
 
 const PREVIEW_STORAGE_PREFIX = "rene-website-preview";
+const REAUTH_DRAFT_STORAGE_KEY = "rene-website-reauth-draft";
+
+// Snapshot of the event form taken when the session really expires mid-edit, so the input
+// survives the trip through the login page. Kept in sessionStorage (this tab only) and tied to
+// the user it belongs to; it holds form content only, never credentials.
+type ReauthDraft = {
+  userId: string;
+  editorMode: "create" | "edit";
+  editingEventId: string | null;
+  editingPublishedEvent: boolean;
+  editingPublishedRevisionStatus: EventRevisionStatus | null;
+  form: CreateEventPayload;
+  useManualLocation: boolean[];
+  lastGeolocationPrecision: Array<GeolocationPrecision | null>;
+  hadPendingImage: boolean;
+};
 
 const extractDateInput = (value?: string | null) => {
   if (!value) {
@@ -152,8 +168,10 @@ export const useEditorStore = defineStore("editor", () => {
   );
   const useManualLocation = ref<boolean[]>([false]);
   const lastGeolocationPrecision = ref<Array<GeolocationPrecision | null>>([null]);
+  const restoredAfterReauth = ref<{ hadPendingImage: boolean } | null>(null);
 
   const resetEditorForm = () => {
+    restoredAfterReauth.value = null;
     editorMode.value = "create";
     editingEventId.value = null;
     editingPublishedEvent.value = false;
@@ -182,6 +200,7 @@ export const useEditorStore = defineStore("editor", () => {
   };
 
   const startEdit = (eventItem: EventItem) => {
+    restoredAfterReauth.value = null;
     const source = eventItem.pendingRevision ? { ...eventItem, ...eventItem.pendingRevision } : eventItem;
     editorMode.value = "edit";
     editingEventId.value = eventItem.id;
@@ -562,6 +581,65 @@ export const useEditorStore = defineStore("editor", () => {
     editorForm.socialLinks = nextLinks;
   };
 
+  const preserveFormForReauth = (userId: string) => {
+    const draft: ReauthDraft = {
+      userId,
+      editorMode: editorMode.value,
+      editingEventId: editingEventId.value,
+      editingPublishedEvent: editingPublishedEvent.value,
+      editingPublishedRevisionStatus: editingPublishedRevisionStatus.value,
+      form: JSON.parse(JSON.stringify(editorForm)) as CreateEventPayload,
+      useManualLocation: [...useManualLocation.value],
+      lastGeolocationPrecision: [...lastGeolocationPrecision.value],
+      hadPendingImage: imageFile.value !== null
+    };
+    try {
+      window.sessionStorage.setItem(REAUTH_DRAFT_STORAGE_KEY, JSON.stringify(draft));
+    } catch {
+      // Storage unavailable (private mode, quota): the input can't be kept across the login.
+    }
+    // Clear the in-memory form so nobody else signing in from this tab can see it. A save
+    // interrupted by the expiry never settles (see handleSessionExpired), so its in-progress
+    // flags are cleared here too, or the restored form's buttons would stay disabled.
+    resetEditorForm();
+    editorError.value = null;
+    isSavingDraft.value = false;
+    isSubmittingForModeration.value = false;
+    isPublishingDirectly.value = false;
+  };
+
+  const readReauthDraft = (): ReauthDraft | null => {
+    try {
+      const raw = window.sessionStorage.getItem(REAUTH_DRAFT_STORAGE_KEY);
+      window.sessionStorage.removeItem(REAUTH_DRAFT_STORAGE_KEY);
+      return raw ? (JSON.parse(raw) as ReauthDraft) : null;
+    } catch {
+      return null;
+    }
+  };
+
+  // Restores the snapshot only for the user it was taken for; it's discarded either way.
+  const restoreFormAfterReauth = (userId: string): boolean => {
+    const draft = readReauthDraft();
+    if (!draft || draft.userId !== userId) {
+      return false;
+    }
+    resetEditorForm();
+    editorMode.value = draft.editorMode;
+    editingEventId.value = draft.editingEventId;
+    editingPublishedEvent.value = draft.editingPublishedEvent;
+    editingPublishedRevisionStatus.value = draft.editingPublishedRevisionStatus;
+    Object.assign(editorForm, draft.form);
+    useManualLocation.value = draft.useManualLocation;
+    lastGeolocationPrecision.value = draft.lastGeolocationPrecision;
+    restoredAfterReauth.value = { hadPendingImage: draft.hadPendingImage };
+    return true;
+  };
+
+  const dismissRestoredNotice = () => {
+    restoredAfterReauth.value = null;
+  };
+
   const getEditorError = () => editorError.value;
   const getEditorFormValues = () => ({ ...editorForm });
 
@@ -595,6 +673,10 @@ export const useEditorStore = defineStore("editor", () => {
     removeSocialLink,
     updateSocialLink,
     formatDateInput,
+    restoredAfterReauth,
+    preserveFormForReauth,
+    restoreFormAfterReauth,
+    dismissRestoredNotice,
     getEditorError,
     getEditorFormValues
   };

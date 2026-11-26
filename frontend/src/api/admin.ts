@@ -1,4 +1,5 @@
 import { buildAuthHeaders, handleSessionExpired } from "./authHeaders";
+import { authFetch } from "./authFetch";
 
 export type AdminUserRole = "EDITOR" | "MODERATOR" | "ADMIN";
 
@@ -30,7 +31,7 @@ export type AdminSettings = {
 const jsonHeaders = (role: string) => buildAuthHeaders(role);
 
 export const fetchAdminUsers = async (role: string): Promise<AdminUser[]> => {
-  const response = await fetch("/api/admin/users", { headers: jsonHeaders(role) });
+  const response = await authFetch("/api/admin/users", { headers: jsonHeaders(role) });
   if (!response.ok) {
     if (response.status === 401) {
       return handleSessionExpired();
@@ -41,7 +42,7 @@ export const fetchAdminUsers = async (role: string): Promise<AdminUser[]> => {
 };
 
 export const createAdminUser = async (role: string, payload: Omit<AdminUser, "id">): Promise<AdminUser> => {
-  const response = await fetch("/api/admin/users", {
+  const response = await authFetch("/api/admin/users", {
     method: "POST",
     headers: jsonHeaders(role),
     body: JSON.stringify(payload)
@@ -60,7 +61,7 @@ export const updateAdminUser = async (
   id: string,
   payload: Omit<AdminUser, "id">
 ): Promise<AdminUser> => {
-  const response = await fetch(`/api/admin/users/${id}`, {
+  const response = await authFetch(`/api/admin/users/${id}`, {
     method: "PUT",
     headers: jsonHeaders(role),
     body: JSON.stringify(payload)
@@ -75,7 +76,7 @@ export const updateAdminUser = async (
 };
 
 export const deleteAdminUser = async (role: string, id: string): Promise<void> => {
-  const response = await fetch(`/api/admin/users/${id}`, {
+  const response = await authFetch(`/api/admin/users/${id}`, {
     method: "DELETE",
     headers: jsonHeaders(role)
   });
@@ -88,7 +89,7 @@ export const deleteAdminUser = async (role: string, id: string): Promise<void> =
 };
 
 export const fetchAdminCategories = async (role: string): Promise<AdminCategory[]> => {
-  const response = await fetch("/api/admin/categories", { headers: jsonHeaders(role) });
+  const response = await authFetch("/api/admin/categories", { headers: jsonHeaders(role) });
   if (!response.ok) {
     if (response.status === 401) {
       return handleSessionExpired();
@@ -102,7 +103,7 @@ export const createAdminCategory = async (
   role: string,
   payload: Omit<AdminCategory, "id">
 ): Promise<AdminCategory> => {
-  const response = await fetch("/api/admin/categories", {
+  const response = await authFetch("/api/admin/categories", {
     method: "POST",
     headers: jsonHeaders(role),
     body: JSON.stringify(payload)
@@ -121,7 +122,7 @@ export const updateAdminCategory = async (
   id: string,
   payload: Omit<AdminCategory, "id">
 ): Promise<AdminCategory> => {
-  const response = await fetch(`/api/admin/categories/${id}`, {
+  const response = await authFetch(`/api/admin/categories/${id}`, {
     method: "PUT",
     headers: jsonHeaders(role),
     body: JSON.stringify(payload)
@@ -136,7 +137,7 @@ export const updateAdminCategory = async (
 };
 
 export const deleteAdminCategory = async (role: string, id: string): Promise<void> => {
-  const response = await fetch(`/api/admin/categories/${id}`, {
+  const response = await authFetch(`/api/admin/categories/${id}`, {
     method: "DELETE",
     headers: jsonHeaders(role)
   });
@@ -149,7 +150,7 @@ export const deleteAdminCategory = async (role: string, id: string): Promise<voi
 };
 
 export const fetchAdminSettings = async (role: string): Promise<AdminSettings> => {
-  const response = await fetch("/api/admin/settings", { headers: jsonHeaders(role) });
+  const response = await authFetch("/api/admin/settings", { headers: jsonHeaders(role) });
   if (!response.ok) {
     if (response.status === 401) {
       return handleSessionExpired();
@@ -160,7 +161,7 @@ export const fetchAdminSettings = async (role: string): Promise<AdminSettings> =
 };
 
 export const updateAdminSettings = async (role: string, payload: AdminSettings): Promise<AdminSettings> => {
-  const response = await fetch("/api/admin/settings", {
+  const response = await authFetch("/api/admin/settings", {
     method: "PUT",
     headers: jsonHeaders(role),
     body: JSON.stringify(payload)
@@ -175,7 +176,7 @@ export const updateAdminSettings = async (role: string, payload: AdminSettings):
 };
 
 export const fetchAdminAudiences = async (role: string): Promise<AdminAudience[]> => {
-  const response = await fetch("/api/admin/audiences", { headers: jsonHeaders(role) });
+  const response = await authFetch("/api/admin/audiences", { headers: jsonHeaders(role) });
   if (!response.ok) {
     if (response.status === 401) {
       return handleSessionExpired();
@@ -189,7 +190,7 @@ export const createAdminAudience = async (
   role: string,
   payload: Omit<AdminAudience, "id">
 ): Promise<AdminAudience> => {
-  const response = await fetch("/api/admin/audiences", {
+  const response = await authFetch("/api/admin/audiences", {
     method: "POST",
     headers: jsonHeaders(role),
     body: JSON.stringify(payload)
@@ -208,7 +209,7 @@ export const updateAdminAudience = async (
   id: string,
   payload: Omit<AdminAudience, "id">
 ): Promise<AdminAudience> => {
-  const response = await fetch(`/api/admin/audiences/${id}`, {
+  const response = await authFetch(`/api/admin/audiences/${id}`, {
     method: "PUT",
     headers: jsonHeaders(role),
     body: JSON.stringify(payload)
@@ -223,7 +224,7 @@ export const updateAdminAudience = async (
 };
 
 export const deleteAdminAudience = async (role: string, id: string): Promise<void> => {
-  const response = await fetch(`/api/admin/audiences/${id}`, {
+  const response = await authFetch(`/api/admin/audiences/${id}`, {
     method: "DELETE",
     headers: jsonHeaders(role)
   });

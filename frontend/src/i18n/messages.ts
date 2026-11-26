@@ -310,6 +310,11 @@ export const messages = {
         "Le lieu pr\u00e9cis n'a pas \u00e9t\u00e9 g\u00e9olocalis\u00e9. Cette fiche utilise une localisation approximative et peut \u00eatre soumise telle quelle.",
       editLockedWhilePending:
         "Modification indisponible tant que cet \u00e9v\u00e9nement est en cours de mod\u00e9ration.",
+      restoredAfterReauth:
+        "Votre session avait expir\u00e9 : votre saisie a \u00e9t\u00e9 restaur\u00e9e. Pensez \u00e0 l'enregistrer.",
+      restoredAfterReauthImage:
+        "L'image que vous veniez de choisir n'avait pas encore \u00e9t\u00e9 envoy\u00e9e : s\u00e9lectionnez-la \u00e0 nouveau.",
+      dismissRestoredNotice: "Masquer",
       rejectionReasonLabel: "Motif : {reason}",
       draftRevisionNotice: "Une nouvelle version est enregistr\u00e9e en brouillon. Elle reste priv\u00e9e tant que vous ne la soumettez pas \u00e0 la mod\u00e9ration.",
       pendingRevisionNotice: "Une nouvelle version est actuellement en attente de validation. La version publi\u00e9e reste visible sur le site public jusqu'\u00e0 d\u00e9cision.",
@@ -898,6 +903,9 @@ export const messages = {
         "The exact venue could not be geolocated. This entry is using an approximate location and can still be submitted as-is.",
       editLockedWhilePending:
         "Editing is unavailable while this event is under moderation.",
+      restoredAfterReauth: "Your session had expired: your input has been restored. Remember to save it.",
+      restoredAfterReauthImage: "The image you had just chosen was not uploaded yet: please select it again.",
+      dismissRestoredNotice: "Dismiss",
       rejectionReasonLabel: "Reason: {reason}",
       draftRevisionNotice: "A new version is saved as a draft. It stays private until you submit it for moderation.",
       pendingRevisionNotice: "A new version is currently waiting for validation. The published version stays visible on the public site until a decision is made.",

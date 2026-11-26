@@ -5,14 +5,15 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onServerPrefetch, watch } from "vue";
+import { onBeforeUnmount, onMounted, onServerPrefetch, watch } from "vue";
 import { useHead } from "@unhead/vue";
 import { useRoute, useRouter } from "vue-router";
 import { useAuthStore } from "./stores/auth";
 import { useEventsStore } from "./stores/events";
 import { useEditorStore } from "./stores/editor";
 import { useAdminStore } from "./stores/admin";
-import { setSessionExpiredHandler } from "./api/authHeaders";
+import { handleSessionExpired, setSessionExpiredHandler } from "./api/authHeaders";
+import { startSessionKeepAlive } from "./auth/sessionKeepAlive";
 import { getCurrentLocale } from "./i18n";
 
 const router = useRouter();
@@ -30,6 +31,10 @@ const editorStore = useEditorStore();
 const adminStore = useAdminStore();
 
 setSessionExpiredHandler(() => {
+  // Keep the event being written so it can be restored once the user signs back in.
+  if (route.name === "backoffice-events-new" && authStore.userId) {
+    editorStore.preserveFormForReauth(authStore.userId);
+  }
   void authStore.logout();
 });
 
@@ -38,7 +43,8 @@ watch(
   ([path, authenticated, initialized]) => {
     if (!initialized) return;
     if ((path === "/login" || path === "/signup" || path === "/forgot-password" || path === "/reset-password") && authenticated) {
-      router.replace("/backoffice").catch(() => {});
+      // LoginPage restores any input kept from an expired session; both redirects must agree.
+      router.replace(editorStore.restoredAfterReauth ? "/backoffice/events/new" : "/backoffice").catch(() => {});
       return;
     }
     if (path.startsWith("/backoffice") && !authenticated) {
@@ -77,6 +83,18 @@ watch(
 onMounted(() => {
   eventsStore.loadEvents();
 });
+
+// Keeps the session alive while a signed-in user is active (browser only: never during SSR).
+let stopSessionKeepAlive: (() => void) | null = null;
+const syncSessionKeepAlive = (authenticated: boolean) => {
+  stopSessionKeepAlive?.();
+  stopSessionKeepAlive = authenticated ? startSessionKeepAlive(() => void handleSessionExpired()) : null;
+};
+onMounted(() => {
+  syncSessionKeepAlive(authStore.isAuthenticated);
+  watch(() => authStore.isAuthenticated, syncSessionKeepAlive);
+});
+onBeforeUnmount(() => syncSessionKeepAlive(false));
 
 // onMounted never runs during SSR, so the initial event list would otherwise render blank;
 // onServerPrefetch awaits the same load server-side (see loadEvents' guard doc comment).

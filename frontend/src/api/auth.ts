@@ -1,4 +1,5 @@
 import { buildAuthHeaders } from "./authHeaders";
+import { refreshAccessSession } from "./authFetch";
 
 export type AuthUser = {
   id: string;
@@ -87,12 +88,7 @@ export const verifyEmail = async (payload: VerifyEmailPayload): Promise<void> =>
 export const getSession = async (): Promise<AuthResponse | null> => {
   let response = await fetch("/api/auth/session", { credentials: "same-origin" });
   if (response.status === 401) {
-    const refresh = await fetch("/api/auth/refresh", {
-      method: "POST",
-      credentials: "same-origin",
-      headers: buildAuthHeaders(undefined, false)
-    });
-    if (!refresh.ok) return null;
+    if ((await refreshAccessSession()) !== "refreshed") return null;
     response = await fetch("/api/auth/session", { credentials: "same-origin" });
   }
   return response.ok ? response.json() as Promise<AuthResponse> : null;

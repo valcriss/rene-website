@@ -1,4 +1,5 @@
 import { buildAuthHeaders, handleSessionExpired } from "./authHeaders";
+import { authFetch } from "./authFetch";
 
 export type CategorySubscription = {
   id: string;
@@ -9,7 +10,7 @@ export type CategorySubscription = {
 const jsonHeaders = (role: string) => buildAuthHeaders(role);
 
 export const fetchCategorySubscriptions = async (role: string): Promise<CategorySubscription[]> => {
-  const response = await fetch("/api/subscriptions/categories", { headers: jsonHeaders(role) });
+  const response = await authFetch("/api/subscriptions/categories", { headers: jsonHeaders(role) });
   if (!response.ok) {
     if (response.status === 401) {
       return handleSessionExpired();
@@ -24,7 +25,7 @@ export const updateCategorySubscription = async (
   categoryId: string,
   subscribed: boolean
 ): Promise<void> => {
-  const response = await fetch(`/api/subscriptions/categories/${categoryId}`, {
+  const response = await authFetch(`/api/subscriptions/categories/${categoryId}`, {
     method: "PUT",
     headers: jsonHeaders(role),
     body: JSON.stringify({ subscribed })

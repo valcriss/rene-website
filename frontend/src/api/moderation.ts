@@ -1,5 +1,6 @@
 import type { EventItem } from "./events";
 import { buildAuthHeaders, handleSessionExpired } from "./authHeaders";
+import { authFetch } from "./authFetch";
 
 export type ModeratorRole = "MODERATOR" | "ADMIN";
 export type AdminRole = "ADMIN";
@@ -9,7 +10,7 @@ const callModerationEndpoint = async <T>(
   role: ModeratorRole,
   body?: Record<string, unknown>
 ): Promise<T> => {
-  const response = await fetch(url, {
+  const response = await authFetch(url, {
     method: "POST",
     headers: buildAuthHeaders(role),
     body: body ? JSON.stringify(body) : undefined
@@ -52,7 +53,7 @@ export const updateEventFeatured = async (
   role: AdminRole,
   featured: boolean
 ): Promise<EventItem> => {
-  const response = await fetch(`/api/events/${id}/featured`, {
+  const response = await authFetch(`/api/events/${id}/featured`, {
     method: "PATCH",
     headers: buildAuthHeaders(role),
     body: JSON.stringify({ featured })

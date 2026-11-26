@@ -5,8 +5,11 @@ import {
   generateRefreshToken,
   hashRefreshToken,
   parseCookies,
+  DEFAULT_SESSION_IDLE_MINUTES,
+  DEFAULT_SESSION_MAX_HOURS,
+  getSessionIdleMinutes,
+  getSessionMaxHours,
   refreshSession,
-  refreshTokenIdleMinutes,
   revokeSession
 } from "../src/auth/session";
 import { createInMemoryAuthRepository } from "../src/auth/inMemoryRepository";
@@ -73,18 +76,71 @@ describe("auth sessions", () => {
     const now = new Date("2026-09-24T10:00:00.000Z");
     expect(await refreshSession(repo, "missing", now)).toEqual({ ok: false, code: "invalid" });
 
-    const absolute = await createSession(repo, user, now);
-    if (!absolute.ok) return;
-    expect(await refreshSession(repo, absolute.value.refreshToken, new Date("2026-09-25T10:00:00.000Z")))
-      .toEqual({ ok: false, code: "expired" });
-
     const idle = await createSession(repo, user, now);
     if (!idle.ok) return;
     expect(await refreshSession(
       repo,
       idle.value.refreshToken,
-      new Date(now.getTime() + refreshTokenIdleMinutes * 60_000)
+      new Date(now.getTime() + DEFAULT_SESSION_IDLE_MINUTES * 60_000)
     )).toEqual({ ok: false, code: "expired" });
+  });
+
+  it("keeps an active session alive past the old 30-minute idle window", async () => {
+    const repo = createInMemoryAuthRepository();
+    const user = await createUser(repo);
+    const now = new Date("2026-09-24T10:00:00.000Z");
+    const created = await createSession(repo, user, now);
+    if (!created.ok) return;
+
+    const refreshed = await refreshSession(repo, created.value.refreshToken, new Date(now.getTime() + 90 * 60_000));
+    expect(refreshed.ok).toBe(true);
+  });
+
+  it("ends a session at its absolute lifetime even when it keeps being refreshed", async () => {
+    process.env.SESSION_MAX_HOURS = "1";
+    try {
+      const repo = createInMemoryAuthRepository();
+      const user = await createUser(repo);
+      const now = new Date("2026-09-24T10:00:00.000Z");
+      const created = await createSession(repo, user, now);
+      if (!created.ok) return;
+
+      const first = await refreshSession(repo, created.value.refreshToken, new Date(now.getTime() + 40 * 60_000));
+      expect(first.ok).toBe(true);
+      if (!first.ok) return;
+      expect(await refreshSession(repo, first.value.refreshToken, new Date(now.getTime() + 60 * 60_000)))
+        .toEqual({ ok: false, code: "expired" });
+    } finally {
+      delete process.env.SESSION_MAX_HOURS;
+    }
+  });
+
+  describe("session durations", () => {
+    afterEach(() => {
+      delete process.env.SESSION_IDLE_MINUTES;
+      delete process.env.SESSION_MAX_HOURS;
+    });
+
+    it("defaults to a 2-hour idle window and a 7-day absolute lifetime", () => {
+      expect(DEFAULT_SESSION_IDLE_MINUTES).toBe(120);
+      expect(DEFAULT_SESSION_MAX_HOURS).toBe(168);
+      expect(getSessionIdleMinutes()).toBe(120);
+      expect(getSessionMaxHours()).toBe(168);
+    });
+
+    it("reads positive integer overrides from the environment", () => {
+      process.env.SESSION_IDLE_MINUTES = " 45 ";
+      process.env.SESSION_MAX_HOURS = "24";
+      expect(getSessionIdleMinutes()).toBe(45);
+      expect(getSessionMaxHours()).toBe(24);
+    });
+
+    it.each(["", "abc", "0", "-5", "1.5"])("falls back to defaults for invalid value %p", (value) => {
+      process.env.SESSION_IDLE_MINUTES = value;
+      process.env.SESSION_MAX_HOURS = value;
+      expect(getSessionIdleMinutes()).toBe(DEFAULT_SESSION_IDLE_MINUTES);
+      expect(getSessionMaxHours()).toBe(DEFAULT_SESSION_MAX_HOURS);
+    });
   });
 
   it("rejects refresh after account invalidation or deletion", async () => {
