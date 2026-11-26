@@ -622,7 +622,9 @@ export const deleteEvent = async (
   }
   const current = access.value;
 
-  if (actor.role !== "ADMIN" && current.status !== "DRAFT") {
+  // A REJECTED event was sent back by moderation before ever being public (rejecting a published
+  // event only rejects its pending revision), so its owner may discard it like a draft.
+  if (actor.role !== "ADMIN" && current.status !== "DRAFT" && current.status !== "REJECTED") {
     return forbidden(deleteForbiddenError);
   }
 
